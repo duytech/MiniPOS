@@ -17,6 +17,20 @@ public class OrdersController(OrderService orders) : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = order.Id }, order);
     }
 
+    /// <summary>
+    /// Lists orders, newest first. Optional filters: <c>status</c> (Open, Paid, Cancelled; case-insensitive),
+    /// <c>search</c> (case-insensitive match on order id or item name) and <c>limit</c> (1-200, default 50).
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType<IReadOnlyList<OrderSummaryDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<IReadOnlyList<OrderSummaryDto>>> List(
+        [FromQuery] string? status,
+        [FromQuery] string? search,
+        [FromQuery] int? limit,
+        CancellationToken cancellationToken) =>
+        Ok(await orders.ListAsync(new ListOrdersRequest(status, search, limit), cancellationToken));
+
     /// <summary>Gets an order with its items and total.</summary>
     [HttpGet("{id:guid}")]
     [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]

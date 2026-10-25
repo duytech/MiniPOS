@@ -13,6 +13,7 @@ public class ApiExceptionHandler(IProblemDetailsService problemDetailsService) :
         var (status, title) = exception switch
         {
             NotFoundException => (StatusCodes.Status404NotFound, "Resource not found"),
+            ValidationException => (StatusCodes.Status400BadRequest, "Invalid request"),
             DomainException => (StatusCodes.Status422UnprocessableEntity, "Business rule violation"),
             _ => (0, null),
         };
