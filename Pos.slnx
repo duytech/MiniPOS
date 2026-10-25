@@ -10,4 +10,7 @@
     <Project Path="tests/Pos.Application.Tests/Pos.Application.Tests.csproj" />
     <Project Path="tests/Pos.Domain.Tests/Pos.Domain.Tests.csproj" />
   </Folder>
+  <Folder Name="/web/">
+    <Project Path="web/Pos.Web.esproj" />
+  </Folder>
 </Solution>
