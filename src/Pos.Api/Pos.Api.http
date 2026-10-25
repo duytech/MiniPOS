@@ -26,4 +26,12 @@ Accept: application/json
 GET {{Pos.Api_HostAddress}}/api/orders/{{createOrder.response.body.$.id}}/total
 Accept: application/json
 
+### List orders (newest first)
+GET {{Pos.Api_HostAddress}}/api/orders
+Accept: application/json
+
+### List open orders containing "espresso"
+GET {{Pos.Api_HostAddress}}/api/orders?status=Open&search=espresso
+Accept: application/json
+
 ###
