@@ -37,3 +37,8 @@ Kết quả: build sạch, 37 test xanh (16 domain, 12 application, 9 integratio
 - Liệt kê rõ kiến trúc Application (Command/Handler/Validator), nếu không agent chọn Service.
 - "Không tự đặt business rule; hỏi khi yêu cầu không nói" sẽ chặn dòng 3, 8, 9.
 - Ứng viên verifier Tuần 2: test đồng thời (N request song song → tổng đúng N) cho mọi thao tác thay đổi order.
+
+**Test tái hiện lỗi 1–2:** `tests/Pos.Api.IntegrationTests/ConcurrentAddItemTests.cs`, đỏ ổn định 3/3 lần chạy.
+- 20 request tăng số lượng cùng lúc: cả 20 trả 200, DB chỉ có 2 ly (mong đợi 21).
+- 20 request thêm món mới cùng lúc: 19 trả 500.
+- Test kiểm tra invariant (chỉ 200/409, số lượng trong DB = số request 200), không ép cách sửa.
