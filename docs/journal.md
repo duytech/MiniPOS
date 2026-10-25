@@ -75,3 +75,55 @@ xử lý đủ loading/lỗi/rỗng, escape `%`/`_` khi tìm kiếm, tính tổn
 - Cần rule "một nguồn duy nhất cho phép tính tiền" và "định dạng tiền trong API/UI": lỗi 1–3 lặp lại cùng gốc với dòng 7 và 12 của Ngày 3.
 - Kiến trúc Command/Query/Handler/Validator phải ghi rõ: hai ngày liên tiếp agent đều chọn Service.
 - Ứng viên verifier Tuần 2: test so khớp tổng tiền giữa `GET /orders/{id}`, `/total` và danh sách (cùng giá trị, cùng scale).
+
+### Ngày 5: viết `CLAUDE.md` (2026-10-25)
+**Quyết định đã chốt** (trước đây agent tự chọn):
+- Tiền: `Money` value object (`decimal Amount` + `Currency`, hiện chỉ USD).
+- Làm tròn: ở cấp order, ngay sau mỗi bước (discount → surcharge → tax → tip), `MidpointRounding.AwayFromZero`, chỉ ở một chỗ trong Domain.
+- Application: Command/Query + Handler tự viết + FluentValidation, không Service, không MediatR.
+- Thêm món: dòng giống hệt (cùng món, cùng giá chụp lại, cùng ghi chú/modifier) → tăng số lượng; khác → dòng mới.
+- Concurrency: `xmin` của Postgres, xung đột → 409.
+- `CLAUDE.md` viết bằng tiếng Anh, 75 dòng.
+
+**Mỗi rule trong `CLAUDE.md` đến từ lỗi nào:**
+| Mục trong `CLAUDE.md` | Lỗi gốc |
+|---|---|
+| Commands (cổng 5433, test nào đang đỏ) | Agent Ngày 3 mất công dò cổng 5432 bị chiếm |
+| "Follow this file, not the surrounding code" | Ngày 4 agent chép lại kiểu Service của Ngày 3 |
+| Architecture: Command/Query + Handler + Validator | N3 #4, #5; N4 #4 |
+| Repository không trả DTO của Application | N4 #4 |
+| Xóa code mẫu template | N3 #11 |
+| Money VO, không `double`/`float`/`decimal` trần | N3 #12 |
+| Thứ tự tính + làm tròn ở một chỗ | N3 #7 |
+| Cơ sở tính của mỗi bước phải lấy từ task hoặc hỏi | Phát hiện khi viết chính `CLAUDE.md` (xem dưới) |
+| Tổng chỉ tính trong Domain + test list total = GET total | N4 #1 |
+| API luôn 2 chữ số thập phân | N4 #2 |
+| Frontend chỉ hiển thị tiền bằng `currency` | N4 #3 |
+| `xmin` + 409, lỗi DB dự đoán được → 4xx, test song song | N3 #1, #2 |
+| Không tự đặt business rule/giới hạn/phạm vi | N3 #3, #8, #9; N4 #9 |
+| Rule gộp dòng | N3 #3 |
+| List phải phân trang + `totalCount` | N4 #5 |
+| Giữ dữ liệu cũ khi tải lại | N4 #6 |
+| Không có URL môi trường trong code/UI | N4 #7 |
+| Không commit mật khẩu, kể cả mặc định trong test | N3 #6 |
+
+**Cố ý không đưa vào** (agent đã tự làm đúng ở Ngày 4): chi tiết RxJS (`debounceTime`, `switchMap`, `catchError` trong
+`switchMap`), label/accessibility, xử lý loading/lỗi/rỗng, escape LIKE. Frontend chỉ còn 1 dòng về `OnPush`/`@if`/`toSignal`.
+Chưa xử lý: N3 #10 (migrate khi khởi động, chỉ ở Development), N4 #8 (`ILIKE` quét toàn bảng), N4 #10 (CORS khi deploy):
+mức thấp, để sau.
+
+**Lỗi của chính tôi khi viết:** bản đầu ghi "mỗi bước tính trên kết quả bước trước", vô tình quy định tip tính trên số tiền
+**sau thuế** (ở Mỹ tip thường tính trước thuế). Đây đúng là lỗi "tự quyết business rule" mà file đang cấm agent. Đã sửa:
+cơ sở tính của mỗi bước phải lấy từ task, không có thì hỏi. Bài học: người viết instruction cũng tự đặt rule mà không để ý.
+
+**Kiểm tra nhanh:** giao một agent mới (chỉ đọc, không nhắc tới `CLAUDE.md`) task "thêm thuế 8.875% + tip, hai thu ngân sửa
+cùng order" và hỏi kế hoạch.
+- Agent tự tìm thấy và trích `CLAUDE.md` làm nguồn chính.
+- Kiến trúc: Query/Command + Handler + Validator, không MediatR.
+- Tiền: `Money`, chỉ tính trong `Order.CalculatePricing()`. Với subtotal $10.00, thuế = 0.8875 → 0.89.
+- Concurrency: `xmin` + 409, thêm test song song.
+- Có JSON converter cho đúng 2 chữ số và test list total = GET total.
+- Liệt kê 5 câu hỏi thay vì tự quyết: tip trước hay sau thuế, thuế suất lấy ở đâu, giới hạn tip, retry hay để client tải lại
+  khi 409, có lưu tổng trên order không.
+- Agent đọc bản **trước** khi sửa rule tip, nhưng vẫn tự nhận ra mâu thuẫn và đưa vào câu hỏi.
+So với Ngày 3–4: các lỗi kiến trúc, tiền và concurrency đều được xử lý **ngay trong kế hoạch**. Đo thật ở Ngày 6.
