@@ -7,6 +7,7 @@ surrounding code.**
 ## Commands
 - DB: `docker compose up -d` (Postgres on **localhost:5433**; 5432 is taken by another install on this machine)
 - Build: `dotnet build Pos.slnx` · Test: `dotnet test Pos.slnx` (integration tests need the DB running)
+- Architecture rules only (no DB, ~1 s): `dotnet test tests/Pos.ArchitectureTests`; a failure lists each offending member
 - Run API: `dotnet run --project src/Pos.Api --launch-profile http` → http://localhost:5191 (migrates on startup in Development)
 - Web (in `web/`): `npm start` → http://localhost:4200 (proxies `/api` to 5191) · `npm run build` ·
   `npx ng test --watch=false --browsers=ChromeHeadless`
