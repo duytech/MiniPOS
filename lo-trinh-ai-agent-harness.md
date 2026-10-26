@@ -22,13 +22,13 @@ Cú pháp hooks, skills, sub-agents thay đổi theo phiên bản: tra [tài li�
 
 Kết quả: một `CLAUDE.md` ngắn, cụ thể, đã kiểm chứng bằng cách cho agent làm lại cùng một tính năng.
 
-- [ ] Ngày 1: Cài Claude Code (hoặc Copilot agent mode). Tạo solution: Domain / Application / Infrastructure / Api + project test xUnit.
-- [ ] Ngày 2: Tạo app Angular 18 + Tailwind, PostgreSQL bằng Docker Compose. Commit khung repo lên GitHub.
-- [ ] Ngày 3: Giao agent làm tính năng Order (tạo order, thêm món, tính tổng) mà chưa có hướng dẫn gì. Ghi lại mọi chỗ sai quy ước.
-- [ ] Ngày 4: Giao agent làm API + màn hình danh sách order bằng RxJS (`switchMap`, `combineLatest`). Tiếp tục ghi lỗi.
-- [ ] Ngày 5: Viết `CLAUDE.md`: lệnh build/test, cấu trúc thư mục, quy tắc tiền (`decimal`, `MidpointRounding.AwayFromZero`, làm tròn ở bước nào), cách đặt tên, những điều cấm.
-- [ ] Ngày 6: Xóa tính năng Order, cho agent làm lại với `CLAUDE.md`. So sánh số lỗi với lần đầu.
-- [ ] Ngày 7: Rút gọn `CLAUDE.md`: bỏ dòng agent đã tự làm đúng, giữ dòng thực sự thay đổi hành vi. Ghi nhật ký tuần.
+- [x] Ngày 1: Cài Claude Code (hoặc Copilot agent mode). Tạo solution: Domain / Application / Infrastructure / Api + project test xUnit.
+- [x] Ngày 2: Tạo app Angular 18 + Tailwind, PostgreSQL bằng Docker Compose. Commit khung repo lên GitHub.
+- [x] Ngày 3: Giao agent làm tính năng Order (tạo order, thêm món, tính tổng) mà chưa có hướng dẫn gì. Ghi lại mọi chỗ sai quy ước.
+- [x] Ngày 4: Giao agent làm API + màn hình danh sách order bằng RxJS (`switchMap`, `combineLatest`). Tiếp tục ghi lỗi.
+- [x] Ngày 5: Viết `CLAUDE.md`: lệnh build/test, cấu trúc thư mục, quy tắc tiền (`decimal`, `MidpointRounding.AwayFromZero`, làm tròn ở bước nào), cách đặt tên, những điều cấm.
+- [x] Ngày 6: Xóa tính năng Order, cho agent làm lại với `CLAUDE.md`. So sánh số lỗi với lần đầu.
+- [x] Ngày 7: Rút gọn `CLAUDE.md`: bỏ dòng agent đã tự làm đúng, giữ dòng thực sự thay đổi hành vi. Ghi nhật ký tuần.
 
 ## Tuần 2: Verifier và loop engineering
 
