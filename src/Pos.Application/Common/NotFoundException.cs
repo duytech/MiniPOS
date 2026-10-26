@@ -1,4 +1,3 @@
 namespace Pos.Application.Common;
 
-public class NotFoundException(string entityName, object key)
-    : Exception($"{entityName} '{key}' was not found.");
+public class NotFoundException(string resource, Guid id) : Exception($"{resource} '{id}' was not found.");

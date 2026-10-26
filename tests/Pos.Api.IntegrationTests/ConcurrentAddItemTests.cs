@@ -1,11 +1,13 @@
 using System.Net;
-using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
-using Pos.Application.Orders;
+using Pos.Infrastructure.Persistence;
 
 namespace Pos.Api.IntegrationTests;
 
 /// <summary>
+/// Hidden verifier from Day 3, adapted to the Day 6 API (menu items created via the API, table <c>order_lines</c>).
 /// Two terminals (or a double-tap) adding to the same order at the same time.
 /// The invariant, whatever the fix (retry or 409): no 5xx, every rejected request
 /// is a 409, and the stored quantity equals exactly the number of accepted requests.
@@ -14,36 +16,34 @@ public class ConcurrentAddItemTests(PosApiFactory factory) : IClassFixture<PosAp
 {
     private const int ConcurrentRequests = 20;
 
-    // Seeded by the InitialCreate migration.
-    private static readonly Guid Espresso = Guid.Parse("11111111-1111-1111-1111-000000000001");
-    private static readonly Guid Cappuccino = Guid.Parse("11111111-1111-1111-1111-000000000002");
-
     private readonly HttpClient _client = factory.CreateClient();
 
     [Fact]
     public async Task Concurrent_adds_of_an_existing_line_do_not_lose_quantity()
     {
-        var orderId = await CreateOrderAsync();
-        (await AddItemAsync(orderId, Cappuccino)).EnsureSuccessStatusCode();
+        var cappuccino = await _client.CreateMenuItemAsync("Cappuccino", 4.50m);
+        var orderId = await _client.CreateOrderAsync();
+        (await _client.AddItemAsync(orderId, cappuccino, 1)).EnsureSuccessStatusCode();
 
-        var statuses = await AddItemConcurrentlyAsync(orderId, Cappuccino);
+        var statuses = await AddItemConcurrentlyAsync(orderId, cappuccino);
 
         AssertNoServerErrorsAndOnlyConflicts(statuses);
         var accepted = statuses.Count(s => s == HttpStatusCode.OK);
-        Assert.Equal(1 + accepted, await StoredQuantityAsync(orderId, Cappuccino));
+        Assert.Equal(1 + accepted, await StoredQuantityAsync(orderId, cappuccino));
     }
 
     [Fact]
     public async Task Concurrent_first_adds_of_a_new_item_never_return_500()
     {
-        var orderId = await CreateOrderAsync();
+        var espresso = await _client.CreateMenuItemAsync("Espresso", 3.00m);
+        var orderId = await _client.CreateOrderAsync();
 
-        var statuses = await AddItemConcurrentlyAsync(orderId, Espresso);
+        var statuses = await AddItemConcurrentlyAsync(orderId, espresso);
 
         AssertNoServerErrorsAndOnlyConflicts(statuses);
         var accepted = statuses.Count(s => s == HttpStatusCode.OK);
         Assert.True(accepted >= 1, "At least one of the concurrent adds must succeed.");
-        Assert.Equal(accepted, await StoredQuantityAsync(orderId, Espresso));
+        Assert.Equal(accepted, await StoredQuantityAsync(orderId, espresso));
     }
 
     private static void AssertNoServerErrorsAndOnlyConflicts(IReadOnlyList<HttpStatusCode> statuses)
@@ -64,7 +64,7 @@ public class ConcurrentAddItemTests(PosApiFactory factory) : IClassFixture<PosAp
             .Select(async _ =>
             {
                 await start.Task;
-                using var response = await AddItemAsync(orderId, menuItemId);
+                using var response = await _client.AddItemAsync(orderId, menuItemId, 1);
                 return response.StatusCode;
             })
             .ToList();
@@ -73,23 +73,19 @@ public class ConcurrentAddItemTests(PosApiFactory factory) : IClassFixture<PosAp
         return await Task.WhenAll(requests);
     }
 
-    private async Task<Guid> CreateOrderAsync()
-    {
-        var response = await _client.PostAsync("/api/orders", null);
-        response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<OrderDto>())!.Id;
-    }
-
-    private Task<HttpResponseMessage> AddItemAsync(Guid orderId, Guid menuItemId) =>
-        _client.PostAsJsonAsync($"/api/orders/{orderId}/items", new AddOrderItemRequest(menuItemId, 1));
-
     /// <summary>Reads straight from Postgres so the API's own view can't hide a lost update.</summary>
     private async Task<int> StoredQuantityAsync(Guid orderId, Guid menuItemId)
     {
-        await using var conn = new NpgsqlConnection(factory.TestConnectionString);
+        string connectionString;
+        using (var scope = factory.Services.CreateScope())
+        {
+            connectionString = scope.ServiceProvider.GetRequiredService<PosDbContext>().Database.GetConnectionString()!;
+        }
+
+        await using var conn = new NpgsqlConnection(connectionString);
         await conn.OpenAsync();
         await using var cmd = new NpgsqlCommand(
-            "SELECT COALESCE(SUM(quantity), 0)::int FROM order_items WHERE order_id = @o AND menu_item_id = @m", conn);
+            "SELECT COALESCE(SUM(quantity), 0)::int FROM order_lines WHERE order_id = @o AND menu_item_id = @m", conn);
         cmd.Parameters.AddWithValue("o", orderId);
         cmd.Parameters.AddWithValue("m", menuItemId);
         return (int)(await cmd.ExecuteScalarAsync())!;

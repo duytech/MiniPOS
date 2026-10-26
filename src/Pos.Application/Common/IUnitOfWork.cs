@@ -2,5 +2,6 @@ namespace Pos.Application.Common;
 
 public interface IUnitOfWork
 {
-    Task SaveChangesAsync(CancellationToken cancellationToken = default);
+    /// <exception cref="ConflictException">The data was changed concurrently or a constraint was violated.</exception>
+    Task SaveChangesAsync(CancellationToken cancellationToken);
 }

@@ -1,53 +1,58 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using Pos.Infrastructure;
+using Pos.Infrastructure.Persistence;
 
 namespace Pos.Api.IntegrationTests;
 
 /// <summary>
-/// Boots the real API against a throwaway PostgreSQL database that is created
-/// (and migrated on startup) for the test run and dropped afterwards.
-/// Server connection defaults to the local dev database; override with the
-/// POS_TEST_CONNECTION environment variable.
+/// Runs the API against a throw-away database on the Postgres server named by <c>ConnectionStrings:Pos</c>
+/// (user-secrets of this project or the <c>ConnectionStrings__Pos</c> environment variable).
 /// </summary>
 public sealed class PosApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
-    private const string DefaultServerConnection =
-        "Host=localhost;Port=5433;Database=pos;Username=pos;Password=pos_dev_password";
-
-    private readonly string _serverConnection;
-    private readonly string _databaseName = $"pos_test_{Guid.NewGuid():N}";
+    private readonly string _connectionString;
 
     public PosApiFactory()
     {
-        _serverConnection = Environment.GetEnvironmentVariable("POS_TEST_CONNECTION") ?? DefaultServerConnection;
-        TestConnectionString = new NpgsqlConnectionStringBuilder(_serverConnection) { Database = _databaseName }.ConnectionString;
-    }
+        var configuration = new ConfigurationBuilder()
+            .AddUserSecrets<PosApiFactory>()
+            .AddEnvironmentVariables()
+            .Build();
+        var serverConnectionString = configuration.GetConnectionString(DependencyInjection.ConnectionStringName)
+            ?? throw new InvalidOperationException(
+                "Integration tests need ConnectionStrings:Pos (user-secrets of Pos.Api.IntegrationTests or the " +
+                "ConnectionStrings__Pos environment variable) pointing at a Postgres server.");
 
-    public string TestConnectionString { get; }
+        _connectionString = new NpgsqlConnectionStringBuilder(serverConnectionString)
+        {
+            Database = $"pos_test_{Guid.NewGuid():N}",
+        }.ConnectionString;
+    }
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Development");
-        builder.UseSetting("ConnectionStrings:Pos", TestConnectionString);
-        builder.UseSetting("Database:MigrateOnStartup", "true");
+        builder.UseEnvironment("Testing");
+        builder.UseSetting($"ConnectionStrings:{DependencyInjection.ConnectionStringName}", _connectionString);
     }
 
     public async Task InitializeAsync()
     {
-        await using var conn = new NpgsqlConnection(_serverConnection);
-        await conn.OpenAsync();
-        await using var cmd = new NpgsqlCommand($"CREATE DATABASE \"{_databaseName}\"", conn);
-        await cmd.ExecuteNonQueryAsync();
+        using var scope = Services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<PosDbContext>().Database.MigrateAsync();
     }
 
     async Task IAsyncLifetime.DisposeAsync()
     {
+        using (var scope = Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<PosDbContext>().Database.EnsureDeletedAsync();
+        }
+
         await DisposeAsync();
-        NpgsqlConnection.ClearAllPools();
-        await using var conn = new NpgsqlConnection(_serverConnection);
-        await conn.OpenAsync();
-        await using var cmd = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{_databaseName}\" WITH (FORCE)", conn);
-        await cmd.ExecuteNonQueryAsync();
     }
 }

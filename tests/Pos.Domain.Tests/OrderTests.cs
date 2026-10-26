@@ -6,112 +6,119 @@ namespace Pos.Domain.Tests;
 
 public class OrderTests
 {
-    private static readonly DateTime Now = new(2026, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+    private static readonly MenuItem Burger = new("Burger", Money.Usd(12.99m));
+    private static readonly MenuItem Fries = new("Fries", Money.Usd(3.35m));
 
     [Fact]
-    public void New_order_is_open_empty_and_has_zero_total()
+    public void New_order_is_open_and_keeps_its_creation_time_in_utc()
     {
-        var order = new Order(Now);
+        var createdAt = new DateTimeOffset(2026, 10, 26, 14, 30, 0, TimeSpan.FromHours(7));
 
-        Assert.NotEqual(Guid.Empty, order.Id);
+        var order = Order.Create(createdAt);
+
         Assert.Equal(OrderStatus.Open, order.Status);
-        Assert.Equal(Now, order.CreatedAtUtc);
-        Assert.Empty(order.Items);
-        Assert.Equal(0m, order.Total);
+        Assert.Equal(createdAt, order.CreatedAt);
+        Assert.Equal(TimeSpan.Zero, order.CreatedAt.Offset);
     }
 
     [Fact]
-    public void AddItem_snapshots_menu_item_name_and_price()
+    public void New_order_has_zero_totals()
     {
-        var order = new Order(Now);
-        var espresso = new MenuItem("Espresso", 2.50m);
+        var totals = Order.Create(DateTimeOffset.UtcNow).CalculateTotals();
 
-        var line = order.AddItem(espresso, 2);
-
-        Assert.Equal(order.Id, line.OrderId);
-        Assert.Equal(espresso.Id, line.MenuItemId);
-        Assert.Equal("Espresso", line.Name);
-        Assert.Equal(2.50m, line.UnitPrice);
-        Assert.Equal(2, line.Quantity);
-        Assert.Equal(5.00m, line.LineTotal);
+        Assert.Equal(Money.Usd(0.00m), totals.Subtotal);
+        Assert.Equal(Money.Usd(0.00m), totals.Total);
     }
 
     [Fact]
-    public void Total_is_sum_of_unit_price_times_quantity_across_lines()
+    public void Line_total_is_unit_price_times_quantity()
     {
-        var order = new Order(Now);
-        order.AddItem(new MenuItem("Espresso", 2.50m), 2);   // 5.00
-        order.AddItem(new MenuItem("Croissant", 2.20m), 3);  // 6.60
-        order.AddItem(new MenuItem("Water", 0m), 1);         // 0.00
+        var order = Order.Create(DateTimeOffset.UtcNow);
 
-        Assert.Equal(3, order.Items.Count);
-        Assert.Equal(11.60m, order.Total);
+        var line = order.AddItem(Fries, 3, notes: null);
+
+        Assert.Equal(Money.Usd(10.05m), line.LineTotal);
     }
 
     [Fact]
-    public void Adding_same_menu_item_twice_merges_into_one_line()
+    public void Subtotal_is_the_sum_of_line_totals_and_total_equals_subtotal()
     {
-        var order = new Order(Now);
-        var espresso = new MenuItem("Espresso", 2.50m);
+        var order = Order.Create(DateTimeOffset.UtcNow);
+        order.AddItem(Burger, 2, notes: null); // 25.98
+        order.AddItem(Fries, 3, notes: null); // 10.05
 
-        order.AddItem(espresso, 1);
-        order.AddItem(espresso, 2);
+        var totals = order.CalculateTotals();
 
-        var line = Assert.Single(order.Items);
+        Assert.Equal(Money.Usd(36.03m), totals.Subtotal);
+        Assert.Equal(Money.Usd(36.03m), totals.Total);
+    }
+
+    [Fact]
+    public void Sums_without_floating_point_drift()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow);
+        var dime = new MenuItem("Mint", Money.Usd(0.10m));
+        var twenty = new MenuItem("Gum", Money.Usd(0.20m));
+        order.AddItem(dime, 1, notes: null);
+        order.AddItem(twenty, 1, notes: null);
+
+        Assert.Equal(Money.Usd(0.30m), order.CalculateTotals().Total);
+    }
+
+    [Fact]
+    public void Identical_line_increases_quantity()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow);
+
+        order.AddItem(Burger, 1, "no onions");
+        order.AddItem(Burger, 2, "no onions");
+
+        var line = Assert.Single(order.Lines);
         Assert.Equal(3, line.Quantity);
-        Assert.Equal(7.50m, order.Total);
+        Assert.Equal(Money.Usd(38.97m), order.CalculateTotals().Total);
     }
 
     [Fact]
-    public void Later_menu_price_change_does_not_affect_existing_order_lines()
+    public void Notes_are_trimmed_and_blank_notes_count_as_no_notes()
     {
-        var order = new Order(Now);
-        var espresso = new MenuItem("Espresso", 2.50m);
-        order.AddItem(espresso, 2);
+        var order = Order.Create(DateTimeOffset.UtcNow);
 
-        espresso.ChangePrice(9.99m);
+        order.AddItem(Burger, 1, null);
+        order.AddItem(Burger, 1, "   ");
+        order.AddItem(Burger, 1, "");
 
-        Assert.Equal(5.00m, order.Total);
-    }
-
-    [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public void AddItem_rejects_non_positive_quantity(int quantity)
-    {
-        var order = new Order(Now);
-
-        var ex = Assert.Throws<DomainException>(() => order.AddItem(new MenuItem("Espresso", 2.50m), quantity));
-        Assert.Contains("greater than zero", ex.Message);
-        Assert.Empty(order.Items);
+        Assert.Equal(3, Assert.Single(order.Lines).Quantity);
     }
 
     [Fact]
-    public void AddItem_rejects_quantity_above_limit_including_merged_quantity()
+    public void Different_notes_create_a_new_line()
     {
-        var order = new Order(Now);
-        var espresso = new MenuItem("Espresso", 2.50m);
-        order.AddItem(espresso, Order.MaxQuantityPerLine);
+        var order = Order.Create(DateTimeOffset.UtcNow);
 
-        Assert.Throws<DomainException>(() => order.AddItem(espresso, 1));
-        Assert.Equal(Order.MaxQuantityPerLine, Assert.Single(order.Items).Quantity);
+        order.AddItem(Burger, 1, "no onions");
+        order.AddItem(Burger, 1, null);
+
+        Assert.Equal(2, order.Lines.Count);
     }
 
     [Fact]
-    public void AddItem_rejects_unavailable_menu_item()
+    public void Different_menu_item_creates_a_new_line()
     {
-        var order = new Order(Now);
-        var soldOut = new MenuItem("Seasonal Pie", 4.00m, isAvailable: false);
+        var order = Order.Create(DateTimeOffset.UtcNow);
 
-        Assert.Throws<DomainException>(() => order.AddItem(soldOut, 1));
-        Assert.Empty(order.Items);
+        order.AddItem(Burger, 1, null);
+        order.AddItem(Fries, 1, null);
+
+        Assert.Equal(2, order.Lines.Count);
     }
 
     [Fact]
-    public void AddItem_throws_on_null_menu_item()
+    public void Line_quantity_overflow_is_a_domain_error()
     {
-        var order = new Order(Now);
+        var order = Order.Create(DateTimeOffset.UtcNow);
+        order.AddItem(Burger, int.MaxValue, null);
 
-        Assert.Throws<ArgumentNullException>(() => order.AddItem(null!, 1));
+        Assert.Throws<DomainException>(() => order.AddItem(Burger, 1, null));
+        Assert.Equal(int.MaxValue, Assert.Single(order.Lines).Quantity);
     }
 }

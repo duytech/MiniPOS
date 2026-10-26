@@ -16,13 +16,14 @@ public static class DependencyInjection
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString = configuration.GetConnectionString(ConnectionStringName)
-            ?? throw new InvalidOperationException($"Connection string '{ConnectionStringName}' is not configured.");
+            ?? throw new InvalidOperationException(
+                $"Connection string '{ConnectionStringName}' is not configured. Set it with user-secrets or the " +
+                $"ConnectionStrings__{ConnectionStringName} environment variable.");
 
         services.AddDbContext<PosDbContext>(options => options.UseNpgsql(connectionString));
-        services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<PosDbContext>());
-        services.AddScoped<IMenuItemRepository, MenuItemRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IOrderRepository, OrderRepository>();
-        services.AddSingleton<IClock, SystemClock>();
+        services.AddScoped<IMenuItemRepository, MenuItemRepository>();
         return services;
     }
 }

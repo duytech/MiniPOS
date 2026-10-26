@@ -5,57 +5,66 @@ namespace Pos.Domain.Orders;
 
 public class Order
 {
-    public const int MaxQuantityPerLine = 1000;
-
-    private readonly List<OrderItem> _items = [];
+    private readonly List<OrderLine> _lines = [];
 
     public Guid Id { get; private set; }
-    public DateTime CreatedAtUtc { get; private set; }
+
+    /// <summary>Sequential number staff use to refer to the order; assigned by the database when the order is saved.</summary>
+    public int Number { get; private set; }
+
     public OrderStatus Status { get; private set; }
+    public DateTimeOffset CreatedAt { get; private set; }
+    public Currency Currency { get; private set; }
+    public IReadOnlyList<OrderLine> Lines => _lines;
 
-    public IReadOnlyCollection<OrderItem> Items => _items.AsReadOnly();
-
-    /// <summary>Sum of all line totals (unit price x quantity).</summary>
-    public decimal Total => _items.Sum(i => i.LineTotal);
-
-    // For EF Core.
-    private Order() { }
-
-    public Order(DateTime createdAtUtc)
+    private Order()
     {
-        Id = Guid.NewGuid();
-        CreatedAtUtc = DateTime.SpecifyKind(createdAtUtc, DateTimeKind.Utc);
-        Status = OrderStatus.Open;
+    }
+
+    public static Order Create(DateTimeOffset createdAt) => new()
+    {
+        Id = Guid.NewGuid(),
+        Status = OrderStatus.Open,
+        CreatedAt = createdAt.ToUniversalTime(),
+        Currency = Currency.USD,
+    };
+
+    /// <summary>
+    /// Adds the menu item at its current price. A line with the same menu item, snapshotted unit price and notes
+    /// gets its quantity increased; anything different becomes a new line.
+    /// </summary>
+    public OrderLine AddItem(MenuItem menuItem, int quantity, string? notes)
+    {
+        if (menuItem.Price.Currency != Currency)
+        {
+            throw new DomainException($"Menu item is priced in {menuItem.Price.Currency}, the order is in {Currency}.");
+        }
+
+        var normalizedNotes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+        var line = _lines.FirstOrDefault(l => l.IsSameAs(menuItem.Id, menuItem.Price, normalizedNotes));
+        if (line is null)
+        {
+            line = new OrderLine(menuItem.Id, menuItem.Name, menuItem.Price, quantity, normalizedNotes);
+            _lines.Add(line);
+        }
+        else
+        {
+            line.IncreaseQuantity(quantity);
+        }
+
+        return line;
     }
 
     /// <summary>
-    /// Adds a menu item to the order. Adding the same menu item again increases the
-    /// quantity of the existing line instead of creating a new one.
+    /// The only place order totals are calculated.
+    /// 1. line total = unit price × quantity (exact cents)
+    /// 2. subtotal = sum of line totals
+    /// Discount, surcharge, tax and tip are not part of the order yet, so total = subtotal. When they are added,
+    /// each step goes here, in that order, rounded to cents (MidpointRounding.AwayFromZero) before the next step.
     /// </summary>
-    public OrderItem AddItem(MenuItem menuItem, int quantity)
+    public OrderTotals CalculateTotals()
     {
-        ArgumentNullException.ThrowIfNull(menuItem);
-
-        if (Status != OrderStatus.Open)
-            throw new DomainException($"Cannot add items to an order with status '{Status}'.");
-        if (quantity <= 0)
-            throw new DomainException("Quantity must be greater than zero.");
-        if (!menuItem.IsAvailable)
-            throw new DomainException($"Menu item '{menuItem.Name}' is not available.");
-
-        var existing = _items.FirstOrDefault(i => i.MenuItemId == menuItem.Id);
-        var newQuantity = (existing?.Quantity ?? 0) + quantity;
-        if (newQuantity > MaxQuantityPerLine)
-            throw new DomainException($"Quantity per item cannot exceed {MaxQuantityPerLine}.");
-
-        if (existing is not null)
-        {
-            existing.IncreaseQuantity(quantity);
-            return existing;
-        }
-
-        var item = new OrderItem(Id, menuItem.Id, menuItem.Name, menuItem.Price, quantity);
-        _items.Add(item);
-        return item;
+        var subtotal = _lines.Aggregate(Money.Zero(Currency), (sum, line) => sum + line.LineTotal);
+        return new OrderTotals(subtotal, Total: subtotal);
     }
 }

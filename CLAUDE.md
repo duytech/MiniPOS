@@ -10,7 +10,6 @@ surrounding code.**
 - Run API: `dotnet run --project src/Pos.Api --launch-profile http` → http://localhost:5191 (migrates on startup in Development)
 - Web (in `web/`): `npm start` → http://localhost:4200 (proxies `/api` to 5191) · `npm run build` ·
   `npx ng test --watch=false --browsers=ChromeHeadless`
-- Known red: the 2 tests in `ConcurrentAddItemTests` fail until order concurrency is fixed. Any other red test is yours.
 
 ## Architecture
 - Dependencies point inward: Api → Application → Domain; Infrastructure → Application. Domain references nothing.
@@ -47,7 +46,7 @@ surrounding code.**
 - A concurrency conflict returns **409** ProblemDetails. Any expected DB error (unique violation, FK, conflict) maps to a
   4xx; a 500 is always a bug.
 - Every endpoint that changes an order needs an integration test that fires parallel requests and checks the stored
-  result (see `ConcurrentAddItemTests` for the pattern).
+  result (e.g. N parallel add-item requests: only 200/409 responses, stored quantity = number of 200s).
 
 ## Business rules
 - Do not invent business rules, limits, or scope that the task doesn't state (max quantities, merge behavior, extra
@@ -70,6 +69,6 @@ surrounding code.**
   variables; commit only `*.example` files. Read the test DB connection from configuration.
 
 ## Definition of done
-- `dotnet build` with 0 warnings, `dotnet test` green except the known red above, `npm run build` passes if `web/` changed.
+- `dotnet build` with 0 warnings, `dotnet test` green, `npm run build` passes if `web/` changed.
 - New behavior has tests: money rules → exact-cent unit tests; order changes → concurrency test.
 - Summary lists any assumptions or open business questions instead of silently deciding them.

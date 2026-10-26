@@ -17,7 +17,7 @@ namespace Pos.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.13")
+                .HasAnnotation("ProductVersion", "10.0.4")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -28,54 +28,18 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<bool>("IsAvailable")
-                        .HasColumnType("boolean")
-                        .HasColumnName("is_available");
-
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("text")
                         .HasColumnName("name");
 
                     b.Property<decimal>("Price")
-                        .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("price");
 
                     b.HasKey("Id");
 
                     b.ToTable("menu_items", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-000000000001"),
-                            IsAvailable = true,
-                            Name = "Espresso",
-                            Price = 2.50m
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-000000000002"),
-                            IsAvailable = true,
-                            Name = "Cappuccino",
-                            Price = 3.75m
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-000000000003"),
-                            IsAvailable = true,
-                            Name = "Croissant",
-                            Price = 2.20m
-                        },
-                        new
-                        {
-                            Id = new Guid("11111111-1111-1111-1111-000000000004"),
-                            IsAvailable = true,
-                            Name = "Club Sandwich",
-                            Price = 7.90m
-                        });
                 });
 
             modelBuilder.Entity("Pos.Domain.Orders.Order", b =>
@@ -84,9 +48,22 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<DateTime>("CreatedAtUtc")
+                    b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("currency");
+
+                    b.Property<int>("Number")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("number");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Number"));
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -94,12 +71,23 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
 
+                    b.Property<uint>("xmin")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
 
                     b.ToTable("orders", (string)null);
                 });
 
-            modelBuilder.Entity("Pos.Domain.Orders.OrderItem", b =>
+            modelBuilder.Entity("Pos.Domain.Orders.OrderLine", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
@@ -111,9 +99,12 @@ namespace Pos.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("character varying(200)")
+                        .HasColumnType("text")
                         .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
 
                     b.Property<Guid>("OrderId")
                         .HasColumnType("uuid")
@@ -124,7 +115,6 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .HasColumnName("quantity");
 
                     b.Property<decimal>("UnitPrice")
-                        .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("unit_price");
 
@@ -132,18 +122,12 @@ namespace Pos.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("MenuItemId");
 
-                    b.HasIndex("OrderId", "MenuItemId")
-                        .IsUnique();
+                    b.HasIndex("OrderId");
 
-                    b.ToTable("order_items", null, t =>
-                        {
-                            t.HasCheckConstraint("ck_order_items_quantity_positive", "quantity > 0");
-
-                            t.HasCheckConstraint("ck_order_items_unit_price_non_negative", "unit_price >= 0");
-                        });
+                    b.ToTable("order_lines", (string)null);
                 });
 
-            modelBuilder.Entity("Pos.Domain.Orders.OrderItem", b =>
+            modelBuilder.Entity("Pos.Domain.Orders.OrderLine", b =>
                 {
                     b.HasOne("Pos.Domain.MenuItems.MenuItem", null)
                         .WithMany()
@@ -152,7 +136,7 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.HasOne("Pos.Domain.Orders.Order", null)
-                        .WithMany("Items")
+                        .WithMany("Lines")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -160,7 +144,7 @@ namespace Pos.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Pos.Domain.Orders.Order", b =>
                 {
-                    b.Navigation("Items");
+                    b.Navigation("Lines");
                 });
 #pragma warning restore 612, 618
         }

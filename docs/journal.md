@@ -127,3 +127,55 @@ cùng order" và hỏi kế hoạch.
   khi 409, có lưu tổng trên order không.
 - Agent đọc bản **trước** khi sửa rule tip, nhưng vẫn tự nhận ra mâu thuẫn và đưa vào câu hỏi.
 So với Ngày 3–4: các lỗi kiến trúc, tiền và concurrency đều được xử lý **ngay trong kế hoạch**. Đo thật ở Ngày 6.
+
+### Ngày 6: làm lại Order với `CLAUDE.md` (2026-10-26)
+**Cách làm:** nhánh `day6-order-with-claude-md`, đưa `src/`, `tests/`, `web/src` về scaffold `0186bc8` (commit `d455947`).
+Hai session mới, mỗi session chỉ nhận **nguyên văn** prompt Ngày 3 rồi Ngày 4, không nhắc `CLAUDE.md`.
+Biến thí nghiệm thay đổi so với Ngày 3–4:
+- `ConcurrentAddItemTests` bị cất đi làm verifier ẩn. `CLAUDE.md` bỏ dòng "Known red" và thay "see `ConcurrentAddItemTests`"
+  bằng mô tả một dòng của cùng phép kiểm tra (N request song song: chỉ 200/409, số lượng lưu = số 200).
+- `docs/journal.md` bị gỡ khỏi nhánh trong lúc agent làm: nó chứa bảng lỗi, tức là đáp án.
+
+**Kết quả:** build 0 warning; A: 47 test, B: tổng 86 test .NET + 12 spec web, tất cả xanh. Verifier ẩn (chỉ sửa route,
+tên bảng `order_lines`, tạo món qua API; invariant giữ nguyên): **2/2 xanh, 3/3 lần chạy** (Ngày 3: đỏ ổn định).
+Kiểm tra trong trình duyệt: tiền `15.40` ở cả `GET /orders/{id}` và list, UI `$15.40`, tìm "pho" lọc đúng, không lỗi console.
+
+**Đối chiếu lỗi cũ:**
+| Lỗi cũ | Ngày 6 |
+|---|---|
+| N3 #1 mất số lượng khi song song | Sửa. Agent tự thấy chỗ khó: thêm dòng không đụng hàng `orders` nên `xmin` không đổi → `SaveChanges` đánh dấu order Modified khi dòng đổi. Agent còn tắt cơ chế đó để chứng minh test của nó bắt được lỗi (21 mong đợi, 4 lưu). |
+| N3 #2 500 khi thêm món mới song song | Sửa: không còn unique index; unique/FK violation → 409. |
+| N3 #3 tự đặt rule gộp dòng | Theo rule trong `CLAUDE.md` (cùng món + giá + ghi chú → tăng số lượng). |
+| N3 #4–5, N4 #4 Service, validate bằng `if`, repo trả DTO | Sửa: mỗi use case một thư mục Command/Query + Handler + Validator; repo trả entity, handler chiếu DTO. |
+| N3 #6 mật khẩu trong repo | Sửa: user-secrets / `ConnectionStrings__Pos`; mỗi lần test tạo DB `pos_test_<guid>` riêng. |
+| N3 #7, #12 làm tròn, Money | Sửa: `Money` VO (bắt buộc đủ cent), một `Order.CalculateTotals()`, ghi rõ chỗ thêm discount → tip. |
+| N3 #8 tự thêm MenuItem | **Một phần**: vẫn thêm (tối thiểu: tạo + lấy), nhưng nêu ra làm câu hỏi mở thay vì im lặng; không seed. |
+| N3 #9, N4 #9 tự đặt hằng số | Phần lớn sửa: không giới hạn số lượng/độ dài; giới hạn giá lấy từ `numeric(12,2)`. Session B **dừng lại hỏi** status, cách tìm, thứ tự sắp xếp. Còn sót: `MaxPageSize = 100` (trả 400, không cắt im lặng). |
+| N3 #10 migrate khi khởi động | Còn, đúng như `CLAUDE.md` mô tả (chỉ Development). |
+| N3 #11 `WeatherForecast` | Sửa: đã xóa. |
+| N4 #1 tổng tính hai nơi | Sửa: list tải order + dòng của trang hiện tại rồi gọi Domain; có test list total = GET total. |
+| N4 #2 `15.4000` vs `15.40` | Sửa: `MoneyJsonConverter` luôn 2 chữ số; test đọc raw JSON. |
+| N4 #3 frontend không có tiền tệ | Sửa: `currency: 'USD'`, frontend không tính tiền. |
+| N4 #5 chỉ có `limit` | Sửa: `page`/`pageSize`/`totalCount`, UI có Previous/Next và "Showing 1–7 of 7". |
+| N4 #6 bảng nháy khi tải | Sửa: giữ dữ liệu cũ, mờ bảng + chỉ báo nhỏ. |
+| N4 #7 URL môi trường trong UI | Sửa. |
+| N4 #8 `ILIKE` quét toàn bảng | Còn (thấp, chấp nhận ở quy mô này). |
+| N4 #10 cách deploy / CORS | Còn (không có trong `CLAUDE.md`). |
+
+**Đếm:** Ngày 3–4 có 22 lỗi. Ngày 6: 16 sửa hẳn, 3 sửa một phần (N3 #8, N3 #9, N4 #9), 3 còn nhưng mức thấp hoặc cố ý (N3 #10,
+N4 #8, N4 #10). Lỗi mới: 1 nhỏ (`MaxPageSize = 100` tự đặt). Không còn lỗi mức Cao.
+
+**Câu hỏi agent nêu thay vì tự quyết** (đúng hành vi mong muốn, xem dưới):
+- A: cơ sở tính tip/surcharge (chưa có rounding nên chưa có test x.xx5), phạm vi MenuItem, vòng đời order, giới hạn
+  số lượng/độ dài, chuẩn hóa ghi chú, món không tồn tại trả 404 hay 422.
+- B (dừng giữa chừng, tôi trả lời): status = Open | Paid | Cancelled (tạo mới là Open, chuyển trạng thái ngoài phạm vi);
+  tìm theo tên món chứa chuỗi + số order tuần tự (`#12`); sắp xếp mới nhất trước (thêm `CreatedAt`).
+
+**Đầu vào cho Ngày 7 (rút gọn `CLAUDE.md`):**
+- Có tác dụng rõ (hành vi đổi hẳn so với Ngày 3–4): Command/Handler/Validator, Money + một chỗ tính tổng, 2 chữ số trong
+  API, `xmin` + 409 + test song song, phân trang + `totalCount`, không tự đặt business rule, giữ dữ liệu cũ khi reload,
+  không commit mật khẩu, xóa template.
+- Rule "không tự thêm phạm vi" chưa đủ mạnh với entity bắt buộc phải có (MenuItem): agent thêm rồi hỏi sau. Cân nhắc nói
+  rõ "nếu cần entity mới, dừng lại hỏi trước".
+- Rule "không tự đặt giới hạn" vẫn sót ở page size: thêm ví dụ `pageSize` tối đa vào dòng đó.
+- Không đo được dòng nào thừa vì không có lần chạy thiếu từng dòng; Ngày 7 chỉ bỏ dòng mà Ngày 4 agent đã tự làm đúng.

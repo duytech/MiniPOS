@@ -1,149 +1,148 @@
 using System.Net;
 using System.Net.Http.Json;
-using Microsoft.AspNetCore.Mvc;
-using Npgsql;
-using Pos.Application.MenuItems;
-using Pos.Application.Orders;
 
 namespace Pos.Api.IntegrationTests;
 
 public class OrdersApiTests(PosApiFactory factory) : IClassFixture<PosApiFactory>
 {
-    // Seeded by the InitialCreate migration.
-    private static readonly Guid Espresso = Guid.Parse("11111111-1111-1111-1111-000000000001");      // 2.50
-    private static readonly Guid ClubSandwich = Guid.Parse("11111111-1111-1111-1111-000000000004");  // 7.90
-
     private readonly HttpClient _client = factory.CreateClient();
 
-    private async Task<OrderDto> CreateOrderAsync()
+    [Fact]
+    public async Task Create_order_returns_201_with_location_and_zero_totals()
     {
         var response = await _client.PostAsync("/api/orders", null);
+
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var order = await response.Content.ReadFromJsonAsync<OrderDto>();
-        Assert.NotNull(order);
-        Assert.EndsWith($"/api/orders/{order.Id}", response.Headers.Location!.ToString(), StringComparison.OrdinalIgnoreCase);
-        return order;
+        var order = await response.ReadJsonAsync();
+        Assert.EndsWith($"/api/orders/{order.GetProperty("id").GetGuid()}", response.Headers.Location!.ToString());
+        Assert.Equal(0, order.GetProperty("lines").GetArrayLength());
+        Assert.Equal("0.00", order.Money("subtotal"));
+        Assert.Equal("0.00", order.Money("total"));
     }
 
-    private Task<HttpResponseMessage> AddItemAsync(Guid orderId, Guid menuItemId, int quantity) =>
-        _client.PostAsJsonAsync($"/api/orders/{orderId}/items", new AddOrderItemRequest(menuItemId, quantity));
-
     [Fact]
-    public async Task Create_order_returns_empty_open_order()
+    public async Task Added_items_are_persisted_and_totals_have_exactly_two_decimals()
     {
-        var order = await CreateOrderAsync();
+        var pho = await _client.CreateMenuItemAsync("Pho", 7.7m);
+        var tea = await _client.CreateMenuItemAsync("Iced tea", 1.15m);
+        var orderId = await _client.CreateOrderAsync();
 
-        Assert.Equal("Open", order.Status);
-        Assert.Empty(order.Items);
-        Assert.Equal(0m, order.Total);
+        Assert.Equal(HttpStatusCode.OK, (await _client.AddItemAsync(orderId, pho, 2)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await _client.AddItemAsync(orderId, tea, 3)).StatusCode);
+
+        var order = await _client.GetOrderAsync(orderId);
+        var lines = order.GetProperty("lines").EnumerateArray().ToList();
+        Assert.Equal(2, lines.Count);
+        Assert.Equal("7.70", lines[0].Money("unitPrice"));
+        Assert.Equal("15.40", lines[0].Money("lineTotal"));
+        Assert.Equal("1.15", lines[1].Money("unitPrice"));
+        Assert.Equal("3.45", lines[1].Money("lineTotal"));
+        Assert.Equal("18.85", order.Money("subtotal"));
+        Assert.Equal("18.85", order.Money("total"));
     }
 
     [Fact]
-    public async Task Add_items_and_calculate_total_is_persisted_in_postgres()
+    public async Task Add_item_response_matches_get_order()
     {
-        var order = await CreateOrderAsync();
+        var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);
+        var orderId = await _client.CreateOrderAsync();
 
-        (await AddItemAsync(order.Id, Espresso, 2)).EnsureSuccessStatusCode();
-        (await AddItemAsync(order.Id, ClubSandwich, 1)).EnsureSuccessStatusCode();
-        var response = await AddItemAsync(order.Id, Espresso, 1); // merges into the espresso line
-        response.EnsureSuccessStatusCode();
-        var updated = await response.Content.ReadFromJsonAsync<OrderDto>();
+        var added = await (await _client.AddItemAsync(orderId, pho, 2)).ReadJsonAsync();
+        var fetched = await _client.GetOrderAsync(orderId);
 
-        Assert.NotNull(updated);
-        Assert.Equal(2, updated.Items.Count);
-        Assert.Equal(3, updated.Items.Single(i => i.MenuItemId == Espresso).Quantity);
-        Assert.Equal(15.40m, updated.Total); // 3 x 2.50 + 1 x 7.90
-
-        // Re-read through a fresh request (new DbContext) to prove it was persisted.
-        var fetched = await _client.GetFromJsonAsync<OrderDto>($"/api/orders/{order.Id}");
-        Assert.NotNull(fetched);
-        Assert.Equal(15.40m, fetched.Total);
-        Assert.Equal(2, fetched.Items.Count);
-
-        var total = await _client.GetFromJsonAsync<OrderTotalDto>($"/api/orders/{order.Id}/total");
-        Assert.NotNull(total);
-        Assert.Equal(order.Id, total.OrderId);
-        Assert.Equal(4, total.ItemCount);
-        Assert.Equal(15.40m, total.Total);
-
-        // And verify directly in the database.
-        await using var conn = new NpgsqlConnection(factory.TestConnectionString);
-        await conn.OpenAsync();
-        await using var cmd = new NpgsqlCommand(
-            "SELECT COALESCE(SUM(unit_price * quantity), 0) FROM order_items WHERE order_id = @id", conn);
-        cmd.Parameters.AddWithValue("id", order.Id);
-        Assert.Equal(15.40m, (decimal)(await cmd.ExecuteScalarAsync())!);
+        Assert.Equal(fetched.GetRawText(), added.GetRawText());
     }
 
     [Fact]
-    public async Task Menu_item_created_via_api_can_be_added_to_an_order()
+    public async Task Adding_an_identical_line_increases_its_quantity()
     {
-        var create = await _client.PostAsJsonAsync("/api/menu-items", new CreateMenuItemRequest("Matcha Latte", 4.25m));
-        Assert.Equal(HttpStatusCode.Created, create.StatusCode);
-        var matcha = await create.Content.ReadFromJsonAsync<MenuItemDto>();
-        Assert.NotNull(matcha);
+        var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);
+        var orderId = await _client.CreateOrderAsync();
 
-        var order = await CreateOrderAsync();
-        var response = await AddItemAsync(order.Id, matcha.Id, 2);
-        response.EnsureSuccessStatusCode();
-        var updated = await response.Content.ReadFromJsonAsync<OrderDto>();
+        await _client.AddItemAsync(orderId, pho, 1, "no onions");
+        await _client.AddItemAsync(orderId, pho, 2, "no onions");
+        await _client.AddItemAsync(orderId, pho, 1);
 
-        var line = Assert.Single(updated!.Items);
-        Assert.Equal("Matcha Latte", line.Name);
-        Assert.Equal(4.25m, line.UnitPrice);
-        Assert.Equal(8.50m, updated.Total);
+        var lines = (await _client.GetOrderAsync(orderId)).GetProperty("lines").EnumerateArray().ToList();
+        Assert.Equal(2, lines.Count);
+        Assert.Equal(3, lines.Single(l => l.GetProperty("notes").GetString() == "no onions").GetProperty("quantity").GetInt32());
     }
 
     [Fact]
-    public async Task Get_unknown_order_returns_404_problem()
+    public async Task Unknown_order_is_404_problem_details()
     {
         var response = await _client.GetAsync($"/api/orders/{Guid.NewGuid()}");
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
-        Assert.Equal(404, problem!.Status);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
     }
 
     [Fact]
-    public async Task Total_of_unknown_order_returns_404()
+    public async Task Adding_to_an_unknown_order_is_404()
     {
-        var response = await _client.GetAsync($"/api/orders/{Guid.NewGuid()}/total");
+        var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);
+
+        var response = await _client.AddItemAsync(Guid.NewGuid(), pho, 1);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task Add_unknown_menu_item_returns_404()
+    public async Task Adding_an_unknown_menu_item_is_404()
     {
-        var order = await CreateOrderAsync();
+        var orderId = await _client.CreateOrderAsync();
 
-        var response = await AddItemAsync(order.Id, Guid.NewGuid(), 1);
+        var response = await _client.AddItemAsync(orderId, Guid.NewGuid(), 1);
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        var problem = await response.Content.ReadFromJsonAsync<ProblemDetails>();
-        Assert.Contains("Menu item", problem!.Detail);
     }
 
     [Theory]
     [InlineData(0)]
-    [InlineData(-3)]
-    public async Task Add_item_with_invalid_quantity_returns_422_and_nothing_is_saved(int quantity)
+    [InlineData(-2)]
+    public async Task Non_positive_quantity_is_400(int quantity)
     {
-        var order = await CreateOrderAsync();
+        var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);
+        var orderId = await _client.CreateOrderAsync();
 
-        var response = await AddItemAsync(order.Id, Espresso, quantity);
+        var response = await _client.AddItemAsync(orderId, pho, quantity);
 
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
-        var fetched = await _client.GetFromJsonAsync<OrderDto>($"/api/orders/{order.Id}");
-        Assert.Empty(fetched!.Items);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        Assert.Equal(0, (await _client.GetOrderAsync(orderId)).GetProperty("lines").GetArrayLength());
     }
 
     [Fact]
-    public async Task List_menu_items_includes_seeded_items()
+    public async Task Quantity_overflow_is_422()
     {
-        var items = await _client.GetFromJsonAsync<List<MenuItemDto>>("/api/menu-items");
+        var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);
+        var orderId = await _client.CreateOrderAsync();
+        await _client.AddItemAsync(orderId, pho, int.MaxValue);
 
-        Assert.NotNull(items);
-        Assert.Contains(items, m => m.Id == Espresso && m.Price == 2.50m);
+        var response = await _client.AddItemAsync(orderId, pho, 1);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("""{ "name": "Tea", "price": 1.005 }""")]
+    [InlineData("""{ "name": "Tea", "price": -1.00 }""")]
+    [InlineData("""{ "name": "Tea" }""")]
+    [InlineData("""{ "name": "", "price": 1.00 }""")]
+    [InlineData("""{ "name": "Tea", "price": "1.00" }""")]
+    public async Task Invalid_menu_item_is_400(string body)
+    {
+        var response = await _client.PostAsync(
+            "/api/menu-items", new StringContent(body, System.Text.Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Menu_item_price_is_returned_with_two_decimals()
+    {
+        var response = await _client.PostAsJsonAsync("/api/menu-items", new { name = "Tea", price = 2.5m });
+
+        Assert.Equal("2.50", (await response.ReadJsonAsync()).Money("price"));
     }
 }

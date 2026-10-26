@@ -1,59 +1,48 @@
 using Microsoft.EntityFrameworkCore;
 using Pos.Application.Orders;
+using Pos.Application.Orders.ListOrders;
 using Pos.Domain.Orders;
 
 namespace Pos.Infrastructure.Persistence.Repositories;
 
-public class OrderRepository(PosDbContext db) : IOrderRepository
+internal sealed class OrderRepository(PosDbContext db) : IOrderRepository
 {
     private const string LikeEscape = "\\";
 
-    public Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default) =>
-        db.Orders.Include(o => o.Items).FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+    public Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
+        db.Orders.Include(o => o.Lines).FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
-    public async Task<IReadOnlyList<OrderSummaryDto>> ListAsync(OrderListFilter filter, CancellationToken cancellationToken = default)
+    public async Task<(IReadOnlyList<Order> Orders, int TotalCount)> ListAsync(
+        OrderStatus? status, OrderSearch? search, int page, int pageSize, CancellationToken cancellationToken)
     {
-        ArgumentNullException.ThrowIfNull(filter);
-
         var query = db.Orders.AsNoTracking();
-
-        if (filter.Status is { } status)
-            query = query.Where(o => o.Status == status);
-
-        if (filter.Search is { } search)
+        if (status is not null)
         {
-            // Case-insensitive "contains" on the order id (as text) or any item name.
-            // LIKE wildcards in user input are escaped so they match literally.
-            var pattern = $"%{EscapeLike(search)}%";
-            query = query.Where(o =>
-                EF.Functions.ILike(o.Id.ToString(), pattern, LikeEscape) ||
-                o.Items.Any(i => EF.Functions.ILike(i.Name, pattern, LikeEscape)));
+            query = query.Where(o => o.Status == status);
         }
 
-        var rows = await query
-            .OrderByDescending(o => o.CreatedAtUtc)
-            .ThenBy(o => o.Id)
-            .Take(filter.Limit)
-            .Select(o => new
-            {
-                o.Id,
-                o.CreatedAtUtc,
-                o.Status,
-                ItemCount = o.Items.Sum(i => (int?)i.Quantity) ?? 0,
-                Total = o.Items.Sum(i => (decimal?)(i.UnitPrice * i.Quantity)) ?? 0m,
-            })
-            .ToListAsync(cancellationToken);
+        if (search is not null)
+        {
+            var pattern = $"%{EscapeLike(search.Text)}%";
+            query = search.Number is { } number
+                ? query.Where(o => o.Number == number
+                    || o.Lines.Any(l => EF.Functions.ILike(l.Name, pattern, LikeEscape)))
+                : query.Where(o => o.Lines.Any(l => EF.Functions.ILike(l.Name, pattern, LikeEscape)));
+        }
 
-        return rows
-            .Select(r => new OrderSummaryDto(
-                r.Id, DateTime.SpecifyKind(r.CreatedAtUtc, DateTimeKind.Utc), r.Status.ToString(), r.ItemCount, r.Total))
-            .ToList();
+        var totalCount = await query.CountAsync(cancellationToken);
+        var orders = await query
+            .OrderByDescending(o => o.CreatedAt).ThenByDescending(o => o.Number)
+            .Skip((page - 1) * pageSize).Take(pageSize)
+            .Include(o => o.Lines)
+            .AsSplitQuery()
+            .ToListAsync(cancellationToken);
+        return (orders, totalCount);
     }
 
     public void Add(Order order) => db.Orders.Add(order);
 
-    private static string EscapeLike(string value) =>
-        value.Replace(LikeEscape, LikeEscape + LikeEscape)
-             .Replace("%", LikeEscape + "%")
-             .Replace("_", LikeEscape + "_");
+    /// <summary>Makes '%', '_' and the escape character in user input match themselves in an ILIKE pattern.</summary>
+    private static string EscapeLike(string text) =>
+        text.Replace(LikeEscape, LikeEscape + LikeEscape).Replace("%", LikeEscape + "%").Replace("_", LikeEscape + "_");
 }
