@@ -34,7 +34,7 @@ Kết quả: một `CLAUDE.md` ngắn, cụ thể, đã kiểm chứng bằng c�
 
 Kết quả: agent tự sửa đến khi mọi check pass; ít nhất một rule review đã được biến thành check tự động. Đây là kỹ năng JD gọi là cốt lõi.
 
-- [ ] Ngày 1: Viết xUnit test cho thuế, tip, giảm giá. Mỗi test so sánh đến từng cent.
+- [x] Ngày 1: Viết xUnit test cho thuế, tip, giảm giá. Mỗi test so sánh đến từng cent.
 - [ ] Ngày 2: Thêm test cho surcharge/dual pricing và Split bill (tổng các phần phải bằng đúng tổng hóa đơn).
 - [ ] Ngày 3: Thêm architecture test (NetArchTest): Domain không tham chiếu Infrastructure; không dùng `double`/`float` cho tiền.
 - [ ] Ngày 4: Bật `TreatWarningsAsErrors` + Roslyn analyzers. Angular: `strict`, ESLint, unit test (Jest hoặc Vitest).

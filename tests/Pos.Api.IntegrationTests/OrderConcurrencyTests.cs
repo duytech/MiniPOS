@@ -27,7 +27,7 @@ public class OrderConcurrencyTests(PosApiFactory factory) : IClassFixture<PosApi
         var line = Assert.Single(order.GetProperty("lines").EnumerateArray());
         Assert.Equal(1 + succeeded, line.GetProperty("quantity").GetInt32());
         Assert.Equal((7.70m * (1 + succeeded)).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
-            order.Money("total"));
+            order.Money("subtotal"));
     }
 
     [Fact]

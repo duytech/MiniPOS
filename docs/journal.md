@@ -228,3 +228,45 @@ build + test sau mỗi lần sửa file.
 
 **Câu hỏi nghiệp vụ còn mở:** cơ sở tính tip/surcharge; phạm vi MenuItem; vòng đời order (chuyển trạng thái, xóa món);
 giới hạn số lượng; món không tồn tại trả 404 hay 422; page size tối đa (hiện code đang để 100).
+
+## Tuần 2
+
+### Chuẩn bị: cài Angular skills (2026-10-26)
+- `angular-developer` + `angular-new-app` từ [angular/skills](https://github.com/angular/skills) @ `3c880aa`, copy
+  nguyên văn vào `.claude/skills/` (clone + đọc trước, không chạy `npx skills add`). Chỉ có markdown, không có script.
+- Lệch với repo, cần để ý khi agent dùng skill: skill nói test bằng **Vitest**, repo đang dùng Karma/Jasmine; skill khuyên
+  Signal Forms (v22+), repo là Angular 20; skill bảo dùng `ng generate` và chạy `ng build` sau khi sửa (khớp
+  `npm run build` trong Definition of done). `CLAUDE.md` vẫn là nguồn chính khi hai bên khác nhau.
+
+### Ngày 1: discount → tax → tip, test đến từng cent (2026-10-26)
+**Quyết định nghiệp vụ** (hỏi trước khi làm, đúng rule `CLAUDE.md`):
+- Discount trên cả order: % của subtotal **hoặc** số tiền cố định; vượt subtotal → 422 (`DomainException`), không tự kẹp.
+- Tax = rate × (subtotal − discount). Rate cấu hình `Pricing:TaxRatePercent` = 8.875, **chụp vào order lúc tạo**.
+- Tip = % × (subtotal − discount), tức là trước thuế.
+- Phạm vi: Domain + unit test. Chưa có endpoint đặt discount/tip.
+
+**Đã làm:** `Percentage` VO (tối đa 4 chữ số thập phân = `numeric(7,4)`), `OrderDiscount`, `Order.ApplyDiscount/SetTip`,
+`CalculateTotals()` trả `Subtotal/Discount/Tax/Tip/Total`, biến `taxBase`/`tipBase` đặt tên rõ; API trả thêm
+`discount`, `tax`, `tip`. Migration `OrderPricing`. 34 domain + 35 application + 39 integration test, 0 warning.
+
+**Test chọn số để bắt lỗi thật** (mọi midpoint có chữ số cent chẵn, nên `ToEven` làm tròn ngược chiều):
+| Test | Số | Bắt lỗi gì |
+|---|---|---|
+| Discount 15% của 11.50 | 1.725 → 1.73 | Sai `MidpointRounding` |
+| Tax 8.875% của 12.00 | 1.065 → 1.07 | Sai `MidpointRounding` |
+| Tip 15% của 12.30 | 1.845 → 1.85 | Sai `MidpointRounding` |
+| Tax/tip sau discount 2.00 trên 12.00 | 0.89 / 1.80 | Tính trên subtotal thay vì sau discount |
+| Tip 18% của 12.00 với tax 0% và 8.875% | 2.16 cả hai | Tip tính sau thuế |
+| 5.00, discount 15%, tax 8.875%, tip 18% | 5.40 (làm tròn cuối chỉ ra 5.39) | Làm tròn một lần ở cuối |
+
+**Kiểm chứng verifier:** đổi tạm `AwayFromZero` → `ToEven`: **5 test đỏ**; trả lại thì xanh. Test cũ
+`OrderConcurrencyTests` tự tính `7.70 × n` rồi so với `total`: vỡ khi có thuế. Đó là một chỗ test tái tính tổng (trái rule
+"chỉ Domain tính tổng"); đã đổi sang so `subtotal`.
+Chạy API thật: order 12.00 → `"tax":1.07,"total":13.07`, list total bằng GET.
+
+**Giả định / câu hỏi còn mở:**
+- Order tạo trước migration có `tax_rate = 0` (DB dev, không có dữ liệu thật). Nếu có dữ liệu thật phải hỏi cách xử lý.
+- Discount cố định chỉ kiểm tra ≤ subtotal lúc áp dụng; hiện chưa xóa được món nên subtotal chỉ tăng. Khi thêm xóa món
+  phải hỏi: discount vượt subtotal thì chặn, kẹp hay bỏ discount?
+- Surcharge (Ngày 2) có bị đánh thuế không, có nằm trong tip base không: chưa hỏi.
+- Giới hạn tip % / tax rate (vd tip 300%?) và quyền ai được giảm giá: chưa có, sẽ hỏi khi làm endpoint.

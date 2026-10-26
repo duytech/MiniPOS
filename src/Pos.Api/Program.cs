@@ -3,12 +3,15 @@ using Microsoft.EntityFrameworkCore;
 using Pos.Api.Errors;
 using Pos.Api.Json;
 using Pos.Application;
+using Pos.Application.Orders;
 using Pos.Infrastructure;
 using Pos.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddApplication();
+builder.Services.AddSingleton(builder.Configuration.GetSection(PricingOptions.SectionName).Get<PricingOptions>()
+    ?? throw new InvalidOperationException($"The '{PricingOptions.SectionName}' configuration section is missing."));
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddControllers()

@@ -28,7 +28,7 @@ public class OrdersListApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
 
         var listed = Assert.Single(list.GetProperty("items").EnumerateArray());
         var order = await _client.GetOrderAsync(orderId);
-        Assert.Equal("18.85", listed.Money("total"));
+        Assert.Equal("20.52", listed.Money("total")); // 18.85 + 8.875% tax (1.67)
         Assert.Equal(order.Money("total"), listed.Money("total"));
         Assert.Equal(order.GetProperty("number").GetInt32(), listed.GetProperty("number").GetInt32());
         Assert.Equal("Open", listed.GetProperty("status").GetString());

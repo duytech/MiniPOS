@@ -18,7 +18,7 @@ public class AddOrderItemHandlerTests
     [Fact]
     public async Task Adds_the_item_at_the_menu_price_and_returns_domain_totals()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow);
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero);
         _orders.Add(order);
         var menuItem = new MenuItem("Pho", Money.Usd(7.70m));
         _menuItems.Add(menuItem);
@@ -49,7 +49,7 @@ public class AddOrderItemHandlerTests
     [Fact]
     public async Task Unknown_menu_item_is_not_found()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow);
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero);
         _orders.Add(order);
 
         await Assert.ThrowsAsync<NotFoundException>(() => _handler.HandleAsync(
