@@ -8,6 +8,12 @@ public class Order
     private readonly List<OrderLine> _lines = [];
 
     public Guid Id { get; private set; }
+
+    /// <summary>Sequential number staff use to refer to the order; assigned by the database when the order is saved.</summary>
+    public int Number { get; private set; }
+
+    public OrderStatus Status { get; private set; }
+    public DateTimeOffset CreatedAt { get; private set; }
     public Currency Currency { get; private set; }
     public IReadOnlyList<OrderLine> Lines => _lines;
 
@@ -15,7 +21,13 @@ public class Order
     {
     }
 
-    public static Order Create() => new() { Id = Guid.NewGuid(), Currency = Currency.USD };
+    public static Order Create(DateTimeOffset createdAt) => new()
+    {
+        Id = Guid.NewGuid(),
+        Status = OrderStatus.Open,
+        CreatedAt = createdAt.ToUniversalTime(),
+        Currency = Currency.USD,
+    };
 
     /// <summary>
     /// Adds the menu item at its current price. A line with the same menu item, snapshotted unit price and notes

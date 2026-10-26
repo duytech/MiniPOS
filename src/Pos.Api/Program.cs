@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Microsoft.EntityFrameworkCore;
 using Pos.Api.Errors;
 using Pos.Api.Json;
@@ -11,7 +12,11 @@ builder.Services.AddApplication();
 builder.Services.AddInfrastructure(builder.Configuration);
 
 builder.Services.AddControllers()
-    .AddJsonOptions(o => o.JsonSerializerOptions.Converters.Add(new MoneyJsonConverter()));
+    .AddJsonOptions(o =>
+    {
+        o.JsonSerializerOptions.Converters.Add(new MoneyJsonConverter());
+        o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddOpenApi();

@@ -17,6 +17,10 @@ Content-Type: application/json
 
 { "menuItemId": "{{menuItem.response.body.$.id}}", "quantity": 2, "notes": "no onions" }
 
+### List open orders containing "pho" (or order number), newest first
+GET {{Pos.Api_HostAddress}}/api/orders?search=pho&status=Open&page=1&pageSize=20
+Accept: application/json
+
 ### Get the order with its totals
 GET {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}
 Accept: application/json

@@ -2,7 +2,9 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Pos.Application.MenuItems.CreateMenuItem;
 using Pos.Application.Orders.AddOrderItem;
+using Pos.Application.Orders.ListOrders;
 using Pos.Domain.Common;
+using Pos.Domain.Orders;
 
 namespace Pos.Application.Tests;
 
@@ -52,6 +54,28 @@ public class ValidatorTests
         var result = Validator<CreateMenuItemCommand>().Validate(new CreateMenuItemCommand(name, Money.Usd(1m)));
 
         Assert.False(result.IsValid);
+    }
+
+    [Theory]
+    [InlineData(1, 1, true)]
+    [InlineData(1, 100, true)]
+    [InlineData(0, 20, false)]
+    [InlineData(1, 0, false)]
+    [InlineData(1, 101, false)]
+    [InlineData(int.MaxValue, 100, false)]
+    public void List_orders_paging_must_be_in_range(int page, int pageSize, bool valid)
+    {
+        var result = Validator<ListOrdersQuery>().Validate(new ListOrdersQuery(null, null, page, pageSize));
+
+        Assert.Equal(valid, result.IsValid);
+    }
+
+    [Fact]
+    public void List_orders_status_must_be_a_known_status()
+    {
+        var result = Validator<ListOrdersQuery>().Validate(new ListOrdersQuery(null, (OrderStatus)42, 1, 20));
+
+        Assert.Equal(["Status"], result.Errors.Select(e => e.PropertyName));
     }
 
     private IValidator<T> Validator<T>() => _services.GetRequiredService<IValidator<T>>();

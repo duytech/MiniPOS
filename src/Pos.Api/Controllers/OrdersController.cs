@@ -4,6 +4,8 @@ using Pos.Application.Orders;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Application.Orders.CreateOrder;
 using Pos.Application.Orders.GetOrder;
+using Pos.Application.Orders.ListOrders;
+using Pos.Domain.Orders;
 
 namespace Pos.Api.Controllers;
 
@@ -20,6 +22,18 @@ public sealed class OrdersController : ControllerBase
         var order = await handler.HandleAsync(new CreateOrderCommand(), cancellationToken);
         return CreatedAtAction(nameof(Get), new { id = order.Id }, order);
     }
+
+    [HttpGet]
+    [ProducesResponseType<PagedResult<OrderSummaryDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    public Task<PagedResult<OrderSummaryDto>> List(
+        [FromServices] IQueryHandler<ListOrdersQuery, PagedResult<OrderSummaryDto>> handler,
+        CancellationToken cancellationToken,
+        [FromQuery] string? search = null,
+        [FromQuery] OrderStatus? status = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20) =>
+        handler.HandleAsync(new ListOrdersQuery(search, status, page, pageSize), cancellationToken);
 
     [HttpGet("{id:guid}")]
     [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]

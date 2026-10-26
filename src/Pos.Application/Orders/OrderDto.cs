@@ -3,12 +3,26 @@ using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders;
 
-public sealed record OrderDto(Guid Id, IReadOnlyList<OrderLineDto> Lines, Money Subtotal, Money Total)
+public sealed record OrderDto(
+    Guid Id,
+    int Number,
+    OrderStatus Status,
+    DateTimeOffset CreatedAt,
+    IReadOnlyList<OrderLineDto> Lines,
+    Money Subtotal,
+    Money Total)
 {
     public static OrderDto From(Order order)
     {
         var totals = order.CalculateTotals();
-        return new OrderDto(order.Id, order.Lines.Select(OrderLineDto.From).ToList(), totals.Subtotal, totals.Total);
+        return new OrderDto(
+            order.Id,
+            order.Number,
+            order.Status,
+            order.CreatedAt,
+            order.Lines.Select(OrderLineDto.From).ToList(),
+            totals.Subtotal,
+            totals.Total);
     }
 }
 

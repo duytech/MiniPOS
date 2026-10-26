@@ -59,6 +59,27 @@ public class OrderConcurrencyTests(PosApiFactory factory) : IClassFixture<PosApi
         Assert.Equal(succeeded, lines);
     }
 
+    [Fact]
+    public async Task Parallel_creates_get_distinct_order_numbers()
+    {
+        var numbers = new System.Collections.Concurrent.ConcurrentBag<int>();
+
+        var statuses = await FireInParallel(async _ =>
+        {
+            var response = await _client.PostAsync("/api/orders", null);
+            if (response.StatusCode == HttpStatusCode.Created)
+            {
+                numbers.Add((await response.ReadJsonAsync()).GetProperty("number").GetInt32());
+            }
+
+            return response;
+        });
+
+        Assert.All(statuses, s => Assert.Equal(HttpStatusCode.Created, s));
+        Assert.Equal(Requests, numbers.Distinct().Count());
+        Assert.All(numbers, n => Assert.True(n > 0));
+    }
+
     private static async Task<HttpStatusCode[]> FireInParallel(Func<int, Task<HttpResponseMessage>> request)
     {
         using var start = new SemaphoreSlim(0);
