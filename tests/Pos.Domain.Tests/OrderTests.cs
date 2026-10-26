@@ -14,7 +14,7 @@ public class OrderTests
     {
         var createdAt = new DateTimeOffset(2026, 10, 26, 14, 30, 0, TimeSpan.FromHours(7));
 
-        var order = Order.Create(createdAt, Percentage.Zero);
+        var order = Order.Create(createdAt, Percentage.Zero, Percentage.Zero);
 
         Assert.Equal(OrderStatus.Open, order.Status);
         Assert.Equal(createdAt, order.CreatedAt);
@@ -24,7 +24,7 @@ public class OrderTests
     [Fact]
     public void New_order_has_zero_totals()
     {
-        var totals = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero).CalculateTotals();
+        var totals = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero).CalculateTotals();
 
         Assert.Equal(Money.Usd(0.00m), totals.Subtotal);
         Assert.Equal(Money.Usd(0.00m), totals.Total);
@@ -33,7 +33,7 @@ public class OrderTests
     [Fact]
     public void Line_total_is_unit_price_times_quantity()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero);
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
 
         var line = order.AddItem(Fries, 3, notes: null);
 
@@ -43,7 +43,7 @@ public class OrderTests
     [Fact]
     public void Subtotal_is_the_sum_of_line_totals_and_total_equals_subtotal()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero);
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         order.AddItem(Burger, 2, notes: null); // 25.98
         order.AddItem(Fries, 3, notes: null); // 10.05
 
@@ -56,7 +56,7 @@ public class OrderTests
     [Fact]
     public void Sums_without_floating_point_drift()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero);
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         var dime = new MenuItem("Mint", Money.Usd(0.10m));
         var twenty = new MenuItem("Gum", Money.Usd(0.20m));
         order.AddItem(dime, 1, notes: null);
@@ -68,7 +68,7 @@ public class OrderTests
     [Fact]
     public void Identical_line_increases_quantity()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero);
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
 
         order.AddItem(Burger, 1, "no onions");
         order.AddItem(Burger, 2, "no onions");
@@ -81,7 +81,7 @@ public class OrderTests
     [Fact]
     public void Notes_are_trimmed_and_blank_notes_count_as_no_notes()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero);
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
 
         order.AddItem(Burger, 1, null);
         order.AddItem(Burger, 1, "   ");
@@ -93,7 +93,7 @@ public class OrderTests
     [Fact]
     public void Different_notes_create_a_new_line()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero);
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
 
         order.AddItem(Burger, 1, "no onions");
         order.AddItem(Burger, 1, null);
@@ -104,7 +104,7 @@ public class OrderTests
     [Fact]
     public void Different_menu_item_creates_a_new_line()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero);
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
 
         order.AddItem(Burger, 1, null);
         order.AddItem(Fries, 1, null);
@@ -115,7 +115,7 @@ public class OrderTests
     [Fact]
     public void Line_quantity_overflow_is_a_domain_error()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero);
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         order.AddItem(Burger, int.MaxValue, null);
 
         Assert.Throws<DomainException>(() => order.AddItem(Burger, 1, null));

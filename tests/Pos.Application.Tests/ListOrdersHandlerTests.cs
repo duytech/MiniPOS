@@ -15,7 +15,7 @@ public class ListOrdersHandlerTests
     [Fact]
     public async Task Summary_total_is_the_domain_total_in_exact_cents()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero);
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         order.AddItem(new MenuItem("Pho", Money.Usd(7.70m)), 2, null); // 15.40
         order.AddItem(new MenuItem("Iced tea", Money.Usd(1.15m)), 3, null); // 3.45
         order.AddItem(new MenuItem("Pho", Money.Usd(7.70m)), 1, "no onions"); // 7.70

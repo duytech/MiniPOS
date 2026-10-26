@@ -270,3 +270,49 @@ Chạy API thật: order 12.00 → `"tax":1.07,"total":13.07`, list total bằng
   phải hỏi: discount vượt subtotal thì chặn, kẹp hay bỏ discount?
 - Surcharge (Ngày 2) có bị đánh thuế không, có nằm trong tip base không: chưa hỏi.
 - Giới hạn tip % / tax rate (vd tip 300%?) và quyền ai được giảm giá: chưa có, sẽ hỏi khi làm endpoint.
+
+### Ngày 2: card surcharge + split bill theo món (2026-10-26)
+**Quyết định nghiệp vụ** (hỏi trước khi làm, 2 lượt câu hỏi):
+- Card surcharge 3% (`Pricing:CardSurchargePercent`), chụp vào order lúc tạo như tax rate. Chỉ áp dụng khi
+  `PaymentMethod = Card`; mặc định `Cash`. Base = subtotal − discount.
+- Surcharge **bị tính thuế, không tính tip**: taxBase = subtotal − discount + surcharge; tipBase = subtotal − discount.
+- Split theo món: mỗi phần gồm nguyên line, mỗi line thuộc đúng một phần; thiếu, trùng, lạ hoặc phần rỗng → 422.
+- Phân bổ: discount, surcharge, tax, tip chia riêng từng khoản theo tỷ lệ subtotal của phần, làm tròn xuống cent; xu dư
+  vào phần có subtotal lớn nhất (hòa → phần đứng trước).
+- Phạm vi: Domain + unit test. Chưa có endpoint chọn phương thức thanh toán hay split.
+
+**Đã làm:** `PaymentMethod`, `Order.SetPaymentMethod`, `CardSurchargeRate`; bước 4 trong `CalculateTotals()` với
+`surchargeBase`/`taxBase`/`tipBase` đặt tên rõ; `Order.Split(...)` trả `SplitPart` và dùng một helper `Allocate`. API trả
+thêm `paymentMethod`, `surcharge`. Migration `OrderSurcharge` (order cũ: rate 0, `Cash`). 63 domain + 35 application
++ 39 integration test, 0 warning. Chạy API thật: order 12.00 → `"surcharge":0.00,"tax":1.07,"total":13.07`, list = GET.
+
+**Test chọn số để bắt lỗi thật:**
+| Test | Số | Bắt lỗi gì |
+|---|---|---|
+| Surcharge 3% của 11.50 | 0.345 → 0.35 | Sai `MidpointRounding` |
+| 12.00, discount 2.00, card | 0.30 (không phải 0.36) | Surcharge tính trên subtotal |
+| 10.00 card, tax 8.875% | 0.91 (không phải 0.89) | Quên đánh thuế surcharge |
+| 10.00 card, tip 18% | 1.80 (không phải 1.85) | Tính tip trên surcharge |
+| 5.00, 15%, card, tax, tip 18% | 5.54 (làm tròn cuối chỉ ra 5.53) | Làm tròn một lần ở cuối |
+| Split 3 × 3.33, tax 0.89 | 0.31 / 0.29 / 0.29 | Làm tròn thường thay vì xuống; sai quy tắc hòa |
+| Split 1.00 + 2.33, tax 0.30 | 0.09 / 0.21 | Xu dư dồn vào phần đầu thay vì phần lớn nhất |
+| 12 tổ hợp discount × card × tip | tổng từng khoản các phần = order | Lệch 1 cent khi chia |
+
+**Kiểm chứng verifier** (đột biến từng rule rồi trả lại):
+| Đột biến | Test đỏ |
+|---|---|
+| `AwayFromZero` → `ToEven` | 7 |
+| Allocation làm tròn thường thay vì xuống | 1 |
+| Surcharge không bị thuế | 3 |
+| Surcharge bị tính tip | 3 |
+| Xu dư vào phần đầu tiên | 1 |
+
+Bài học: test "tổng các phần = tổng order" **không** bắt được đột biến allocation, vì xu dư (kể cả âm) luôn bù đúng
+phần chênh. Bất biến tổng là cần nhưng không đủ; phải có test chốt số từng phần.
+
+**Giả định / câu hỏi còn mở:**
+- Split có bắt buộc ≥ 2 phần không? Hiện cho phép 1 phần (bằng nguyên order).
+- Split chỉ tính khi gọi, không lưu. Có cần lưu và khóa order sau khi split không?
+- Đổi phương thức thanh toán sau khi split hoặc sau khi thanh toán: chưa có vòng đời order.
+- Một phần trả thẻ, phần khác trả tiền mặt: hiện surcharge tính theo phương thức của cả order.
+- Order tạo trước migration có `card_surcharge_rate = 0`: chỉ là DB dev.

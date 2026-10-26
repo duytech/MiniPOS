@@ -15,7 +15,7 @@ public class OrderPricingTests
 
     private static Order OrderWith(decimal subtotal, Percentage taxRate)
     {
-        var order = Order.Create(DateTimeOffset.UtcNow, taxRate);
+        var order = Order.Create(DateTimeOffset.UtcNow, taxRate, Percentage.Zero);
         order.AddItem(new MenuItem("Item", Money.Usd(subtotal)), 1, notes: null);
         return order;
     }
@@ -189,7 +189,7 @@ public class OrderPricingTests
     [Fact]
     public void Tax_rate_is_snapshotted_at_creation()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow, NycTax);
+        var order = Order.Create(DateTimeOffset.UtcNow, NycTax, Percentage.Zero);
 
         Assert.Equal(NycTax, order.TaxRate);
     }
