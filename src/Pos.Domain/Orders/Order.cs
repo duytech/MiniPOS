@@ -19,6 +19,11 @@ public class Order
     /// <summary>Sales tax rate in effect when the order was created; later rate changes don't affect it.</summary>
     public Percentage TaxRate { get; private set; }
 
+    /// <summary>Card surcharge rate in effect when the order was created; charged only when paying by card.</summary>
+    public Percentage CardSurchargeRate { get; private set; }
+
+    public PaymentMethod PaymentMethod { get; private set; }
+
     /// <summary>Tip as a percentage of the pre-tax amount (subtotal after discount); null means no tip.</summary>
     public Percentage? TipRate { get; private set; }
 
@@ -39,13 +44,15 @@ public class Order
     {
     }
 
-    public static Order Create(DateTimeOffset createdAt, Percentage taxRate) => new()
+    public static Order Create(DateTimeOffset createdAt, Percentage taxRate, Percentage cardSurchargeRate) => new()
     {
         Id = Guid.NewGuid(),
         Status = OrderStatus.Open,
         CreatedAt = createdAt.ToUniversalTime(),
         Currency = Currency.USD,
         TaxRate = taxRate,
+        CardSurchargeRate = cardSurchargeRate,
+        PaymentMethod = PaymentMethod.Cash,
     };
 
     /// <summary>
@@ -108,16 +115,18 @@ public class Order
 
     public void RemoveTip() => TipRate = null;
 
+    public void SetPaymentMethod(PaymentMethod paymentMethod) => PaymentMethod = paymentMethod;
+
     /// <summary>
     /// The only place order totals are calculated. Each step is rounded to cents (MidpointRounding.AwayFromZero)
     /// before the next step uses it.
     /// 1. line total = unit price × quantity (exact cents)
     /// 2. subtotal = sum of line totals
     /// 3. discount = percentage of subtotal, or a fixed amount
-    /// 4. surcharge: not part of the order yet; it goes here, after the discount and before tax
-    /// 5. tax = tax rate × (subtotal − discount)
-    /// 6. tip = tip rate × (subtotal − discount), i.e. on the pre-tax amount
-    /// total = subtotal − discount + tax + tip
+    /// 4. surcharge = card surcharge rate × (subtotal − discount) when paying by card, otherwise zero
+    /// 5. tax = tax rate × (subtotal − discount + surcharge), i.e. the surcharge is taxed
+    /// 6. tip = tip rate × (subtotal − discount), i.e. before surcharge and tax
+    /// total = subtotal − discount + surcharge + tax + tip
     /// </summary>
     public OrderTotals CalculateTotals()
     {
@@ -131,19 +140,117 @@ public class Order
         };
         var discountedSubtotal = subtotal - discount;
 
-        var taxBase = discountedSubtotal;
+        var surchargeBase = discountedSubtotal;
+        var surcharge = PaymentMethod == PaymentMethod.Card
+            ? PercentOf(surchargeBase, CardSurchargeRate)
+            : Money.Zero(Currency);
+
+        var taxBase = discountedSubtotal + surcharge;
         var tax = PercentOf(taxBase, TaxRate);
 
         var tipBase = discountedSubtotal;
         var tip = TipRate is { } tipRate ? PercentOf(tipBase, tipRate) : Money.Zero(Currency);
 
-        return new OrderTotals(subtotal, discount, tax, tip, Total: discountedSubtotal + tax + tip);
+        return new OrderTotals(subtotal, discount, surcharge, tax, tip,
+            Total: discountedSubtotal + surcharge + tax + tip);
+    }
+
+    /// <summary>
+    /// Splits the bill by item: each part is a set of whole lines and every line is in exactly one part.
+    /// The order's discount, surcharge, tax and tip are each shared by the part's share of the subtotal, rounded down
+    /// to the cent; the leftover cents go to the part with the largest subtotal (the earlier part on a tie).
+    /// So every amount of the parts adds up exactly to the order's amount, and the part totals to the order total.
+    /// </summary>
+    public IReadOnlyList<SplitPart> Split(IReadOnlyList<IReadOnlyCollection<Guid>> lineIdsPerPart)
+    {
+        if (lineIdsPerPart.Count == 0)
+        {
+            throw new DomainException("A split needs at least one part.");
+        }
+
+        var linesById = _lines.ToDictionary(l => l.Id);
+        var assignedLineIds = new HashSet<Guid>();
+        var partSubtotals = new List<Money>();
+        foreach (var lineIds in lineIdsPerPart)
+        {
+            if (lineIds.Count == 0)
+            {
+                throw new DomainException("Every part of a split needs at least one line.");
+            }
+
+            var partSubtotal = Money.Zero(Currency);
+            foreach (var lineId in lineIds)
+            {
+                if (!linesById.TryGetValue(lineId, out var line))
+                {
+                    throw new DomainException($"Line {lineId} is not on this order.");
+                }
+
+                if (!assignedLineIds.Add(lineId))
+                {
+                    throw new DomainException($"Line {lineId} is in more than one part.");
+                }
+
+                partSubtotal += line.LineTotal;
+            }
+
+            partSubtotals.Add(partSubtotal);
+        }
+
+        if (assignedLineIds.Count != _lines.Count)
+        {
+            throw new DomainException("Every line of the order must be in a part of the split.");
+        }
+
+        var totals = CalculateTotals();
+        var discounts = Allocate(totals.Discount, partSubtotals, totals.Subtotal);
+        var surcharges = Allocate(totals.Surcharge, partSubtotals, totals.Subtotal);
+        var taxes = Allocate(totals.Tax, partSubtotals, totals.Subtotal);
+        var tips = Allocate(totals.Tip, partSubtotals, totals.Subtotal);
+
+        return lineIdsPerPart.Select((lineIds, i) => new SplitPart(
+                lineIds.ToList(),
+                partSubtotals[i],
+                discounts[i],
+                surcharges[i],
+                taxes[i],
+                tips[i],
+                Total: partSubtotals[i] - discounts[i] + surcharges[i] + taxes[i] + tips[i]))
+            .ToList();
     }
 
     private Money CalculateSubtotal() => _lines.Aggregate(Money.Zero(Currency), (sum, line) => sum + line.LineTotal);
 
     private static Money PercentOf(Money amount, Percentage rate) =>
         new(decimal.Round(amount.Amount * rate.Value / 100m, 2, MidpointRounding.AwayFromZero), amount.Currency);
+
+    /// <summary>
+    /// Shares <paramref name="amount"/> by each part's share of the subtotal, rounded down to the cent (amounts are never
+    /// negative, so ToZero is rounding down); the leftover cents go to the part with the largest subtotal.
+    /// </summary>
+    private static Money[] Allocate(Money amount, IReadOnlyList<Money> partSubtotals, Money subtotal)
+    {
+        var shares = partSubtotals
+            .Select(partSubtotal => subtotal.Amount == 0m
+                ? Money.Zero(amount.Currency)
+                : new Money(
+                    decimal.Round(amount.Amount * partSubtotal.Amount / subtotal.Amount, 2, MidpointRounding.ToZero),
+                    amount.Currency))
+            .ToArray();
+
+        var leftover = shares.Aggregate(amount, (rest, share) => rest - share);
+        var largestPart = 0;
+        for (var i = 1; i < partSubtotals.Count; i++)
+        {
+            if (partSubtotals[i].Amount > partSubtotals[largestPart].Amount)
+            {
+                largestPart = i;
+            }
+        }
+
+        shares[largestPart] += leftover;
+        return shares;
+    }
 
     private void EnsureSameCurrency(Money money)
     {

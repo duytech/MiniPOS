@@ -10,7 +10,8 @@ public sealed class CreateOrderHandler(IOrderRepository orders, IUnitOfWork unit
 {
     public async Task<OrderDto> HandleAsync(CreateOrderCommand command, CancellationToken cancellationToken)
     {
-        var order = Order.Create(timeProvider.GetUtcNow(), new Percentage(pricing.TaxRatePercent));
+        var order = Order.Create(timeProvider.GetUtcNow(), new Percentage(pricing.TaxRatePercent),
+            new Percentage(pricing.CardSurchargePercent));
         orders.Add(order);
         await unitOfWork.SaveChangesAsync(cancellationToken);
         return OrderDto.From(order);

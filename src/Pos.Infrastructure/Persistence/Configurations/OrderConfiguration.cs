@@ -20,6 +20,9 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.Currency).HasColumnName("currency").HasConversion<string>().HasMaxLength(3);
         builder.Property(o => o.TaxRate).HasColumnName("tax_rate")
             .HasConversion<PercentageConverter>().HasColumnType(PercentageConverter.ColumnType);
+        builder.Property(o => o.CardSurchargeRate).HasColumnName("card_surcharge_rate")
+            .HasConversion<PercentageConverter>().HasColumnType(PercentageConverter.ColumnType);
+        builder.Property(o => o.PaymentMethod).HasColumnName("payment_method").HasConversion<string>().HasMaxLength(20);
         builder.Property(o => o.TipRate).HasColumnName("tip_rate")
             .HasConversion<PercentageConverter>().HasColumnType(PercentageConverter.ColumnType);
         builder.Property<Percentage?>("DiscountRate").HasColumnName("discount_rate")

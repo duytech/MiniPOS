@@ -8,9 +8,11 @@ public sealed record OrderDto(
     int Number,
     OrderStatus Status,
     DateTimeOffset CreatedAt,
+    PaymentMethod PaymentMethod,
     IReadOnlyList<OrderLineDto> Lines,
     Money Subtotal,
     Money Discount,
+    Money Surcharge,
     Money Tax,
     Money Tip,
     Money Total)
@@ -23,9 +25,11 @@ public sealed record OrderDto(
             order.Number,
             order.Status,
             order.CreatedAt,
+            order.PaymentMethod,
             order.Lines.Select(OrderLineDto.From).ToList(),
             totals.Subtotal,
             totals.Discount,
+            totals.Surcharge,
             totals.Tax,
             totals.Tip,
             totals.Total);

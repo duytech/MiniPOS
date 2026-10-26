@@ -39,6 +39,8 @@ public class OrdersApiTests(PosApiFactory factory) : IClassFixture<PosApiFactory
         Assert.Equal("3.45", lines[1].Money("lineTotal"));
         Assert.Equal("18.85", order.Money("subtotal"));
         Assert.Equal("0.00", order.Money("discount"));
+        Assert.Equal("Cash", order.GetProperty("paymentMethod").GetString());
+        Assert.Equal("0.00", order.Money("surcharge"));
         Assert.Equal("1.67", order.Money("tax")); // Pricing:TaxRatePercent 8.875 × 18.85 = 1.6729375
         Assert.Equal("0.00", order.Money("tip"));
         Assert.Equal("20.52", order.Money("total"));
