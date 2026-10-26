@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Pos.Domain.Common;
 using Pos.Domain.Orders;
 
 namespace Pos.Infrastructure.Persistence.Configurations;
@@ -17,6 +18,15 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.CreatedAt).HasColumnName("created_at");
         builder.HasIndex(o => o.CreatedAt);
         builder.Property(o => o.Currency).HasColumnName("currency").HasConversion<string>().HasMaxLength(3);
+        builder.Property(o => o.TaxRate).HasColumnName("tax_rate")
+            .HasConversion<PercentageConverter>().HasColumnType(PercentageConverter.ColumnType);
+        builder.Property(o => o.TipRate).HasColumnName("tip_rate")
+            .HasConversion<PercentageConverter>().HasColumnType(PercentageConverter.ColumnType);
+        builder.Property<Percentage?>("DiscountRate").HasColumnName("discount_rate")
+            .HasConversion<PercentageConverter>().HasColumnType(PercentageConverter.ColumnType);
+        builder.Property<Money?>("DiscountAmount").HasColumnName("discount_amount")
+            .HasConversion<MoneyConverter>().HasColumnType(MoneyConverter.ColumnType);
+        builder.Ignore(o => o.Discount);
 
         // Postgres system column that changes on every update of the row: the optimistic concurrency token.
         builder.Property<uint>("xmin").HasColumnName("xmin").HasColumnType("xid").IsRowVersion();

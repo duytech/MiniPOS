@@ -31,6 +31,12 @@ public readonly record struct Money
         return new Money(left.Amount + right.Amount, left.Currency);
     }
 
+    public static Money operator -(Money left, Money right)
+    {
+        EnsureSameCurrency(left, right);
+        return new Money(left.Amount - right.Amount, left.Currency);
+    }
+
     public static Money operator *(Money money, int quantity) => new(money.Amount * quantity, money.Currency);
 
     public override string ToString() => $"{Amount:0.00} {Currency}";

@@ -28,6 +28,12 @@ public class MoneyTests
     }
 
     [Fact]
+    public void Subtracts_exact_cents()
+    {
+        Assert.Equal(Money.Usd(0.10m), Money.Usd(0.30m) - Money.Usd(0.20m));
+    }
+
+    [Fact]
     public void Multiplies_by_quantity_exactly()
     {
         Assert.Equal(Money.Usd(3.45m), Money.Usd(1.15m) * 3);

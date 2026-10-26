@@ -58,6 +58,14 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(3)")
                         .HasColumnName("currency");
 
+                    b.Property<decimal?>("DiscountAmount")
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("discount_amount");
+
+                    b.Property<decimal?>("DiscountRate")
+                        .HasColumnType("numeric(7,4)")
+                        .HasColumnName("discount_rate");
+
                     b.Property<int>("Number")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -70,6 +78,14 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
+
+                    b.Property<decimal>("TaxRate")
+                        .HasColumnType("numeric(7,4)")
+                        .HasColumnName("tax_rate");
+
+                    b.Property<decimal?>("TipRate")
+                        .HasColumnType("numeric(7,4)")
+                        .HasColumnName("tip_rate");
 
                     b.Property<uint>("xmin")
                         .IsConcurrencyToken()

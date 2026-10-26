@@ -10,6 +10,9 @@ public sealed record OrderDto(
     DateTimeOffset CreatedAt,
     IReadOnlyList<OrderLineDto> Lines,
     Money Subtotal,
+    Money Discount,
+    Money Tax,
+    Money Tip,
     Money Total)
 {
     public static OrderDto From(Order order)
@@ -22,6 +25,9 @@ public sealed record OrderDto(
             order.CreatedAt,
             order.Lines.Select(OrderLineDto.From).ToList(),
             totals.Subtotal,
+            totals.Discount,
+            totals.Tax,
+            totals.Tip,
             totals.Total);
     }
 }
