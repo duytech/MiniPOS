@@ -316,3 +316,35 @@ phần chênh. Bất biến tổng là cần nhưng không đủ; phải có tes
 - Đổi phương thức thanh toán sau khi split hoặc sau khi thanh toán: chưa có vòng đời order.
 - Một phần trả thẻ, phần khác trả tiền mặt: hiện surcharge tính theo phương thức của cả order.
 - Order tạo trước migration có `card_surcharge_rate = 0`: chỉ là DB dev.
+
+### Ngày 3: architecture test (2026-10-26)
+**Đã làm:** project `tests/Pos.ArchitectureTests` (NetArchTest + Mono.Cecil), 6 test, chạy ~1 s, không cần DB:
+- Layer: Domain không phụ thuộc Application/Infrastructure/Api/EF Core/ASP.NET/FluentValidation; Application không
+  phụ thuộc Infrastructure/Api/EF Core/Npgsql/ASP.NET; Infrastructure không phụ thuộc Api.
+- Không `double`/`float`/`Half` ở bất kỳ assembly `src/` nào: quét IL (field, signature, local, hằng, `conv.r8`, lời gọi).
+- Không `decimal` thô trong signature public/protected của Domain + Application. Allowlist có lý do: `Money`,
+  `Percentage`, `PricingOptions`, `MoneyLimits`.
+- Interface `*Repository` không trả type của Application (DTO, read model).
+- Message lỗi in đủ từng member vi phạm và cách sửa, để agent tự sửa không cần đọc test.
+
+**Kiểm chứng verifier** (đột biến từng rule rồi trả lại):
+| Đột biến | Test đỏ |
+|---|---|
+| `[Owned]` của EF Core trên `OrderLine` (Domain thêm package EF) | 1 (layer Domain) |
+| Class trong Application có property `DbContext` | 1 (layer Application) |
+| Field + property `double` trong `Order` | 1 (floating point) |
+| `PercentOf` làm tròn qua `(double)` + `Math.Round` | 1 (floating point), **sau khi đổi sang quét IL** |
+| `Order.TipFor(decimal percent)` | 1 (decimal signature) |
+| `IOrderReportRepository` trả `OrderSummaryDto` | 1 (repository) |
+
+**Chuyện đáng kể:** bản đầu dùng `HaveDependencyOnAny("System.Double")` của NetArchTest. Đột biến field `double` bị bắt,
+nhưng đột biến `PercentOf` tính qua `double` thì **qua hết**: NetArchTest không thấy lệnh `conv.r8` và lời gọi
+`Math.Round(double, …)` trong thân method. Cả 63 domain test (có ca midpoint x.xx5) cũng **xanh** với đột biến đó. Tức là
+một lỗi tiền thật lọt qua cả test nghiệp vụ lẫn arch test "chuẩn". Sửa bằng `FloatingPointScanner` đọc IL bằng Mono.Cecil;
+đột biến giờ đỏ và chỉ đúng `Order.PercentOf: call System.Math::Round(System.Double, …)`.
+Bài học: verifier cũng phải được kiểm bằng đột biến; check "trông đúng" có thể chỉ quét bề mặt.
+
+**Giả định / câu hỏi còn mở:**
+- Allowlist decimal là phán đoán của mình. `PricingOptions` có thể bind thẳng sang `Percentage` để bỏ khỏi allowlist.
+- Rule decimal chỉ quét public/protected; helper private trong `Order` dùng `decimal` để làm tròn là cố ý.
+- Domain test không bắt được làm tròn qua `double` với các số hiện có: có nên thêm ca số mà `double` làm lệch cent không?

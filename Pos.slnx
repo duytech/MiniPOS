@@ -8,6 +8,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Pos.Api.IntegrationTests/Pos.Api.IntegrationTests.csproj" />
     <Project Path="tests/Pos.Application.Tests/Pos.Application.Tests.csproj" />
+    <Project Path="tests/Pos.ArchitectureTests/Pos.ArchitectureTests.csproj" />
     <Project Path="tests/Pos.Domain.Tests/Pos.Domain.Tests.csproj" />
   </Folder>
   <Folder Name="/web/">
