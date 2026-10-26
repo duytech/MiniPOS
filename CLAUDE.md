@@ -15,6 +15,10 @@ surrounding code.**
   (ESLint) · `npx ng test --watch=false` (Vitest + jsdom, no browser; `fakeAsync` does not work, use
   `vi.useFakeTimers()`)
 
+- A `PostToolUse` hook (`.claude/hooks/verify-on-edit.mjs`) checks each edited file: `.cs` → build + the tests that
+  need no DB; `web/src/**/*.ts|html` → eslint on the file + `ngc` (`tsc` for specs). When it reports errors, fix them
+  before the next step. It does not run integration tests or Vitest: run those before you finish.
+
 ## Architecture
 - One use case = one folder in Application with `XxxCommand`/`XxxQuery` (record), `XxxHandler`
   (`ICommandHandler<TCommand, TResult>` / `IQueryHandler<TQuery, TResult>`), and `XxxValidator` (FluentValidation).
