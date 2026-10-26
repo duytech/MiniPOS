@@ -384,6 +384,6 @@ test đầu tiên dùng `fakeAsync`. Bài học cho agent: đọc lỗi đầu t
 **Giả định / câu hỏi còn mở:**
 - **`npm audit`: Vitest 3 kéo theo 2 critical + 2 moderate** (`tinypool` prototype pollution, `@vitest/mocker` path
   traversal; trước đó 0). Chỉ là devDependency chạy local, nhưng bản sửa là Vitest 4+, mà `@angular/build` 20 chỉ nhận
-  `vitest ^3`. Cần quyết: chấp nhận tạm, hay lên Angular 21 (builder Vitest ổn định)?
+  `vitest ^3`. **Quyết định (2026-10-26): chấp nhận tạm**; xử lý khi lên Angular 21 (cho phép Vitest 4+).
 - Builder `unit-test` của Angular 20 còn EXPERIMENTAL (in cảnh báo mỗi lần chạy).
 - Mức `latest-recommended` là lựa chọn đã hỏi; `latest-all` sẽ bắt thêm nhiều (CA1062, CA1848…) nhưng ồn.
