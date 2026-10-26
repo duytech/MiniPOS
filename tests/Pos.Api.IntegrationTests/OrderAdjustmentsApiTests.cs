@@ -206,6 +206,21 @@ public class OrderAdjustmentsApiTests(PosApiFactory factory) : IClassFixture<Pos
         Assert.Equal("10.89", (await _client.GetOrderAsync(orderId)).Money("total"));
     }
 
+    [Fact]
+    public async Task Adding_an_item_to_a_paid_order_is_422_and_leaves_it_unchanged()
+    {
+        var orderId = await OrderWithSubtotalAsync(10.00m);
+        var tea = await _client.CreateMenuItemAsync("Tea", 2.00m);
+        await SetStatusAsync(orderId, "Paid");
+
+        var response = await _client.AddItemAsync(orderId, tea, 1);
+
+        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        var order = await _client.GetOrderAsync(orderId);
+        Assert.Equal(1, order.GetProperty("lines").GetArrayLength());
+        Assert.Equal("10.89", order.Money("total"));
+    }
+
     private async Task<Guid> OrderWithSubtotalAsync(decimal price)
     {
         var menuItem = await _client.CreateMenuItemAsync("Pho", price);

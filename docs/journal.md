@@ -430,7 +430,7 @@ Thời gian khi xanh: `.cs` ~6.5 s (build ~4 s + 3 project test), `.ts` ~6.7 s (
 ### Ngày 6: tính năng mới với hook bật: discount / tip / payment method API (2026-10-26)
 **Đã làm:** đưa `ApplyDiscount`, `RemoveDiscount`, `SetTip`, `RemoveTip`, `SetPaymentMethod` (đã có trong Domain từ
 Ngày 1–2) ra API: `PUT|DELETE /api/orders/{id}/discount`, `PUT|DELETE .../tip`, `PUT .../payment-method`. Mỗi thao tác
-một folder Application (Command + Handler + Validator). Domain thêm `EnsureOpen()`: order không `Open` → 422.
+một folder Application (Command + Handler + Validator). Domain thêm `EnsureOpen()` (cả `AddItem`): order không `Open` → 422.
 `PercentageJsonConverter` chặn rate âm / quá 4 chữ số thập phân ngay lúc đọc JSON (400), vì `new Percentage(-1)` ném
 `ArgumentOutOfRangeException` = 500 nếu để tới handler. `PercentageLimits.MaxRate` (999.9999, cột numeric(7,4)) cho tip.
 Test: Domain (10 case order đóng), validator, 33 integration (đến từng cent, có midpoint 0.105 → 0.11, list total ==
@@ -458,7 +458,7 @@ DB lưu đúng các request 200). Kiểm thêm: 409 thật sự xảy ra (9–18
 - Hook không chạy integration test: 33 + 7 test mới đều qua ngay lần đầu, nhưng phải chạy tay.
 
 **Giả định / câu hỏi còn mở:**
-- Chỉ order `Open` được đổi discount/tip/payment method (đã hỏi). `AddItem` chưa chặn order đóng: cần quyết định.
+- Chỉ order `Open` được thêm món, đổi discount/tip/payment method (đã hỏi, gồm cả `AddItem`): khác `Open` → 422.
 - Chưa có endpoint đóng order (Paid/Cancelled); test đặt status bằng reflection (Domain) và SQL (integration).
 - Tip không giới hạn trên (đã hỏi); chỉ giới hạn theo cột numeric(7,4). Số tiền tip không được lưu (Domain tính khi
   đọc), nên tip lớn không gây lỗi DB.

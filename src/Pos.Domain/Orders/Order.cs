@@ -61,6 +61,7 @@ public class Order
     /// </summary>
     public OrderLine AddItem(MenuItem menuItem, int quantity, string? notes)
     {
+        EnsureOpen();
         if (menuItem.Price.Currency != Currency)
         {
             throw new DomainException($"Menu item is priced in {menuItem.Price.Currency}, the order is in {Currency}.");
@@ -131,7 +132,7 @@ public class Order
         PaymentMethod = paymentMethod;
     }
 
-    /// <summary>Discount, tip and payment method can only change while the order is open.</summary>
+    /// <summary>Items, discount, tip and payment method can only change while the order is open.</summary>
     private void EnsureOpen()
     {
         if (Status != OrderStatus.Open)

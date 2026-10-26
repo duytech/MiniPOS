@@ -124,6 +124,9 @@ public class OrderTests
 
     public static TheoryData<OrderStatus, Action<Order>> ClosedOrderChanges => new()
     {
+        { OrderStatus.Paid, o => o.AddItem(Burger, 1, null) },
+        { OrderStatus.Paid, o => o.AddItem(Fries, 1, null) },
+        { OrderStatus.Cancelled, o => o.AddItem(Burger, 1, null) },
         { OrderStatus.Paid, o => o.ApplyDiscount(OrderDiscount.PercentOfSubtotal(new Percentage(10m))) },
         { OrderStatus.Paid, o => o.RemoveDiscount() },
         { OrderStatus.Paid, o => o.SetTip(new Percentage(15m)) },
@@ -138,7 +141,7 @@ public class OrderTests
 
     [Theory]
     [MemberData(nameof(ClosedOrderChanges))]
-    public void Discount_tip_and_payment_method_cannot_change_once_the_order_is_closed(
+    public void Items_discount_tip_and_payment_method_cannot_change_once_the_order_is_closed(
         OrderStatus status, Action<Order> change)
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
@@ -147,6 +150,7 @@ public class OrderTests
         SetStatus(order, status);
 
         Assert.Throws<DomainException>(() => change(order));
+        Assert.Equal(1, Assert.Single(order.Lines).Quantity);
         Assert.Equal(totalsBefore, order.CalculateTotals());
         Assert.Equal(PaymentMethod.Cash, order.PaymentMethod);
     }
