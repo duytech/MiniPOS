@@ -25,6 +25,22 @@ internal static class ApiClient
         this HttpClient client, Guid orderId, Guid menuItemId, int quantity, string? notes = null) =>
         client.PostAsJsonAsync($"/api/orders/{orderId}/items", new { menuItemId, quantity, notes });
 
+    /// <summary>Body is sent as given, e.g. <c>new { rate = 15 }</c> or <c>new { amount = 2.50 }</c>.</summary>
+    public static Task<HttpResponseMessage> ApplyDiscountAsync(this HttpClient client, Guid orderId, object body) =>
+        client.PutAsJsonAsync($"/api/orders/{orderId}/discount", body);
+
+    public static Task<HttpResponseMessage> RemoveDiscountAsync(this HttpClient client, Guid orderId) =>
+        client.DeleteAsync($"/api/orders/{orderId}/discount");
+
+    public static Task<HttpResponseMessage> SetTipAsync(this HttpClient client, Guid orderId, decimal rate) =>
+        client.PutAsJsonAsync($"/api/orders/{orderId}/tip", new { rate });
+
+    public static Task<HttpResponseMessage> RemoveTipAsync(this HttpClient client, Guid orderId) =>
+        client.DeleteAsync($"/api/orders/{orderId}/tip");
+
+    public static Task<HttpResponseMessage> SetPaymentMethodAsync(this HttpClient client, Guid orderId, string paymentMethod) =>
+        client.PutAsJsonAsync($"/api/orders/{orderId}/payment-method", new { paymentMethod });
+
     public static async Task<JsonElement> GetOrderAsync(this HttpClient client, Guid orderId)
     {
         var response = await client.GetAsync($"/api/orders/{orderId}");

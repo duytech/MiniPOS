@@ -17,6 +17,7 @@ public class MoneyTypeTests
         [typeof(Percentage)] = "the percentage value object wraps the decimal rate",
         [typeof(PricingOptions)] = "bound from configuration, converted to Percentage when snapshotted onto an order",
         [typeof(MoneyLimits)] = "constant used by validators before a Money exists",
+        [typeof(PercentageLimits)] = "constant used by validators, compared with Percentage.Value",
     };
 
     [Fact]

@@ -39,7 +39,7 @@ Kết quả: agent tự sửa đến khi mọi check pass; ít nhất một rule
 - [x] Ngày 3: Thêm architecture test (NetArchTest): Domain không tham chiếu Infrastructure; không dùng `double`/`float` cho tiền.
 - [x] Ngày 4: Bật `TreatWarningsAsErrors` + Roslyn analyzers. Angular: `strict`, ESLint, unit test (Jest hoặc Vitest).
 - [x] Ngày 5: Tạo hook `PostToolUse`: sau mỗi lần sửa file `.cs` chạy `dotnet build` + test; file `.ts` chạy lint + `tsc`.
-- [ ] Ngày 6: Giao agent một tính năng mới với hook bật. Quan sát vòng lặp tự sửa; chỉnh hook nếu quá chậm hoặc quá ồn.
+- [x] Ngày 6: Giao agent một tính năng mới với hook bật. Quan sát vòng lặp tự sửa; chỉnh hook nếu quá chậm hoặc quá ồn.
 - [ ] Ngày 7: Cố ý giao task dễ gây lỗi làm tròn. Ghi lại verifier đã bắt lỗi thế nào: đây là câu chuyện phỏng vấn số 1.
 
 ## Tuần 3: Skills, sub-agents và visual loop

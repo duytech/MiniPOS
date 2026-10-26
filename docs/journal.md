@@ -426,3 +426,41 @@ Thời gian khi xanh: `.cs` ~6.5 s (build ~4 s + 3 project test), `.ts` ~6.7 s (
 - Sửa nhiều file `.cs` liên tiếp = build mỗi lần (~6 s). Nếu Ngày 6 thấy chậm: gom, hoặc chỉ test project bị ảnh hưởng.
 - Hai `Edit` song song có thể chạy hai `dotnet build` cùng lúc trên cùng `obj/`: chưa gặp, theo dõi.
 - Mức `latest-recommended` là lựa chọn đã hỏi; `latest-all` sẽ bắt thêm nhiều (CA1062, CA1848…) nhưng ồn.
+
+### Ngày 6: tính năng mới với hook bật: discount / tip / payment method API (2026-10-26)
+**Đã làm:** đưa `ApplyDiscount`, `RemoveDiscount`, `SetTip`, `RemoveTip`, `SetPaymentMethod` (đã có trong Domain từ
+Ngày 1–2) ra API: `PUT|DELETE /api/orders/{id}/discount`, `PUT|DELETE .../tip`, `PUT .../payment-method`. Mỗi thao tác
+một folder Application (Command + Handler + Validator). Domain thêm `EnsureOpen()`: order không `Open` → 422.
+`PercentageJsonConverter` chặn rate âm / quá 4 chữ số thập phân ngay lúc đọc JSON (400), vì `new Percentage(-1)` ném
+`ArgumentOutOfRangeException` = 500 nếu để tới handler. `PercentageLimits.MaxRate` (999.9999, cột numeric(7,4)) cho tip.
+Test: Domain (10 case order đóng), validator, 33 integration (đến từng cent, có midpoint 0.105 → 0.11, list total ==
+GET total, 400/404/422), 7 concurrency (tip/discount song song; mỗi thao tác chạy song song với add-item: chỉ 200/409,
+DB lưu đúng các request 200). Kiểm thêm: 409 thật sự xảy ra (9–18 trên 20 request), không phải test chạy tuần tự.
+
+**Hook trong vòng lặp:** khoảng 30 lần chạy, mỗi lần `.cs` ~2–7 s. 5 lần đỏ:
+| Lần | Check | Lỗi | Loại |
+|---|---|---|---|
+| Thêm lời gọi `EnsureOpen()` trước khi viết method | build | `CS0103` | trạng thái dở dang, sửa ở edit kế |
+| `PercentageLimits` (const decimal) trong Application | arch test | `PercentageLimits.MaxRate` dùng raw decimal | **lỗi thật**: thêm vào `RawDecimalAllowed` kèm lý do |
+| `DependencyInjection.cs`: body rồi `using` (2 edit song song) | build | 10× `CS0246` | **nhiễu**: edit thứ hai đã sửa |
+| `OrdersController.cs`: cùng kiểu | build | 12× `CS0246` | **nhiễu** |
+| `ValidatorTests.cs`: `using` trước, body sau | build | `IDE0005` | **nhiễu** (đảo thứ tự vẫn đỏ) |
+
+**Chuyện đáng kể:**
+- Lỗi thật duy nhất là arch test, và hook bắt nó ngay ở file vừa tạo, trước khi có code nào dùng hằng số đó.
+- 3/5 lần đỏ là nhiễu: hai edit phụ thuộc nhau trong cùng một lượt, hook chạy sau edit đầu nên thấy trạng thái dở. Thứ
+  tự nào cũng đỏ (`CS0246` hoặc `IDE0005`). Hook không sai; cách sửa nằm ở cách agent chia edit. Đã thêm một dòng vào
+  `CLAUDE.md`: thay đổi chỉ compile khi đi cùng nhau thì làm trong một `Edit`/`Write`. Mỗi lần nhiễu tốn 1 lệnh build
+  kiểm lại (~2 s), không tốn vòng sửa.
+- Không cần chỉnh tốc độ hook: build incremental ~2 s, cả vòng ~6 s.
+- Mutation thử "bỏ `IsRowVersion`" làm hỏng cả tạo order (500 ở insert), không chứng minh gì cho test mới. Thay bằng đếm
+  409 trong một lần chạy.
+- Hook không chạy integration test: 33 + 7 test mới đều qua ngay lần đầu, nhưng phải chạy tay.
+
+**Giả định / câu hỏi còn mở:**
+- Chỉ order `Open` được đổi discount/tip/payment method (đã hỏi). `AddItem` chưa chặn order đóng: cần quyết định.
+- Chưa có endpoint đóng order (Paid/Cancelled); test đặt status bằng reflection (Domain) và SQL (integration).
+- Tip không giới hạn trên (đã hỏi); chỉ giới hạn theo cột numeric(7,4). Số tiền tip không được lưu (Domain tính khi
+  đọc), nên tip lớn không gây lỗi DB.
+- Fixed discount được kiểm với subtotal lúc áp dụng; nếu sau này có xóa món, discount có thể vượt subtotal.
+- `OrderDto` không trả `tipRate` / discount rate (chỉ số tiền): frontend sau này có thể cần.

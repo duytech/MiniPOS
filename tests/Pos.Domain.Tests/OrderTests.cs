@@ -121,4 +121,37 @@ public class OrderTests
         Assert.Throws<DomainException>(() => order.AddItem(Burger, 1, null));
         Assert.Equal(int.MaxValue, Assert.Single(order.Lines).Quantity);
     }
+
+    public static TheoryData<OrderStatus, Action<Order>> ClosedOrderChanges => new()
+    {
+        { OrderStatus.Paid, o => o.ApplyDiscount(OrderDiscount.PercentOfSubtotal(new Percentage(10m))) },
+        { OrderStatus.Paid, o => o.RemoveDiscount() },
+        { OrderStatus.Paid, o => o.SetTip(new Percentage(15m)) },
+        { OrderStatus.Paid, o => o.RemoveTip() },
+        { OrderStatus.Paid, o => o.SetPaymentMethod(PaymentMethod.Card) },
+        { OrderStatus.Cancelled, o => o.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(1.00m))) },
+        { OrderStatus.Cancelled, o => o.RemoveDiscount() },
+        { OrderStatus.Cancelled, o => o.SetTip(new Percentage(15m)) },
+        { OrderStatus.Cancelled, o => o.RemoveTip() },
+        { OrderStatus.Cancelled, o => o.SetPaymentMethod(PaymentMethod.Card) },
+    };
+
+    [Theory]
+    [MemberData(nameof(ClosedOrderChanges))]
+    public void Discount_tip_and_payment_method_cannot_change_once_the_order_is_closed(
+        OrderStatus status, Action<Order> change)
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        order.AddItem(Burger, 1, null);
+        var totalsBefore = order.CalculateTotals();
+        SetStatus(order, status);
+
+        Assert.Throws<DomainException>(() => change(order));
+        Assert.Equal(totalsBefore, order.CalculateTotals());
+        Assert.Equal(PaymentMethod.Cash, order.PaymentMethod);
+    }
+
+    /// <summary>No domain method closes an order yet, so tests set the status directly.</summary>
+    private static void SetStatus(Order order, OrderStatus status) =>
+        typeof(Order).GetProperty(nameof(Order.Status))!.SetValue(order, status);
 }

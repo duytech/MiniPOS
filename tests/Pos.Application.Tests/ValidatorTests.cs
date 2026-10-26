@@ -3,7 +3,12 @@ using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Pos.Application.MenuItems.CreateMenuItem;
 using Pos.Application.Orders.AddOrderItem;
+using Pos.Application.Orders.ApplyDiscount;
 using Pos.Application.Orders.ListOrders;
+using Pos.Application.Orders.RemoveDiscount;
+using Pos.Application.Orders.RemoveTip;
+using Pos.Application.Orders.SetPaymentMethod;
+using Pos.Application.Orders.SetTip;
 using Pos.Domain.Common;
 using Pos.Domain.Orders;
 
@@ -77,6 +82,57 @@ public class ValidatorTests
         var result = Validator<ListOrdersQuery>().Validate(new ListOrdersQuery(null, (OrderStatus)42, 1, 20));
 
         Assert.Equal(["Status"], result.Errors.Select(e => e.PropertyName));
+    }
+
+    [Theory]
+    [InlineData("15", null, true)]
+    [InlineData(null, "2.50", true)]
+    [InlineData(null, "0.00", true)]
+    [InlineData(null, "9999999999.99", true)]
+    [InlineData(null, null, false)]
+    [InlineData("15", "2.50", false)]
+    [InlineData(null, "-0.01", false)]
+    [InlineData(null, "10000000000.00", false)]
+    public void Discount_has_exactly_one_of_rate_or_amount_and_the_amount_fits(string? rate, string? amount, bool valid)
+    {
+        var result = Validator<ApplyDiscountCommand>().Validate(new ApplyDiscountCommand(
+            Guid.NewGuid(),
+            rate is null ? null : new Percentage(decimal.Parse(rate, CultureInfo.InvariantCulture)),
+            amount is null ? null : Money.Usd(decimal.Parse(amount, CultureInfo.InvariantCulture))));
+
+        Assert.Equal(valid, result.IsValid);
+    }
+
+    [Theory]
+    [InlineData("0", true)]
+    [InlineData("999.9999", true)]
+    [InlineData("1000", false)]
+    public void Tip_rate_must_fit_the_percentage_column(string rate, bool valid)
+    {
+        var result = Validator<SetTipCommand>()
+            .Validate(new SetTipCommand(Guid.NewGuid(), new Percentage(decimal.Parse(rate, CultureInfo.InvariantCulture))));
+
+        Assert.Equal(valid, result.IsValid);
+    }
+
+    [Fact]
+    public void Payment_method_must_be_a_known_method()
+    {
+        var result = Validator<SetPaymentMethodCommand>()
+            .Validate(new SetPaymentMethodCommand(Guid.NewGuid(), (PaymentMethod)42));
+
+        Assert.Equal(["PaymentMethod"], result.Errors.Select(e => e.PropertyName));
+    }
+
+    [Fact]
+    public void Order_changes_require_the_order_id()
+    {
+        Assert.False(Validator<ApplyDiscountCommand>().Validate(new ApplyDiscountCommand(Guid.Empty, Percentage.Zero, null)).IsValid);
+        Assert.False(Validator<RemoveDiscountCommand>().Validate(new RemoveDiscountCommand(Guid.Empty)).IsValid);
+        Assert.False(Validator<SetTipCommand>().Validate(new SetTipCommand(Guid.Empty, Percentage.Zero)).IsValid);
+        Assert.False(Validator<RemoveTipCommand>().Validate(new RemoveTipCommand(Guid.Empty)).IsValid);
+        Assert.False(Validator<SetPaymentMethodCommand>()
+            .Validate(new SetPaymentMethodCommand(Guid.Empty, PaymentMethod.Card)).IsValid);
     }
 
     private IValidator<T> Validator<T>() => _services.GetRequiredService<IValidator<T>>();
