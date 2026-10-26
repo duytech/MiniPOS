@@ -1,2 +1,0 @@
-# Shell hooks must keep LF line endings; sh reads a CR as part of each line.
-.githooks/* text eol=lf

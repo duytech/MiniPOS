@@ -1,7 +1,7 @@
 // PreToolUse hook (Bash, PowerShell): blocks a commit, PR or issue whose text has a "Co-Authored-By: Claude" line.
 // Checks the command itself (-m "...", --body "...", heredocs) and any message file it passes
 // (git commit -F/--file, gh --body-file/-F). Exit 2 blocks the call and tells Claude why.
-// .githooks/commit-msg strips the same line from commits made outside Claude; this hook also covers PR bodies.
+// Commits made outside Claude (a terminal, an IDE) are not checked.
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
