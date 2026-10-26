@@ -20,6 +20,8 @@ surrounding code.**
   before the next step. It does not run integration tests or Vitest: run those before you finish.
 - No `Co-Authored-By: Claude` in commits, PRs or issues. A `PreToolUse` hook (`.claude/hooks/block-claude-coauthor.mjs`)
   blocks such commands.
+- Never commit or push to `main`: branch, push the branch, open a PR. A `PreToolUse` hook
+  (`.claude/hooks/block-main-branch.mjs`) blocks `git commit` on main and any `git push` that updates main.
 
 ## Architecture
 - One use case = one folder in Application with `XxxCommand`/`XxxQuery` (record), `XxxHandler`
