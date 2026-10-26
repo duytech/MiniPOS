@@ -386,4 +386,43 @@ test đầu tiên dùng `fakeAsync`. Bài học cho agent: đọc lỗi đầu t
   traversal; trước đó 0). Chỉ là devDependency chạy local, nhưng bản sửa là Vitest 4+, mà `@angular/build` 20 chỉ nhận
   `vitest ^3`. **Quyết định (2026-10-26): chấp nhận tạm**; xử lý khi lên Angular 21 (cho phép Vitest 4+).
 - Builder `unit-test` của Angular 20 còn EXPERIMENTAL (in cảnh báo mỗi lần chạy).
+
+### Ngày 5: hook `PostToolUse` (2026-10-26)
+**Đã làm:** `.claude/settings.json` (commit vào repo) gọi `.claude/hooks/verify-on-edit.mjs` sau mỗi `Edit`/`Write`/`MultiEdit`.
+Script Node đọc `tool_input.file_path` rồi chọn check theo file:
+- `.cs`, `.csproj`, `.props`: `dotnet build Pos.slnx`, xanh thì chạy `dotnet test` cho Domain, Application, Architecture
+  (không cần DB). Integration test không chạy trong hook.
+- `web/src/**/*.ts|html`: `eslint` riêng file đó + `ngc -p tsconfig.app.json --noEmit` (bắt cả lỗi template; `tsc` thường
+  không thấy `.html`). File `.spec.ts`: `tsc -p tsconfig.spec.json`.
+- File khác (`.md`, `.json`…): thoát ngay (~0.2 s).
+- Lỗi: exit 2, stderr chỉ giữ dòng cần để sửa (lỗi compiler không trùng; với test: tên test, Expected/Actual hoặc danh sách
+  vi phạm của arch test, một dòng stack trỏ vào file `.cs`). Tối đa 40 dòng.
+
+Thời gian khi xanh: `.cs` ~6.5 s (build ~4 s + 3 project test), `.ts` ~6.7 s (eslint ~4 s chủ yếu là khởi động, ngc ~2.5 s).
+
+**Kiểm chứng verifier** (đột biến, đưa JSON giống Claude Code vào script, rồi trả lại; thêm 1 lần qua `Edit` thật):
+| Đột biến | Check đỏ | Agent thấy |
+|---|---|---|
+| `PercentOf` làm tròn `ToEven` | Domain tests | 7 test, `Expected: 0.35 USD / Actual: 0.34 USD` + dòng test |
+| `public static double Ratio => 0.5` trong `Order` | Arch test | `Order.get_Ratio: signature`, `ldc.r8 0.5` |
+| Sai chữ ký method | build | `CS7036` kèm file:dòng |
+| `list(query: any)` | eslint | `no-explicit-any`, `no-unused-vars` |
+| `PAGE_SIZE: string = 20` | ngc | `TS2322`, `TS2345` |
+| `{{ order.numbr }}` trong template | ngc | `TS2551 ... Did you mean 'number'?` |
+| Sai kiểu trong spec | tsc spec | `TS2322` |
+
+**Chuyện đáng kể:**
+- Bản đầu dùng `dotnet test -v q`: chỉ in tên test `[FAIL]`, không có Expected/Actual. Agent sẽ phải chạy lại test để biết
+  sai bao nhiêu. Đổi sang logger `console;verbosity=normal` và tự lọc block lỗi.
+- Bản đầu lọc theo regex dòng: lỗi arch test mất danh sách vi phạm (dòng message không khớp regex). Đổi sang parser giữ
+  cả block message giữa `Failed …` và `Stack Trace:`.
+- `ngc` vẫn in mã màu ANSI dù có `--pretty false`, làm regex `error TS` không khớp; script xóa ANSI trước khi lọc.
+- Đột biến `double` lần đầu bị CA1822 (analyzer Ngày 4) bắt trước khi tới arch test: hai verifier chồng nhau là tốt, nhưng
+  muốn kiểm arch test thì đột biến phải qua được analyzer.
+
+**Giả định / câu hỏi còn mở:**
+- Hook không chạy integration test (cần DB) và Vitest (~3 s mỗi lần). CLAUDE.md ghi phải chạy trước khi xong. Ngày 6 xem
+  agent có quên không.
+- Sửa nhiều file `.cs` liên tiếp = build mỗi lần (~6 s). Nếu Ngày 6 thấy chậm: gom, hoặc chỉ test project bị ảnh hưởng.
+- Hai `Edit` song song có thể chạy hai `dotnet build` cùng lúc trên cùng `obj/`: chưa gặp, theo dõi.
 - Mức `latest-recommended` là lựa chọn đã hỏi; `latest-all` sẽ bắt thêm nhiều (CA1062, CA1848…) nhưng ồn.
