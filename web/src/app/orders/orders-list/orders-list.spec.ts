@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { OrderSummary, PagedResult } from '../order.models';
 import { OrdersList, PAGE_SIZE, SEARCH_DEBOUNCE_MS } from './orders-list';
@@ -58,6 +58,8 @@ describe('OrdersList', () => {
   };
 
   beforeEach(() => {
+    // Fake timers drive the search debounce; tests advance them with vi.advanceTimersByTime.
+    vi.useFakeTimers();
     TestBed.configureTestingModule({
       imports: [OrdersList],
       providers: [provideHttpClient(), provideHttpClientTesting()],
@@ -66,7 +68,10 @@ describe('OrdersList', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
-  afterEach(() => http.verify());
+  afterEach(() => {
+    http.verify();
+    vi.useRealTimers();
+  });
 
   it('loads the first page with no filters and shows the orders', () => {
     fixture.detectChanges();
@@ -91,65 +96,65 @@ describe('OrdersList', () => {
     expect(rows()[1].textContent).toContain('$0.00');
   });
 
-  it('debounces the search and sends only the last text', fakeAsync(() => {
+  it('debounces the search and sends only the last text', () => {
     loadFirstPage();
 
     typeSearch('p');
-    tick(100);
+    vi.advanceTimersByTime(100);
     typeSearch('ph');
-    tick(100);
+    vi.advanceTimersByTime(100);
     typeSearch('  pho ');
     http.expectNone((req) => req.url === '/api/orders');
-    tick(SEARCH_DEBOUNCE_MS);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
 
     expect(params(expectList())).toEqual({ search: 'pho', status: null, page: '1', pageSize: String(PAGE_SIZE) });
-  }));
+  });
 
-  it('cancels the request in flight when the search changes (switchMap)', fakeAsync(() => {
+  it('cancels the request in flight when the search changes (switchMap)', () => {
     loadFirstPage();
 
     typeSearch('tea');
-    tick(SEARCH_DEBOUNCE_MS);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
     const stale = expectList();
     typeSearch('coffee');
-    tick(SEARCH_DEBOUNCE_MS);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
     const latest = expectList();
 
-    expect(stale.cancelled).toBeTrue();
+    expect(stale.cancelled).toBe(true);
     expect(params(latest).search).toBe('coffee');
     latest.flush(page([order({ number: 99, itemNames: ['Coffee'] })]));
     fixture.detectChanges();
-    expect(rows().map((r) => r.textContent)).toEqual([jasmine.stringContaining('#99')]);
-  }));
+    expect(rows().map((r) => r.textContent)).toEqual([expect.stringContaining('#99')]);
+  });
 
-  it('combines the search text with the status filter (combineLatest)', fakeAsync(() => {
+  it('combines the search text with the status filter (combineLatest)', () => {
     loadFirstPage();
 
     typeSearch('pho');
-    tick(SEARCH_DEBOUNCE_MS);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
     expectList().flush(page([order()]));
     selectStatus('Paid');
 
     expect(params(expectList())).toEqual({ search: 'pho', status: 'Paid', page: '1', pageSize: String(PAGE_SIZE) });
 
     typeSearch('tea');
-    tick(SEARCH_DEBOUNCE_MS);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
     expect(params(expectList())).toEqual({ search: 'tea', status: 'Paid', page: '1', pageSize: String(PAGE_SIZE) });
-  }));
+  });
 
-  it('does not send a request when the trimmed search text did not change', fakeAsync(() => {
+  it('does not send a request when the trimmed search text did not change', () => {
     loadFirstPage();
 
     typeSearch('   ');
-    tick(SEARCH_DEBOUNCE_MS);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
     fixture.detectChanges();
 
     http.expectNone((req) => req.url === '/api/orders');
     expect(el('loading')).toBeNull();
     expect(rows().length).toBe(1);
-  }));
+  });
 
-  it('pages with Next and goes back to page 1 when a filter changes', fakeAsync(() => {
+  it('pages with Next and goes back to page 1 when a filter changes', () => {
     loadFirstPage(page([order()], 45));
     expect(el('range')?.textContent).toContain('of 45');
 
@@ -159,17 +164,17 @@ describe('OrdersList', () => {
     second.flush(page([order({ number: 3 })], 45, 2));
     fixture.detectChanges();
     expect(el('range')?.textContent).toContain('Showing 21–21 of 45');
-    expect((el('previous') as HTMLButtonElement).disabled).toBeFalse();
+    expect((el('previous') as HTMLButtonElement).disabled).toBe(false);
 
     selectStatus('Cancelled');
     expect(params(expectList()).page).toBe('1');
-  }));
+  });
 
-  it('keeps showing the previous rows with a loading indicator while reloading', fakeAsync(() => {
+  it('keeps showing the previous rows with a loading indicator while reloading', () => {
     loadFirstPage(page([order({ number: 12 })]));
 
     typeSearch('tea');
-    tick(SEARCH_DEBOUNCE_MS);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
     fixture.detectChanges();
 
     expect(rows().length).toBe(1);
@@ -180,13 +185,13 @@ describe('OrdersList', () => {
     fixture.detectChanges();
     expect(rows()[0].textContent).toContain('#7');
     expect(el('loading')).toBeNull();
-  }));
+  });
 
-  it('shows an error but keeps the previous rows when a request fails, and recovers on the next search', fakeAsync(() => {
+  it('shows an error but keeps the previous rows when a request fails, and recovers on the next search', () => {
     loadFirstPage(page([order({ number: 12 })]));
 
     typeSearch('tea');
-    tick(SEARCH_DEBOUNCE_MS);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
     expectList().flush(null, { status: 500, statusText: 'Server Error' });
     fixture.detectChanges();
 
@@ -194,18 +199,18 @@ describe('OrdersList', () => {
     expect(rows()[0].textContent).toContain('#12');
 
     typeSearch('coffee');
-    tick(SEARCH_DEBOUNCE_MS);
+    vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
     expectList().flush(page([order({ number: 5 })]));
     fixture.detectChanges();
     expect(el('error')).toBeNull();
     expect(rows()[0].textContent).toContain('#5');
-  }));
+  });
 
   it('shows an empty state when nothing matches', () => {
     loadFirstPage(page([]));
 
     expect(el('empty')?.textContent).toContain('No orders match');
     expect(el('range')?.textContent).toContain('0 orders');
-    expect((el('next') as HTMLButtonElement).disabled).toBeTrue();
+    expect((el('next') as HTMLButtonElement).disabled).toBe(true);
   });
 });

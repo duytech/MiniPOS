@@ -1,3 +1,4 @@
+using System.Globalization;
 using Pos.Domain.Common;
 
 namespace Pos.Domain.Tests;
@@ -10,7 +11,7 @@ public class MoneyTests
     [InlineData("1.001")]
     public void Rejects_amounts_that_are_not_whole_cents(string amount)
     {
-        Assert.Throws<ArgumentException>(() => Money.Usd(decimal.Parse(amount)));
+        Assert.Throws<ArgumentException>(() => Money.Usd(decimal.Parse(amount, CultureInfo.InvariantCulture)));
     }
 
     [Fact]

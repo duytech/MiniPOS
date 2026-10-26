@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -73,7 +74,7 @@ public class OrdersListApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
         var orderId = await _client.CreateOrderAsync();
         var number = (await _client.GetOrderAsync(orderId)).GetProperty("number").GetInt32();
 
-        var list = await ListAsync($"search={Uri.EscapeDataString(string.Format(format, number))}&pageSize=100");
+        var list = await ListAsync($"search={Uri.EscapeDataString(string.Format(CultureInfo.InvariantCulture, format, number))}&pageSize=100");
 
         Assert.Contains(list.GetProperty("items").EnumerateArray(), o => o.GetProperty("id").GetGuid() == orderId);
     }
