@@ -18,6 +18,9 @@ surrounding code.**
 - A `PostToolUse` hook (`.claude/hooks/verify-on-edit.mjs`) checks each edited file: `.cs` → build + the tests that
   need no DB; `web/src/**/*.ts|html` → eslint on the file + `ngc` (`tsc` for specs). When it reports errors, fix them
   before the next step. It does not run integration tests or Vitest: run those before you finish.
+- No `Co-Authored-By: Claude` in commits, PRs or issues. A `PreToolUse` hook (`.claude/hooks/block-claude-coauthor.mjs`)
+  blocks such commands; `.githooks/commit-msg` strips the line from any commit (enable per clone:
+  `git config core.hooksPath .githooks`).
 
 ## Architecture
 - One use case = one folder in Application with `XxxCommand`/`XxxQuery` (record), `XxxHandler`

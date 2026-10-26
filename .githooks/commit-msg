@@ -1,0 +1,11 @@
+#!/bin/sh
+# Removes "Co-Authored-By: Claude ..." trailers from the commit message, whoever writes the commit.
+# Enable once per clone: git config core.hooksPath .githooks
+msg="$1"
+tmp="$msg.tmp"
+
+# Git reads a trailer only at the start of a line, with an email: "Co-Authored-By: Claude <noreply@anthropic.com>".
+grep -viE '^co-authored-by:[^<]*(claude[^<]*<[^>]*>|<[^>]*noreply@anthropic\.com>)' "$msg" > "$tmp" || true
+# Drop the blank lines the removed trailer leaves at the end.
+sed -e ':a' -e '/^[[:space:]]*$/{$d;N;ba' -e '}' "$tmp" > "$msg"
+rm -f "$tmp"
