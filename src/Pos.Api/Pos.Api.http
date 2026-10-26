@@ -1,6 +1,24 @@
 @Pos.Api_HostAddress = http://localhost:5191
 
-GET {{Pos.Api_HostAddress}}/weatherforecast/
+### Create a menu item
+# @name menuItem
+POST {{Pos.Api_HostAddress}}/api/menu-items
+Content-Type: application/json
+
+{ "name": "Pho", "price": 7.70 }
+
+### Create an order
+# @name order
+POST {{Pos.Api_HostAddress}}/api/orders
+
+### Add an item to the order
+POST {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}/items
+Content-Type: application/json
+
+{ "menuItemId": "{{menuItem.response.body.$.id}}", "quantity": 2, "notes": "no onions" }
+
+### Get the order with its totals
+GET {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}
 Accept: application/json
 
 ###
