@@ -1,7 +1,7 @@
-// PostToolUse hook: after Claude edits a file, run the checks for that file's side of the repo.
+// Stop hook: when Claude is about to end its turn, run the checks for each side of the repo with uncommitted changes.
 //   .cs / .csproj / .props          -> dotnet build Pos.slnx, then the tests that need no database
-//   web/**/*.ts, web/**/*.html      -> eslint on the file, then the Angular compiler (types + templates)
-// A failure exits with code 2 and prints the errors on stderr, which Claude Code feeds back to Claude.
+//   web/**/*.ts, web/**/*.html      -> eslint on the changed files, then the Angular compiler (types + templates)
+// A failure exits with code 2 and prints the errors on stderr, which keeps Claude working to fix them.
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -15,13 +15,18 @@ const FAST_TEST_PROJECTS = [
 
 const input = JSON.parse(readFileSync(0, 'utf8').replace(/^﻿/, '') || '{}');
 const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
-const filePath = input.tool_input?.file_path;
-if (!filePath) process.exit(0);
 
-const rel = path.relative(root, path.resolve(root, filePath)).split(path.sep).join('/');
-if (rel.startsWith('..')) process.exit(0);
+/** Modified, added and untracked files (deleted ones need no lint), relative to the repo root with forward slashes. */
+const status = spawnSync('git status --porcelain --untracked-files=all', { cwd: root, shell: true, encoding: 'utf8' });
+const changed = (status.stdout ?? '')
+  .split(/\r?\n/)
+  .filter((line) => line.length > 3 && !line.startsWith(' D') && !line.startsWith('D '))
+  .map((line) => line.slice(3).replace(/^.* -> /, '').replace(/^"|"$/g, ''));
+const ext = (file) => path.extname(file).toLowerCase();
+const dotnetChanged = changed.some((file) => ['.cs', '.csproj', '.props'].includes(ext(file)));
+const webFiles = changed.filter((file) => file.startsWith('web/src/') && ['.ts', '.html'].includes(ext(file)));
+if (!dotnetChanged && webFiles.length === 0) process.exit(0);
 
-const ext = path.extname(rel).toLowerCase();
 const failures = [];
 
 /** Keeps the distinct lines that match (compilers repeat the same error per target). */
@@ -78,7 +83,7 @@ function check(label, command, cwd, pick) {
   return false;
 }
 
-if (ext === '.cs' || ext === '.csproj' || ext === '.props') {
+if (dotnetChanged) {
   const built = check('dotnet build', 'dotnet build Pos.slnx -nologo -v q', root, matching(/: (error|warning) [A-Z]+\d+/));
   if (built) {
     for (const project of FAST_TEST_PROJECTS) {
@@ -90,24 +95,23 @@ if (ext === '.cs' || ext === '.csproj' || ext === '.props') {
       );
     }
   }
-} else if (rel.startsWith('web/src/') && (ext === '.ts' || ext === '.html')) {
+}
+
+if (webFiles.length) {
   const web = path.join(root, 'web');
-  const fileInWeb = rel.slice('web/'.length);
-  check('eslint', `npx eslint "${fileInWeb}"`, web, matching(/^\s*\d+:\d+\s+(error|warning)\s/));
-  const isSpec = rel.endsWith('.spec.ts');
-  check(
-    isSpec ? 'tsc (spec)' : 'ngc (types + templates)',
-    isSpec
-      ? 'npx tsc -p tsconfig.spec.json --noEmit --pretty false'
-      : 'npx ngc -p tsconfig.app.json --noEmit --pretty false',
-    web,
-    matching(/error (TS|NG)\d+/),
-  );
+  const filesInWeb = webFiles.map((file) => `"${file.slice('web/'.length)}"`).join(' ');
+  check('eslint', `npx eslint ${filesInWeb}`, web, matching(/^\s*\d+:\d+\s+(error|warning)\s|^\S.*\.(ts|html)$/));
+  if (webFiles.some((file) => !file.endsWith('.spec.ts'))) {
+    check('ngc (types + templates)', 'npx ngc -p tsconfig.app.json --noEmit --pretty false', web, matching(/error (TS|NG)\d+/));
+  }
+  if (webFiles.some((file) => file.endsWith('.spec.ts'))) {
+    check('tsc (spec)', 'npx tsc -p tsconfig.spec.json --noEmit --pretty false', web, matching(/error (TS|NG)\d+/));
+  }
 }
 
 if (failures.length) {
   process.stderr.write(
-    [`Checks failed after editing ${rel}. Fix these before continuing:`, ...failures].join('\n') + '\n',
+    ['Checks failed on the uncommitted changes. Fix these before finishing:', ...failures].join('\n') + '\n',
   );
   process.exit(2);
 }
