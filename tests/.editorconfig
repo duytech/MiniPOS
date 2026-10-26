@@ -1,0 +1,3 @@
+[*.cs]
+# Test names are sentences with underscores (Tax_is_rounded_away_from_zero_at_the_midpoint); CA1707 is for public APIs.
+dotnet_diagnostic.CA1707.severity = none

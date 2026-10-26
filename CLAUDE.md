@@ -6,11 +6,14 @@ surrounding code.**
 
 ## Commands
 - DB: `docker compose up -d` (Postgres on **localhost:5433**; 5432 is taken by another install on this machine)
-- Build: `dotnet build Pos.slnx` · Test: `dotnet test Pos.slnx` (integration tests need the DB running)
+- Build: `dotnet build Pos.slnx` · Test: `dotnet test Pos.slnx` (integration tests need the DB running). Warnings are
+  errors and Roslyn analyzers (`latest-recommended`) run on build (`Directory.Build.props`, `.editorconfig`): fix the
+  code; a rule is only turned off in `.editorconfig` with a one-line reason
 - Architecture rules only (no DB, ~1 s): `dotnet test tests/Pos.ArchitectureTests`; a failure lists each offending member
 - Run API: `dotnet run --project src/Pos.Api --launch-profile http` → http://localhost:5191 (migrates on startup in Development)
-- Web (in `web/`): `npm start` → http://localhost:4200 (proxies `/api` to 5191) · `npm run build` ·
-  `npx ng test --watch=false --browsers=ChromeHeadless`
+- Web (in `web/`): `npm start` → http://localhost:4200 (proxies `/api` to 5191) · `npm run build` · `npm run lint`
+  (ESLint) · `npx ng test --watch=false` (Vitest + jsdom, no browser; `fakeAsync` does not work, use
+  `vi.useFakeTimers()`)
 
 ## Architecture
 - One use case = one folder in Application with `XxxCommand`/`XxxQuery` (record), `XxxHandler`
@@ -66,6 +69,7 @@ surrounding code.**
   variables; commit only `*.example` files. Read the test DB connection from configuration.
 
 ## Definition of done
-- `dotnet build` with 0 warnings, `dotnet test` green, `npm run build` passes if `web/` changed.
+- `dotnet build` with 0 warnings, `dotnet test` green, `npm run build`, `npm run lint` and `npx ng test --watch=false` pass
+  if `web/` changed.
 - New behavior has tests: money rules → exact-cent unit tests; order changes → concurrency test.
 - Summary lists any assumptions or open business questions instead of silently deciding them.

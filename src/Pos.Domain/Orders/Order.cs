@@ -228,7 +228,7 @@ public class Order
     /// Shares <paramref name="amount"/> by each part's share of the subtotal, rounded down to the cent (amounts are never
     /// negative, so ToZero is rounding down); the leftover cents go to the part with the largest subtotal.
     /// </summary>
-    private static Money[] Allocate(Money amount, IReadOnlyList<Money> partSubtotals, Money subtotal)
+    private static Money[] Allocate(Money amount, List<Money> partSubtotals, Money subtotal)
     {
         var shares = partSubtotals
             .Select(partSubtotal => subtotal.Amount == 0m

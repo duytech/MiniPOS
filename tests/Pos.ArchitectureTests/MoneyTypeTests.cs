@@ -45,7 +45,7 @@ public class MoneyTypeTests
     {
         var offenders =
             from type in Layers.Application.GetTypes()
-            where type.IsInterface && type.Name.EndsWith("Repository")
+            where type.IsInterface && type.Name.EndsWith("Repository", StringComparison.Ordinal)
             from method in type.GetMethods()
             where Flatten(method.ReturnType).Any(t => t.Assembly == Layers.Application)
             select $"{type.FullName}.{method.Name}";

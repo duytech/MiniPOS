@@ -348,3 +348,42 @@ Bài học: verifier cũng phải được kiểm bằng đột biến; check "t
 - Allowlist decimal là phán đoán của mình. `PricingOptions` có thể bind thẳng sang `Percentage` để bỏ khỏi allowlist.
 - Rule decimal chỉ quét public/protected; helper private trong `Order` dùng `decimal` để làm tròn là cố ý.
 - Domain test không bắt được làm tròn qua `double` với các số hiện có: có nên thêm ca số mà `double` làm lệch cent không?
+
+### Ngày 4: warnings = errors, analyzers, ESLint, Vitest (2026-10-26)
+**Đã làm:**
+- `Directory.Build.props` cho mọi project: `TreatWarningsAsErrors`, `AnalysisLevel=latest-recommended`,
+  `EnforceCodeStyleInBuild`, `GenerateDocumentationFile` (để IDE0005 chạy khi build; CS1591 tắt).
+- `.editorconfig` root: IDE0005 (using thừa) và IDE0161 (file-scoped namespace) là warning; `Migrations/` là generated code.
+  `tests/.editorconfig` tắt CA1707 (tên test có gạch dưới).
+- Bật lên là ra 7 vi phạm thật, đã sửa: CA1859 (`Order.Allocate` nhận `List<Money>`), CA1305 ×3 (`decimal.Parse`,
+  `string.Format` trong test dùng `CultureInfo.InvariantCulture`), CA1310 (`EndsWith` thêm `StringComparison.Ordinal`),
+  CS1573 ×2 (thiếu `<param>` cho test split). Không rule nào phải tắt trong `src/`.
+- Angular: `strict` + `strictTemplates` đã bật từ trước. Thêm angular-eslint 20 (typescript-eslint recommended +
+  stylistic, angular recommended, template recommended + accessibility), `npm run lint`; code hiện có pass luôn.
+- Karma/Jasmine → Vitest (builder `@angular/build:unit-test`, jsdom). Port matcher Jasmine; `fakeAsync`/`tick` không chạy
+  (lỗi `Expected to be running in 'ProxyZone'`, Vitest không được zone.js patch) nên đổi sang `vi.useFakeTimers()` +
+  `vi.advanceTimersByTime`. Thêm `orders-api.spec.ts` (3 test). Tổng web 15 test, ~3 s, không cần Chrome.
+
+**Kiểm chứng verifier** (đột biến từng rule rồi trả lại):
+| Đột biến | Check đỏ |
+|---|---|
+| `using System.Text;` thừa trong Domain | build: IDE0005 |
+| `decimal.Parse(s)` không culture | build: CA1305 |
+| `string? s` rồi `s.Length` | build: CS8602 |
+| Block namespace | build: IDE0161 |
+| `any` tường minh trong component | lint: `no-explicit-any` |
+| Constructor injection thay `inject()` | lint: `prefer-inject` (+ `no-unused-vars`) |
+| `<img>` không `alt`, `<div (click)>` | lint: `alt-text`, `click-events-have-key-events`, `interactive-supports-focus` |
+| `OrdersApi` luôn gửi `search` | Vitest: 2 test |
+| Bỏ `distinctUntilChanged` ở search | Vitest: 1 test ("trimmed search text did not change") |
+
+**Chuyện đáng kể:** nếu chỉ đổi runner mà giữ `fakeAsync`, 8/10 test orders-list đỏ, nhưng 7 cái trong đó đỏ vì lỗi dây
+chuyền (`afterEach` `http.verify()` fail → TestBed không reset → "Cannot configure the test module"). Lỗi gốc chỉ có ở
+test đầu tiên dùng `fakeAsync`. Bài học cho agent: đọc lỗi đầu tiên, không sửa từng lỗi theo thứ tự in ra.
+
+**Giả định / câu hỏi còn mở:**
+- **`npm audit`: Vitest 3 kéo theo 2 critical + 2 moderate** (`tinypool` prototype pollution, `@vitest/mocker` path
+  traversal; trước đó 0). Chỉ là devDependency chạy local, nhưng bản sửa là Vitest 4+, mà `@angular/build` 20 chỉ nhận
+  `vitest ^3`. Cần quyết: chấp nhận tạm, hay lên Angular 21 (builder Vitest ổn định)?
+- Builder `unit-test` của Angular 20 còn EXPERIMENTAL (in cảnh báo mỗi lần chạy).
+- Mức `latest-recommended` là lựa chọn đã hỏi; `latest-all` sẽ bắt thêm nhiều (CA1062, CA1848…) nhưng ồn.

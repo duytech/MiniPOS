@@ -1,0 +1,13 @@
+<Project>
+
+  <!-- Build-time verifiers for every project: any compiler, analyzer or code-style warning fails the build. -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <!-- IDE0005 (unnecessary using) only runs on build when XML docs are generated. Missing docs are not enforced. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+</Project>

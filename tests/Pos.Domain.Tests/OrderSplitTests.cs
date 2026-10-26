@@ -86,6 +86,8 @@ public class OrderSplitTests
     }
 
     /// <param name="discountKind">0 = none, 1 = 15% of subtotal, 2 = fixed 1.00.</param>
+    /// <param name="card">Pay by card, so the order has a surcharge.</param>
+    /// <param name="tip">Add an 18% tip.</param>
     [Theory]
     [MemberData(nameof(PricingCombinations))]
     public void Parts_add_up_exactly_to_the_order(int discountKind, bool card, bool tip)

@@ -1,3 +1,4 @@
+using System.Globalization;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
 using Pos.Application.MenuItems.CreateMenuItem;
@@ -41,7 +42,7 @@ public class ValidatorTests
     public void Menu_item_price_must_fit_the_money_column_and_not_be_negative(string price, bool valid)
     {
         var result = Validator<CreateMenuItemCommand>()
-            .Validate(new CreateMenuItemCommand("Tea", Money.Usd(decimal.Parse(price))));
+            .Validate(new CreateMenuItemCommand("Tea", Money.Usd(decimal.Parse(price, CultureInfo.InvariantCulture))));
 
         Assert.Equal(valid, result.IsValid);
     }
