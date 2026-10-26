@@ -18,6 +18,7 @@ builder.Services.AddControllers()
     .AddJsonOptions(o =>
     {
         o.JsonSerializerOptions.Converters.Add(new MoneyJsonConverter());
+        o.JsonSerializerOptions.Converters.Add(new PercentageJsonConverter());
         o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 builder.Services.AddProblemDetails();

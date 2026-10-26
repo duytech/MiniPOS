@@ -61,6 +61,7 @@ public class Order
     /// </summary>
     public OrderLine AddItem(MenuItem menuItem, int quantity, string? notes)
     {
+        EnsureOpen();
         if (menuItem.Price.Currency != Currency)
         {
             throw new DomainException($"Menu item is priced in {menuItem.Price.Currency}, the order is in {Currency}.");
@@ -86,6 +87,7 @@ public class Order
     /// </summary>
     public void ApplyDiscount(OrderDiscount discount)
     {
+        EnsureOpen();
         var subtotal = CalculateSubtotal();
         if (discount.Rate is { Value: > 100m } rate)
         {
@@ -107,15 +109,37 @@ public class Order
 
     public void RemoveDiscount()
     {
+        EnsureOpen();
         DiscountRate = null;
         DiscountAmount = null;
     }
 
-    public void SetTip(Percentage tipRate) => TipRate = tipRate;
+    public void SetTip(Percentage tipRate)
+    {
+        EnsureOpen();
+        TipRate = tipRate;
+    }
 
-    public void RemoveTip() => TipRate = null;
+    public void RemoveTip()
+    {
+        EnsureOpen();
+        TipRate = null;
+    }
 
-    public void SetPaymentMethod(PaymentMethod paymentMethod) => PaymentMethod = paymentMethod;
+    public void SetPaymentMethod(PaymentMethod paymentMethod)
+    {
+        EnsureOpen();
+        PaymentMethod = paymentMethod;
+    }
+
+    /// <summary>Items, discount, tip and payment method can only change while the order is open.</summary>
+    private void EnsureOpen()
+    {
+        if (Status != OrderStatus.Open)
+        {
+            throw new DomainException($"The order is {Status}; only an open order can be changed.");
+        }
+    }
 
     /// <summary>
     /// The only place order totals are calculated. Each step is rounded to cents (MidpointRounding.AwayFromZero)

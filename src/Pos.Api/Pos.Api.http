@@ -17,6 +17,30 @@ Content-Type: application/json
 
 { "menuItemId": "{{menuItem.response.body.$.id}}", "quantity": 2, "notes": "no onions" }
 
+### Discount: a percentage of the subtotal ({ "rate": 15 }) or a fixed amount ({ "amount": 2.50 })
+PUT {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}/discount
+Content-Type: application/json
+
+{ "rate": 15 }
+
+### Remove the discount
+DELETE {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}/discount
+
+### Tip as a percentage of the subtotal after discount
+PUT {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}/tip
+Content-Type: application/json
+
+{ "rate": 18 }
+
+### Remove the tip
+DELETE {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}/tip
+
+### Pay by card (adds the card surcharge) or "Cash"
+PUT {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}/payment-method
+Content-Type: application/json
+
+{ "paymentMethod": "Card" }
+
 ### List open orders containing "pho" (or order number), newest first
 GET {{Pos.Api_HostAddress}}/api/orders?search=pho&status=Open&page=1&pageSize=20
 Accept: application/json

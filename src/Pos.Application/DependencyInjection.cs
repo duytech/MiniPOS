@@ -7,9 +7,14 @@ using Pos.Application.MenuItems.CreateMenuItem;
 using Pos.Application.MenuItems.GetMenuItem;
 using Pos.Application.Orders;
 using Pos.Application.Orders.AddOrderItem;
+using Pos.Application.Orders.ApplyDiscount;
 using Pos.Application.Orders.CreateOrder;
 using Pos.Application.Orders.GetOrder;
 using Pos.Application.Orders.ListOrders;
+using Pos.Application.Orders.RemoveDiscount;
+using Pos.Application.Orders.RemoveTip;
+using Pos.Application.Orders.SetPaymentMethod;
+using Pos.Application.Orders.SetTip;
 
 namespace Pos.Application;
 
@@ -25,6 +30,11 @@ public static class DependencyInjection
 
         services.AddCommandHandler<CreateOrderCommand, OrderDto, CreateOrderHandler>();
         services.AddCommandHandler<AddOrderItemCommand, OrderDto, AddOrderItemHandler>();
+        services.AddCommandHandler<ApplyDiscountCommand, OrderDto, ApplyDiscountHandler>();
+        services.AddCommandHandler<RemoveDiscountCommand, OrderDto, RemoveDiscountHandler>();
+        services.AddCommandHandler<SetTipCommand, OrderDto, SetTipHandler>();
+        services.AddCommandHandler<RemoveTipCommand, OrderDto, RemoveTipHandler>();
+        services.AddCommandHandler<SetPaymentMethodCommand, OrderDto, SetPaymentMethodHandler>();
         services.AddScoped<IQueryHandler<GetOrderQuery, OrderDto>, GetOrderHandler>();
         services.AddQueryHandler<ListOrdersQuery, PagedResult<OrderSummaryDto>, ListOrdersHandler>();
 

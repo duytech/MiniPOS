@@ -7,7 +7,7 @@ using Pos.Infrastructure.Persistence;
 
 namespace Pos.Api.IntegrationTests;
 
-/// <summary>No endpoint sets a discount, tip or payment method yet, so the mapping is checked through the DbContext.</summary>
+/// <summary>Checks the EF Core mapping of rates, discount, tip and payment method directly through the DbContext.</summary>
 public class OrderPricingPersistenceTests(PosApiFactory factory) : IClassFixture<PosApiFactory>
 {
     [Theory]
