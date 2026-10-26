@@ -12,13 +12,11 @@ surrounding code.**
   `npx ng test --watch=false --browsers=ChromeHeadless`
 
 ## Architecture
-- Dependencies point inward: Api → Application → Domain; Infrastructure → Application. Domain references nothing.
 - One use case = one folder in Application with `XxxCommand`/`XxxQuery` (record), `XxxHandler`
   (`ICommandHandler<TCommand, TResult>` / `IQueryHandler<TQuery, TResult>`), and `XxxValidator` (FluentValidation).
   No service classes, no MediatR.
 - Validators check request shape (required, ranges, formats). Domain entities enforce invariants (status transitions,
   totals). Don't duplicate one in the other.
-- Controllers are thin: map HTTP → command/query → handler → HTTP. No logic.
 - Repositories return domain entities. Read models for lists live in Application (query + projection); Infrastructure
   never returns Application DTOs from a repository.
 - Delete template leftovers (e.g. `WeatherForecast`) when you touch that project.
@@ -36,7 +34,6 @@ surrounding code.**
 - Totals are computed only by Domain. Never re-implement a total in SQL, LINQ projections, or the frontend. If a list
   needs totals, store them on the order when it changes or load through Domain; add a test that the list total equals
   `GET /api/orders/{id}` total.
-- Unit prices are snapshotted onto the order line when added. DB columns are `numeric(12,2)`.
 - API returns money as numbers with exactly 2 decimals (`15.40`, never `15.4` or `15.4000`), everywhere.
 - Frontend only displays money (`currency` pipe, `'USD'`); it never adds, multiplies, or rounds amounts.
 - Every money rule gets a unit test that asserts exact cents, including a midpoint case (x.xx5).
@@ -49,8 +46,9 @@ surrounding code.**
   result (e.g. N parallel add-item requests: only 200/409 responses, stored quantity = number of 200s).
 
 ## Business rules
-- Do not invent business rules, limits, or scope that the task doesn't state (max quantities, merge behavior, extra
-  entities, seed data). Ask, or list them as open questions in your summary.
+- Do not invent business rules, limits, or scope that the task doesn't state (max quantities, max page size, merge
+  behavior, extra entities, seed data). If the task can't be done without one, stop and ask **before** building it;
+  listing it afterwards as an open question is not enough.
 - Adding an item: identical line (same menu item, same snapshotted unit price, same notes/modifiers) → increase quantity;
   anything different → new line.
 
@@ -59,8 +57,6 @@ surrounding code.**
 - List endpoints are paged (`page`, `pageSize`, response includes `totalCount`). Never silently cap results.
 
 ## Frontend (web/)
-- Standalone components, `OnPush`, `inject()`, `@if`/`@for`, `toSignal` for streams; no manual `subscribe` without
-  `takeUntilDestroyed`.
 - When reloading data, keep showing the previous data with a small loading indicator; don't swap the table for a spinner.
 - No environment URLs (hosts, ports) in components or messages.
 

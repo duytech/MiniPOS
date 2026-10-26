@@ -179,3 +179,52 @@ N4 #8, N4 #10). Lỗi mới: 1 nhỏ (`MaxPageSize = 100` tự đặt). Không c
   rõ "nếu cần entity mới, dừng lại hỏi trước".
 - Rule "không tự đặt giới hạn" vẫn sót ở page size: thêm ví dụ `pageSize` tối đa vào dòng đó.
 - Không đo được dòng nào thừa vì không có lần chạy thiếu từng dòng; Ngày 7 chỉ bỏ dòng mà Ngày 4 agent đã tự làm đúng.
+
+### Ngày 7: rút gọn `CLAUDE.md` (2026-10-26)
+Tiêu chí bỏ dòng: agent Ngày 3–4 (chưa có `CLAUDE.md`) đã tự làm đúng, tức là dòng đó không đổi hành vi.
+74 → 70 dòng.
+
+| Thay đổi | Lý do |
+|---|---|
+| Bỏ "Dependencies point inward…" | Ngày 3 tự chia tầng đúng. Tuần 2 Ngày 3 sẽ có arch test (NetArchTest) kiểm tra thay cho chữ. |
+| Bỏ "Controllers are thin…" | Ngày 3–4 controller đều mỏng; lỗi nằm ở Service, đã có dòng Command/Handler/Validator chặn. |
+| Bỏ "Unit prices are snapshotted… `numeric(12,2)`" | Ngày 3 tự chụp giá và dùng `numeric(12,2)`. Rule gộp dòng vẫn nhắc "same snapshotted unit price". |
+| Bỏ dòng Angular (standalone, `OnPush`, `inject()`, `@if`, `toSignal`, `takeUntilDestroyed`) | Ngày 4 tự làm đúng hết; đó là mặc định của Angular 20. |
+| Sửa rule "không tự đặt business rule" | Ngày 6: agent A vẫn thêm `MenuItem` rồi mới hỏi; agent B tự đặt `MaxPageSize = 100`. Thêm ví dụ "max page size" và "phải hỏi **trước** khi xây, liệt kê sau là chưa đủ". |
+
+**Giữ nguyên** mọi dòng có lỗi gốc trong bảng Ngày 5, kể cả những dòng Ngày 6 làm đúng: làm đúng *khi có* dòng đó
+không chứng minh được dòng đó thừa.
+
+**Rủi ro:** không có lần chạy lại sau khi rút gọn. Bỏ dòng dựa trên Ngày 3–4 (một lần chạy mỗi task), nên nếu Tuần 2
+thấy lệch kiến trúc hay sai kiểu cột tiền, đó là dấu hiệu cần trả lại dòng. Arch test và verifier Tuần 2 sẽ bắt các lỗi
+này tự động thay vì dựa vào chữ.
+
+## Tổng kết Tuần 1
+**Kết quả:** `CLAUDE.md` 70 dòng, mỗi dòng có nguồn (lỗi thật hoặc quyết định đã chốt), đã kiểm chứng bằng cách cho agent
+mới làm lại cùng tính năng.
+
+| | Ngày 3–4 (không hướng dẫn) | Ngày 6 (có `CLAUDE.md`) |
+|---|---|---|
+| Lỗi từ bảng cũ | 22 (4 mức Cao) | 3 còn (mức thấp/cố ý), 3 sửa một phần, 16 sửa hẳn; 0 mức Cao |
+| Lỗi mới | – | 1 nhỏ (`MaxPageSize = 100`) |
+| Verifier đồng thời ẩn | Đỏ 3/3 | Xanh 3/3 |
+| Câu hỏi nghiệp vụ agent tự nêu | 0 (tự quyết hết) | A: 6 câu sau khi làm; B: 3 câu, dừng lại hỏi trước |
+
+**Bài học:**
+1. **Test xanh không có nghĩa là đúng.** Ngày 3 có 37 test xanh mà vẫn mất tiền khi chạy song song. Verifier phải kiểm
+   tra invariant nghiệp vụ (tổng lưu trong DB), không chỉ code chạy được.
+2. **Rule có tác dụng nhất là rule nêu cái agent không tự nghĩ tới:** concurrency, một chỗ tính tiền, định dạng tiền trong
+   API. Rule về thứ agent vốn làm tốt (RxJS, Angular style, chia tầng) chỉ tốn chỗ.
+3. **Rule cụ thể thắng rule chung.** "Không tự đặt giới hạn" vẫn sót page size; có ví dụ cụ thể thì agent mới dừng lại.
+   Ví dụ trong rule concurrency (N request song song, chỉ 200/409, số lượng = số 200) đủ để agent tự viết test tương
+   đương verifier ẩn.
+4. **Người viết instruction cũng tự đặt rule** (tip trước/sau thuế ở Ngày 5). Rule "hỏi khi task không nói" áp dụng cho
+   cả mình.
+5. **Thí nghiệm phải kín:** journal chứa đáp án nên phải gỡ khỏi nhánh khi agent làm lại; verifier cũng phải ẩn.
+
+**Mang sang Tuần 2:** biến rule thành check tự động: arch test cho chia tầng và không `double`/`float` (thay cho dòng đã
+bỏ), test tiền đến từng cent khi thêm thuế/tip/giảm giá (cần trả lời câu hỏi cơ sở tính tip/surcharge trước), hook
+build + test sau mỗi lần sửa file.
+
+**Câu hỏi nghiệp vụ còn mở:** cơ sở tính tip/surcharge; phạm vi MenuItem; vòng đời order (chuyển trạng thái, xóa món);
+giới hạn số lượng; món không tồn tại trả 404 hay 422; page size tối đa (hiện code đang để 100).
