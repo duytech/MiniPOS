@@ -28,6 +28,10 @@ internal static class ApiClient
     public static Task<HttpResponseMessage> RemoveLineAsync(this HttpClient client, Guid orderId, Guid lineId) =>
         client.DeleteAsync($"/api/orders/{orderId}/lines/{lineId}");
 
+    public static Task<HttpResponseMessage> ChangeLineQuantityAsync(
+        this HttpClient client, Guid orderId, Guid lineId, int quantity) =>
+        client.PutAsJsonAsync($"/api/orders/{orderId}/lines/{lineId}/quantity", new { quantity });
+
     /// <summary>Body is sent as given, e.g. <c>new { rate = 15 }</c> or <c>new { amount = 2.50 }</c>.</summary>
     public static Task<HttpResponseMessage> ApplyDiscountAsync(this HttpClient client, Guid orderId, object body) =>
         client.PutAsJsonAsync($"/api/orders/{orderId}/discount", body);

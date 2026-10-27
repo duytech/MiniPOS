@@ -175,6 +175,96 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         Assert.Equal(discounted ? "5.00" : "0.00", order.Money("discount"));
     }
 
+    [Fact]
+    public async Task Parallel_quantity_changes_of_different_lines_store_exactly_the_accepted_quantities()
+    {
+        var orderId = await _client.CreateOrderAsync();
+        var lineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
+
+        var results = await ConcurrentlyAsync(lineIds.Select(lineId => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+        {
+            using var response = await _client.ChangeLineQuantityAsync(orderId, lineId, 5);
+            return (response.StatusCode, lineId.ToString());
+        })));
+
+        var accepted = AssertOnlyOkOrConflict(results);
+        var expected = lineIds
+            .Select(id => $"{id}:{(accepted.Contains(id.ToString()) ? 5 : 1)}")
+            .Order(StringComparer.Ordinal);
+        Assert.Equal(string.Join(",", expected), await StoredLineQuantitiesAsync(orderId));
+    }
+
+    [Fact]
+    public async Task Parallel_quantity_changes_and_add_items_lose_neither()
+    {
+        var (orderId, menuItemId) = await OrderWithOneItemAsync();
+        var changedLineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
+
+        var requests = changedLineIds.SelectMany(lineId => new Func<Task<(HttpStatusCode, string)>>[]
+        {
+            async () =>
+            {
+                using var response = await _client.AddItemAsync(orderId, menuItemId, 1);
+                return (response.StatusCode, "add");
+            },
+            async () =>
+            {
+                using var response = await _client.ChangeLineQuantityAsync(orderId, lineId, 4);
+                return (response.StatusCode, lineId.ToString());
+            },
+        });
+        var results = await ConcurrentlyAsync(requests);
+
+        var accepted = AssertOnlyOkOrConflict(results);
+        Assert.Equal(1 + accepted.Count(a => a == "add"), await StoredAsync<int>(
+            orderId, $"(SELECT quantity FROM order_lines WHERE order_id = o.id AND menu_item_id = '{menuItemId}')"));
+        var expected = changedLineIds
+            .Select(id => $"{id}:{(accepted.Contains(id.ToString()) ? 4 : 1)}")
+            .Order(StringComparer.Ordinal);
+        var stored = (await StoredLineQuantitiesAsync(orderId)).Split(',')
+            .Where(entry => changedLineIds.Contains(Guid.Parse(entry.Split(':')[0])));
+        Assert.Equal(expected, stored.Order(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// Bun cha 9.50 × 2 = 19.00. A fixed 10.00 discount and lowering Bun cha to 1 (subtotal 9.50) are each fine alone,
+    /// but not both: whatever the interleaving, the stored discount must never be more than the stored subtotal.
+    /// </summary>
+    [Fact]
+    public async Task Quantity_decrease_racing_a_fixed_discount_never_leaves_the_discount_above_the_subtotal()
+    {
+        var (orderId, menuItemId) = await OrderWithOneItemAsync();
+        (await _client.AddItemAsync(orderId, menuItemId, 1)).EnsureSuccessStatusCode();
+        var lineId = Guid.Parse(await StoredAsync<string>(
+            orderId, "(SELECT id::text FROM order_lines WHERE order_id = o.id)"));
+
+        var requests = Enumerable.Range(0, ConcurrentRequests).Select(_ => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+            {
+                using var response = await _client.ApplyDiscountAsync(orderId, new { amount = 10.00m });
+                return (response.StatusCode, "discount");
+            }))
+            .Append(async () =>
+            {
+                using var response = await _client.ChangeLineQuantityAsync(orderId, lineId, 1);
+                return (response.StatusCode, "decrease");
+            });
+        var results = await ConcurrentlyAsync(requests);
+
+        var unexpected = results.Where(r => r.Item1 is not (HttpStatusCode.OK or HttpStatusCode.Conflict
+            or HttpStatusCode.UnprocessableEntity)).ToList();
+        Assert.Empty(unexpected);
+        var order = await _client.GetOrderAsync(orderId);
+        var decreased = results.Any(r => r is (HttpStatusCode.OK, "decrease"));
+        var discounted = results.Any(r => r is (HttpStatusCode.OK, "discount"));
+        Assert.Equal(!decreased, discounted);
+        Assert.Equal(decreased ? "9.50" : "19.00", order.Money("subtotal"));
+        Assert.Equal(discounted ? "10.00" : "0.00", order.Money("discount"));
+    }
+
+    private Task<string> StoredLineQuantitiesAsync(Guid orderId) => StoredAsync<string>(
+        orderId, "(SELECT COALESCE(string_agg(id::text || ':' || quantity, ',' ORDER BY id::text COLLATE \"C\"), '') " +
+                 "FROM order_lines WHERE order_id = o.id)");
+
     private async Task<List<Guid>> AddDistinctLinesAsync(Guid orderId, int count)
     {
         var lineIds = new List<Guid>();

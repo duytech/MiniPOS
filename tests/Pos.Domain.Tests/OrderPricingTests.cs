@@ -137,6 +137,64 @@ public class OrderPricingTests
     }
 
     [Fact]
+    public void Percent_discount_and_tip_follow_the_subtotal_after_a_quantity_change_and_round_away_from_zero()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        var tea = order.AddItem(new MenuItem("Tea", Money.Usd(0.35m)), 4, notes: null);
+        order.ApplyDiscount(OrderDiscount.PercentOfSubtotal(new Percentage(15m)));
+        order.SetTip(new Percentage(10m));
+        Assert.Equal(Money.Usd(0.21m), order.CalculateTotals().Discount); // 15% of 1.40
+
+        order.ChangeLineQuantity(tea, 2);
+
+        var totals = order.CalculateTotals();
+        Assert.Equal(Money.Usd(0.70m), totals.Subtotal);
+        Assert.Equal(Money.Usd(0.11m), totals.Discount); // 15% of 0.70 = 0.105
+        Assert.Equal(Money.Usd(0.06m), totals.Tip); // 10% of tip base 0.59 = 0.059
+        Assert.Equal(Money.Usd(0.65m), totals.Total);
+    }
+
+    [Fact]
+    public void Fixed_discount_equal_to_the_new_subtotal_allows_lowering_a_quantity()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        var pho = order.AddItem(new MenuItem("Pho", Money.Usd(3.85m)), 3, notes: null);
+        order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(7.70m)));
+
+        order.ChangeLineQuantity(pho, 2);
+
+        var totals = order.CalculateTotals();
+        Assert.Equal(Money.Usd(7.70m), totals.Subtotal);
+        Assert.Equal(Money.Usd(7.70m), totals.Discount);
+        Assert.Equal(Money.Usd(0.00m), totals.Total);
+    }
+
+    [Fact]
+    public void Fixed_discount_more_than_the_new_subtotal_rejects_lowering_a_quantity()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        var pho = order.AddItem(new MenuItem("Pho", Money.Usd(3.85m)), 3, notes: null);
+        order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(7.71m)));
+
+        Assert.Throws<DomainException>(() => order.ChangeLineQuantity(pho, 2));
+
+        Assert.Equal(3, pho.Quantity);
+        Assert.Equal(Money.Usd(3.84m), order.CalculateTotals().Total); // 11.55 − 7.71
+    }
+
+    [Fact]
+    public void Fixed_discount_does_not_block_raising_a_quantity()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        var pho = order.AddItem(new MenuItem("Pho", Money.Usd(3.85m)), 2, notes: null);
+        order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(7.70m)));
+
+        order.ChangeLineQuantity(pho, 3);
+
+        Assert.Equal(Money.Usd(3.85m), order.CalculateTotals().Total); // 11.55 − 7.70
+    }
+
+    [Fact]
     public void Tax_is_rounded_to_cents()
     {
         var totals = OrderWith(10.00m, NycTax).CalculateTotals(); // 0.8875

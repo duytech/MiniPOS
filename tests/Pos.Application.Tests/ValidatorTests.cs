@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Pos.Application.MenuItems.CreateMenuItem;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Application.Orders.ApplyDiscount;
+using Pos.Application.Orders.ChangeOrderLineQuantity;
 using Pos.Application.Orders.ListOrders;
 using Pos.Application.Orders.RemoveDiscount;
 using Pos.Application.Orders.RemoveOrderLine;
@@ -136,6 +137,29 @@ public class ValidatorTests
         Assert.False(Validator<RemoveTipCommand>().Validate(new RemoveTipCommand(Guid.Empty)).IsValid);
         Assert.False(Validator<SetPaymentMethodCommand>()
             .Validate(new SetPaymentMethodCommand(Guid.Empty, PaymentMethod.Card)).IsValid);
+    }
+
+    [Theory]
+    [InlineData(int.MinValue, false)]
+    [InlineData(-1, false)]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
+    [InlineData(int.MaxValue, true)]
+    public void Changed_line_quantity_must_be_positive(int quantity, bool valid)
+    {
+        var result = Validator<ChangeOrderLineQuantityCommand>()
+            .Validate(new ChangeOrderLineQuantityCommand(Guid.NewGuid(), Guid.NewGuid(), quantity));
+
+        Assert.Equal(valid, result.IsValid);
+    }
+
+    [Fact]
+    public void Change_line_quantity_requires_both_ids()
+    {
+        var result = Validator<ChangeOrderLineQuantityCommand>()
+            .Validate(new ChangeOrderLineQuantityCommand(Guid.Empty, Guid.Empty, 1));
+
+        Assert.Equal(["OrderId", "LineId"], result.Errors.Select(e => e.PropertyName));
     }
 
     [Fact]

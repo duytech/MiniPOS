@@ -5,6 +5,7 @@ using Pos.Application.Common;
 using Pos.Application.Orders;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Application.Orders.ApplyDiscount;
+using Pos.Application.Orders.ChangeOrderLineQuantity;
 using Pos.Application.Orders.CreateOrder;
 using Pos.Application.Orders.GetOrder;
 using Pos.Application.Orders.ListOrders;
@@ -95,6 +96,25 @@ public sealed class OrdersController : ControllerBase
         CancellationToken cancellationToken) =>
         handler.HandleAsync(new RemoveOrderLineCommand(id, lineId), cancellationToken);
 
+    /// <summary>
+    /// Sets a line's quantity (at least 1). A fixed discount larger than the new subtotal makes this a 422.
+    /// </summary>
+    [HttpPut("{id:guid}/lines/{lineId:guid}/quantity")]
+    [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public Task<OrderDto> ChangeLineQuantity(
+        Guid id,
+        Guid lineId,
+        ChangeLineQuantityRequest request,
+        [FromServices] ICommandHandler<ChangeOrderLineQuantityCommand, OrderDto> handler,
+        CancellationToken cancellationToken) =>
+        handler.HandleAsync(
+            new ChangeOrderLineQuantityCommand(id, lineId, request.Quantity!.Value),
+            cancellationToken);
+
     [HttpPut("{id:guid}/discount")]
     [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
@@ -158,6 +178,8 @@ public sealed class OrdersController : ControllerBase
 }
 
 public sealed record AddOrderItemRequest(Guid MenuItemId, int Quantity, string? Notes);
+
+public sealed record ChangeLineQuantityRequest([Required] int? Quantity);
 
 /// <summary>Exactly one of <paramref name="Rate"/> (percent of subtotal) or <paramref name="Amount"/> (fixed).</summary>
 public sealed record ApplyDiscountRequest(Percentage? Rate, Money? Amount);
