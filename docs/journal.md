@@ -469,7 +469,7 @@ DB lưu đúng các request 200). Kiểm thêm: 409 thật sự xảy ra (9–18
 **Đã làm:** `Order.SplitEvenly(int parts)` trong Domain, ra API `GET /api/orders/{id}/split-even?parts=N` (chỉ tính,
 không lưu, nên không có concurrency test). Order tính xong trước; rồi subtotal, discount, surcharge, tax, tip **mỗi khoản
 chia riêng** cho N, làm tròn xuống (`ToZero`), cent dư của từng khoản dồn vào **phần đầu** (đã hỏi). Total từng phần =
-cộng các khoản của phần đó. Validator: `Parts ≥ 1`, `[BindRequired]` cho query (thiếu `parts` → 400, không lặng lẽ
+cộng các khoản của phần đó. Validator: `1 ≤ Parts ≤ 20`, `[BindRequired]` cho query (thiếu `parts` → 400, không lặng lẽ
 thành 0). Test: 12 Domain (có ca 0.195 → 0.19, $0.05 / 10 → 0.05 + 9 × 0.00), 1 validator theory, 7 integration
 (chuỗi JSON 2 chữ số, tổng các phần == total của `GET`, 400/404).
 
@@ -497,8 +497,8 @@ thành 0). Test: 12 Domain (có ca 0.195 → 0.19, $0.05 / 10 → 0.05 + 9 × 0.
   `decimal.Round`/`Math.Round` ngoài Domain.
 
 **Giả định / câu hỏi còn mở:**
-- N không giới hạn trên (đã hỏi: không có giới hạn nghiệp vụ). Nhưng `parts=2000000000` sẽ tạo ~2 tỉ phần trong bộ nhớ:
-  có thể hết bộ nhớ = 500, mà CLAUDE.md coi 500 là bug. Chưa thử. Cần quyết định: giới hạn, trả rút gọn
-  (một phần đầu + một phần đại diện × N−1), hay phân trang.
+- N lúc đầu không giới hạn trên, nhưng `parts=2000000000` sẽ tạo ~2 tỉ phần trong bộ nhớ (hết bộ nhớ = 500). Đã hỏi
+  lại, user chọn **N ≤ 20** (2026-10-27): `SplitOrderEvenlyValidator.MaxParts`, `parts` 21 hoặc 2000000000 → 400.
+  Integration test: 20 phần của $1.09 → 0.14 + 19 × 0.05.
 - Chia đều được ở mọi status (giống `GET`), kể cả order đã đóng.
 - Phần có thể là 0.00 khi N > số cent; không chặn.

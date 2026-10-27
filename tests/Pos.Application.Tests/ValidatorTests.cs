@@ -140,8 +140,10 @@ public class ValidatorTests
     [InlineData(-1, false)]
     [InlineData(0, false)]
     [InlineData(1, true)]
-    [InlineData(int.MaxValue, true)]
-    public void Even_split_needs_at_least_one_part(int parts, bool valid)
+    [InlineData(20, true)]
+    [InlineData(21, false)]
+    [InlineData(int.MaxValue, false)]
+    public void Even_split_is_between_1_and_20_parts(int parts, bool valid)
     {
         Assert.Equal(valid, Validator<SplitOrderEvenlyQuery>().Validate(new SplitOrderEvenlyQuery(Guid.NewGuid(), parts)).IsValid);
         Assert.False(Validator<SplitOrderEvenlyQuery>().Validate(new SplitOrderEvenlyQuery(Guid.Empty, 2)).IsValid);

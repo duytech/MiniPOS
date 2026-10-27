@@ -48,14 +48,27 @@ public class SplitEvenApiTests(PosApiFactory factory) : IClassFixture<PosApiFact
     [Theory]
     [InlineData("0")]
     [InlineData("-2")]
+    [InlineData("21")]
+    [InlineData("2000000000")]
     [InlineData("abc")]
-    public async Task Parts_below_one_or_not_a_number_is_400(string parts)
+    public async Task Parts_outside_1_to_20_or_not_a_number_is_400(string parts)
     {
         var orderId = await OrderWithSubtotalAsync(10.00m);
 
         var response = await _client.GetAsync($"/api/orders/{orderId}/split-even?parts={parts}");
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Twenty_parts_is_the_most()
+    {
+        var orderId = await OrderWithSubtotalAsync(1.00m); // tax 8.875% of 1.00 = 0.08875 → 0.09, total 1.09
+
+        var parts = await SplitAsync(orderId, 20);
+
+        Assert.Equal(["0.14", .. Enumerable.Repeat("0.05", 19)], parts.Select(p => p.Money("total")));
+        await AssertPartTotalsAddUpToGetTotalAsync(orderId, parts);
     }
 
     [Fact]
