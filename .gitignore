@@ -488,3 +488,6 @@ $RECYCLE.BIN/
 web/node_modules/
 web/dist/
 web/.angular/
+
+# Claude Code sub-agent worktrees
+.claude/worktrees/
