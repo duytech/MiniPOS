@@ -44,7 +44,7 @@ Kết quả: agent tự sửa đến khi mọi check pass; ít nhất một rule
 
 ## Tuần 3: Skills, sub-agents và visual loop
 
-Kết quả: một tính năng chạy trọn chuỗi plan → implement → review → verify, có bạn duyệt ở mỗi cổng, và agent tự xem được UI đã render.
+Kết quả: một tính năng chạy trọn chuỗi plan → implement → review → verify, có bạn duyệt ở mỗi cổng, agent tự xem được UI đã render, và một tính năng chạy backend + frontend song song bằng hai agent.
 
 - [x] Ngày 1: Viết skill `add-endpoint`: Controller → Command/Query → Handler → validator → test.
 - [x] Ngày 2: Viết skill `add-angular-feature`: component + service + RxJS + Tailwind, theo quy ước trong `CLAUDE.md`.
@@ -52,7 +52,11 @@ Kết quả: một tính năng chạy trọn chuỗi plan → implement → revi
 - [ ] Ngày 4: Tạo sub-agent `reviewer` (chỉ đọc), đối chiếu diff với `CLAUDE.md` và business rule về tiền.
 - [ ] Ngày 5: Cài Playwright MCP. Viết skill bắt agent mở trang, chụp màn hình và đọc accessibility snapshot sau mỗi lần sửa UI.
 - [ ] Ngày 6: Thử visual loop với dữ liệu xấu: tên món rất dài, 200 món, mạng chậm (throttle). Ghi lại lỗi agent tự phát hiện.
-- [ ] Ngày 7: Chạy trọn tính năng Split bill qua cả chuỗi agent. Ghi lại chỗ các agent trả về không nhất quán và cách bạn sửa harness.
+- [ ] Ngày 7: Chạy trọn tính năng Split bill qua cả chuỗi agent, backend và frontend **song song**.
+  - [ ] Sửa `planner`: khi task có cả API và web, xuất **contract** (route, request/response JSON, mã lỗi) và **danh sách file của từng task**; hai danh sách không được trùng file.
+  - [ ] Duyệt contract, rồi chạy hai `implementer` song song, mỗi agent một worktree (`isolation: worktree`): một làm backend (lưu split, endpoint), một làm frontend (trang chia hóa đơn, gọi API theo contract).
+  - [ ] Thêm bước **integrator** (agent hoặc bạn): merge hai nhánh, chạy toàn bộ verifier (build, test, lint, `ng test`), mở app kiểm tra end-to-end.
+  - [ ] Ghi vào `docs/journal.md`: conflict gặp phải (file trùng, contract lệch, DTO khác tên, số tiền khác định dạng) và cách xử lý; chỗ các agent trả về không nhất quán và cách bạn sửa harness.
 
 ## Tuần 4: AI code review và đóng gói hồ sơ
 
@@ -74,5 +78,5 @@ Mỗi câu trả lời nên dựa trên một ví dụ thật trong repo, nói b
 - [ ] "Tell me about a time AI output looked correct but was wrong." → câu chuyện lỗi làm tròn ở Tuần 2.
 - [ ] "How do you verify front-end work done by an agent?" → visual loop với Playwright ở Tuần 3.
 - [ ] "How do you keep AI code review from being noise?" → kết quả chỉnh prompt ở Tuần 4.
-- [ ] "How would you split one feature across several agents?" → chuỗi planner / implementer / reviewer và các cổng duyệt.
+- [ ] "How would you split one feature across several agents?" → chuỗi planner / implementer / reviewer và các cổng duyệt; chạy backend/frontend song song sau khi chốt contract, integrator merge và verify.
 - [ ] "Who is accountable when AI-written code breaks production?" → bạn, luôn luôn; nêu cách verifier và review giảm rủi ro.
