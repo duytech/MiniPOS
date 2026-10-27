@@ -625,3 +625,47 @@ chính (worktree tạo từ `main` không có skill mới).
   `ChangeLineQuantity`). Không vi phạm rule nào, nhưng nên gom về một helper private.
 - Không giới hạn quantity: `int.MaxValue` × 2.00 cho total ~4.29 tỷ, trả 200. Đúng như đã chốt; total không lưu trong DB
   nên không tràn cột numeric(12,2).
+
+### Ngày 2: skill `add-angular-feature` (2026-10-27)
+**Đã làm:** `.claude/skills/add-angular-feature/SKILL.md` + `references/templates.md`, rút từ `orders-list` (tính năng
+Angular duy nhất): bước 0 hỏi hành vi UI; model → service → component (`OnPush`, `inject()`, một signal `state` qua
+`toSignal` + `scan`); `switchMap` cho đọc, `concatMap`/`exhaustMap` cho ghi (không bao giờ `switchMap`); tiền chỉ
+`currency` pipe, kể cả không cập nhật lạc quan; reload giữ dữ liệu cũ; bảng test Vitest. Plan:
+`plans/tuan-3-ngay-2-skill-add-angular-feature.md`.
+
+**Thử skill:** trang chi tiết order `/orders/:id` (dòng món, 6 khoản tiền, xóa dòng, −/+ số lượng, link từ danh sách),
+sub-agent mới, **không đưa rule nào**.
+- Sau 6 tool call, agent **dừng và hỏi 10 câu** (lỗi 422/409/404/500, xác nhận xóa, kiểu điều khiển số lượng, bấm
+  thêm khi đang chạy, order đóng, điều hướng, trường hiển thị); API shape thì tự đọc, không hỏi. User chốt: 422 hiện
+  `detail`; 409 và 404 dòng → "The order changed. Showing the latest version." + tự tải lại; 404 khi mở → "Order not
+  found." + link; mạng/500 → câu chung, giữ dữ liệu cũ; không xác nhận xóa; nút −/+, − khóa ở 1; **mọi click đều tính
+  (`concatMap`)**; order đóng chỉ đọc; link ở số order + "Back to orders"; trường như agent đề xuất.
+- Resume, xong trong ~4 phút, 17 tool call: 19 test component, 3 test service, 1 test link; build, lint, 38 Vitest xanh.
+- Điểm dễ sai nhất làm đúng: mỗi lần ghi trong `concatMap` tính số lượng từ order **mà lần ghi trước trả về**
+  (`defer` đọc `state()`), nên 3 click + nhanh gửi 3, 4, 5. Reload sau 409/404 nằm trong cùng bước `concatMap`, nên các
+  click đang xếp hàng bắt đầu từ order mới nhất. Frontend không tính tiền.
+
+**Kiểm bằng app thật** (API + `npm start`, browser pane), order #11: Pho bo 2 × 9.50 + Iced tea 1 × 2.00, discount
+cố định 15.00:
+| Thao tác | Kết quả |
+|---|---|
+| Click `#11` trong danh sách | mở `/orders/{id}`, đủ dòng và 6 khoản |
+| 3 click + nhanh trên Iced tea | DB lưu quantity 4 (1 → 4), màn hình $27.00 / $13.07 khớp API |
+| Remove Pho bo (subtotal mới < discount) | hiện nguyên `detail` 422 của API, order giữ nguyên |
+| Xóa Iced tea bằng API khác, rồi + trên Iced tea | 404 → "The order changed. Showing the latest version." + tải lại, dòng biến mất |
+| Tab title | **"Order � Mini POS"** |
+
+**Chỗ lệch tìm được:**
+| Chỗ lệch | Check nào bắt | Sửa |
+|---|---|---|
+| `app.routes.ts` bị ghi bằng Latin-1: `·` thành 1 byte, tab hiện `�` | **không check nào** (build, lint, ngc, Vitest đều xanh); chỉ thấy khi mở app thật | Hook verify (Stop + trước commit) chặn file text không phải UTF-8; skill cảnh báo `Set-Content` |
+| Agent không mở app thật (skill cho phép bỏ qua "nếu chạy được") | — | Skill: bắt buộc mở trang với API thật, kiểm cả tab title; nếu không chạy được thì nói rõ |
+| Tự quyết "bỏ qua click xếp hàng không còn hợp lệ" (− về 0, Remove lần 2) rồi mới hỏi | — | Bước 0 thêm câu này. User giữ cách của agent |
+
+**Chuyện đáng kể:** lỗi mã hóa lọt qua cả 4 verifier của `web/`, vì với compiler và test, `'Order \xb7 Mini POS'` vẫn
+là một chuỗi hợp lệ. Chỉ visual check mới thấy. Đây là lý do cho Ngày 5 (Playwright, visual loop).
+
+**Giả định / câu hỏi còn mở:**
+- Chưa chạy lại agent với skill đã sửa (3 chỗ lệch đều nhỏ, không ở logic).
+- Route title cố định "Order · Mini POS", không có số order.
+- Danh sách không giữ bộ lọc khi quay lại (user chọn để sau).

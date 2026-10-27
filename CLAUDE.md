@@ -17,7 +17,8 @@ surrounding code.**
 
 - A `Stop` hook (`.claude/hooks/verify-on-edit.mjs`) checks the uncommitted changes when you finish a turn: `.cs` →
   build + the tests that need no DB; `web/src/**/*.ts|html` → eslint on those files + `ngc` (`tsc` for specs). The
-  same checks run as a `PreToolUse` hook before any `git commit` and block it when they fail. When it reports errors,
+  same checks run as a `PreToolUse` hook before any `git commit` and block it when they fail. Both also reject changed
+  text files that are not UTF-8. When it reports errors,
   fix them. It does not run integration tests or Vitest: run those before you finish.
 - No `Co-Authored-By: Claude` in commits, PRs or issues. A `PreToolUse` hook (`.claude/hooks/block-claude-coauthor.mjs`)
   blocks such commands.

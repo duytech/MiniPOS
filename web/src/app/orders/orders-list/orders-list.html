@@ -67,7 +67,14 @@
         <tbody class="divide-y divide-slate-100">
           @for (order of page.items; track order.id) {
             <tr data-testid="order-row" class="hover:bg-slate-50">
-              <td class="px-4 py-3 font-medium text-slate-900">#{{ order.number }}</td>
+              <td class="px-4 py-3 font-medium text-slate-900">
+                <a
+                  data-testid="order-link"
+                  [routerLink]="['/orders', order.id]"
+                  class="text-emerald-700 hover:text-emerald-800 hover:underline"
+                  >#{{ order.number }}</a
+                >
+              </td>
               <td class="px-4 py-3 whitespace-nowrap text-slate-600">
                 {{ order.createdAt | date: 'short' }}
               </td>
