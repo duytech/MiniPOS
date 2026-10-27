@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Pos.Application.Common;
 using Pos.Application.Orders;
 using Pos.Application.Orders.AddOrderItem;
@@ -11,6 +12,7 @@ using Pos.Application.Orders.RemoveDiscount;
 using Pos.Application.Orders.RemoveTip;
 using Pos.Application.Orders.SetPaymentMethod;
 using Pos.Application.Orders.SetTip;
+using Pos.Application.Orders.SplitOrderEvenly;
 using Pos.Domain.Common;
 using Pos.Domain.Orders;
 
@@ -50,6 +52,18 @@ public sealed class OrdersController : ControllerBase
         [FromServices] IQueryHandler<GetOrderQuery, OrderDto> handler,
         CancellationToken cancellationToken) =>
         handler.HandleAsync(new GetOrderQuery(id), cancellationToken);
+
+    /// <summary>Splits the bill evenly between <paramref name="parts"/> people; the first part takes the leftover cents.</summary>
+    [HttpGet("{id:guid}/split-even")]
+    [ProducesResponseType<IReadOnlyList<SplitPartDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public Task<IReadOnlyList<SplitPartDto>> SplitEvenly(
+        Guid id,
+        [FromQuery, BindRequired] int parts,
+        [FromServices] IQueryHandler<SplitOrderEvenlyQuery, IReadOnlyList<SplitPartDto>> handler,
+        CancellationToken cancellationToken) =>
+        handler.HandleAsync(new SplitOrderEvenlyQuery(id, parts), cancellationToken);
 
     [HttpPost("{id:guid}/items")]
     [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]

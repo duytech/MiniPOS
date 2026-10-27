@@ -9,6 +9,7 @@ using Pos.Application.Orders.RemoveDiscount;
 using Pos.Application.Orders.RemoveTip;
 using Pos.Application.Orders.SetPaymentMethod;
 using Pos.Application.Orders.SetTip;
+using Pos.Application.Orders.SplitOrderEvenly;
 using Pos.Domain.Common;
 using Pos.Domain.Orders;
 
@@ -133,6 +134,17 @@ public class ValidatorTests
         Assert.False(Validator<RemoveTipCommand>().Validate(new RemoveTipCommand(Guid.Empty)).IsValid);
         Assert.False(Validator<SetPaymentMethodCommand>()
             .Validate(new SetPaymentMethodCommand(Guid.Empty, PaymentMethod.Card)).IsValid);
+    }
+
+    [Theory]
+    [InlineData(-1, false)]
+    [InlineData(0, false)]
+    [InlineData(1, true)]
+    [InlineData(int.MaxValue, true)]
+    public void Even_split_needs_at_least_one_part(int parts, bool valid)
+    {
+        Assert.Equal(valid, Validator<SplitOrderEvenlyQuery>().Validate(new SplitOrderEvenlyQuery(Guid.NewGuid(), parts)).IsValid);
+        Assert.False(Validator<SplitOrderEvenlyQuery>().Validate(new SplitOrderEvenlyQuery(Guid.Empty, 2)).IsValid);
     }
 
     private IValidator<T> Validator<T>() => _services.GetRequiredService<IValidator<T>>();

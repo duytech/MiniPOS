@@ -243,6 +243,38 @@ public class Order
             .ToList();
     }
 
+    /// <summary>
+    /// Splits the bill evenly between <paramref name="parts"/> people. The order is priced first; then its subtotal,
+    /// discount, surcharge, tax and tip are each divided by the number of parts, rounded down to the cent, and the
+    /// leftover cents of each amount go to the first part. So every amount of the parts adds up exactly to the order's
+    /// amount, and the part totals to the order total. Parts hold no lines.
+    /// </summary>
+    public IReadOnlyList<SplitPart> SplitEvenly(int parts)
+    {
+        if (parts < 1)
+        {
+            throw new DomainException("An even split needs at least one part.");
+        }
+
+        var totals = CalculateTotals();
+        var subtotals = AllocateEvenly(totals.Subtotal, parts);
+        var discounts = AllocateEvenly(totals.Discount, parts);
+        var surcharges = AllocateEvenly(totals.Surcharge, parts);
+        var taxes = AllocateEvenly(totals.Tax, parts);
+        var tips = AllocateEvenly(totals.Tip, parts);
+
+        return Enumerable.Range(0, parts)
+            .Select(i => new SplitPart(
+                [],
+                subtotals[i],
+                discounts[i],
+                surcharges[i],
+                taxes[i],
+                tips[i],
+                Total: subtotals[i] - discounts[i] + surcharges[i] + taxes[i] + tips[i]))
+            .ToList();
+    }
+
     private Money CalculateSubtotal() => _lines.Aggregate(Money.Zero(Currency), (sum, line) => sum + line.LineTotal);
 
     private static Money PercentOf(Money amount, Percentage rate) =>
@@ -273,6 +305,18 @@ public class Order
         }
 
         shares[largestPart] += leftover;
+        return shares;
+    }
+
+    /// <summary>
+    /// Divides <paramref name="amount"/> into <paramref name="parts"/> equal shares rounded down to the cent; the
+    /// leftover cents go to the first share.
+    /// </summary>
+    private static Money[] AllocateEvenly(Money amount, int parts)
+    {
+        var share = new Money(decimal.Round(amount.Amount / parts, 2, MidpointRounding.ToZero), amount.Currency);
+        var shares = Enumerable.Repeat(share, parts).ToArray();
+        shares[0] = amount - share * (parts - 1);
         return shares;
     }
 
