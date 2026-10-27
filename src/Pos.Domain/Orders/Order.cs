@@ -95,14 +95,7 @@ public class Order
             throw new DomainException($"Line {line.Id} is not on this order.");
         }
 
-        var newSubtotal = CalculateSubtotal() - line.LineTotal;
-        if (DiscountAmount is { } discount && discount.Amount > newSubtotal.Amount)
-        {
-            throw new DomainException(
-                $"Removing the line would leave a subtotal of {newSubtotal}, less than the discount of {discount}. " +
-                "Change or remove the discount first.");
-        }
-
+        EnsureFixedDiscountFits(DiscountAmount, CalculateSubtotal() - line.LineTotal, "Removing the line");
         _lines.Remove(line);
     }
 
@@ -124,14 +117,10 @@ public class Order
             return;
         }
 
-        var newSubtotal = CalculateSubtotal() - line.LineTotal + line.UnitPrice * quantity;
-        if (DiscountAmount is { } discount && discount.Amount > newSubtotal.Amount)
-        {
-            throw new DomainException(
-                $"A quantity of {quantity} would leave a subtotal of {newSubtotal}, less than the discount of " +
-                $"{discount}. Change or remove the discount first.");
-        }
-
+        EnsureFixedDiscountFits(
+            DiscountAmount,
+            CalculateSubtotal() - line.LineTotal + line.UnitPrice * quantity,
+            $"A quantity of {quantity}");
         line.ChangeQuantity(quantity);
     }
 
@@ -141,7 +130,6 @@ public class Order
     public void ApplyDiscount(OrderDiscount discount)
     {
         EnsureOpen();
-        var subtotal = CalculateSubtotal();
         if (discount.Rate is { Value: > 100m } rate)
         {
             throw new DomainException($"A discount of {rate} is more than the subtotal.");
@@ -150,11 +138,9 @@ public class Order
         if (discount.Amount is { } amount)
         {
             EnsureSameCurrency(amount);
-            if (amount.Amount > subtotal.Amount)
-            {
-                throw new DomainException($"A discount of {amount} is more than the subtotal of {subtotal}.");
-            }
         }
+
+        EnsureFixedDiscountFits(discount.Amount, CalculateSubtotal(), change: null);
 
         DiscountRate = discount.Rate;
         DiscountAmount = discount.Amount;
@@ -371,6 +357,23 @@ public class Order
         var shares = Enumerable.Repeat(share, parts).ToArray();
         shares[0] = amount - share * (parts - 1);
         return shares;
+    }
+
+    /// <summary>
+    /// A fixed discount can never be more than the subtotal. <paramref name="change"/> names the line change that would
+    /// leave <paramref name="subtotal"/>, or is null when the discount itself is being applied.
+    /// </summary>
+    private static void EnsureFixedDiscountFits(Money? fixedDiscount, Money subtotal, string? change)
+    {
+        if (fixedDiscount is not { } discount || discount.Amount <= subtotal.Amount)
+        {
+            return;
+        }
+
+        throw new DomainException(change is null
+            ? $"A discount of {discount} is more than the subtotal of {subtotal}."
+            : $"{change} would leave a subtotal of {subtotal}, less than the discount of {discount}. " +
+              "Change or remove the discount first.");
     }
 
     private void EnsureSameCurrency(Money money)
