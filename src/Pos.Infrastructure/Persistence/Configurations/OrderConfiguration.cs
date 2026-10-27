@@ -17,6 +17,8 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
         builder.Property(o => o.CreatedAt).HasColumnName("created_at");
         builder.HasIndex(o => o.CreatedAt);
+        builder.Property(o => o.PaidAt).HasColumnName("paid_at");
+        builder.Property(o => o.CancelledAt).HasColumnName("cancelled_at");
         builder.Property(o => o.Currency).HasColumnName("currency").HasConversion<string>().HasMaxLength(3);
         builder.Property(o => o.TaxRate).HasColumnName("tax_rate")
             .HasConversion<PercentageConverter>().HasColumnType(PercentageConverter.ColumnType);

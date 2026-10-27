@@ -8,6 +8,7 @@ public class OrderTests
 {
     private static readonly MenuItem Burger = new("Burger", Money.Usd(12.99m));
     private static readonly MenuItem Fries = new("Fries", Money.Usd(3.35m));
+    private static readonly DateTimeOffset ClosedAt = new(2026, 10, 27, 9, 15, 0, TimeSpan.Zero);
 
     [Fact]
     public void New_order_is_open_and_keeps_its_creation_time_in_utc()
@@ -234,7 +235,7 @@ public class OrderTests
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         order.AddItem(Burger, 1, null);
         var totalsBefore = order.CalculateTotals();
-        SetStatus(order, status);
+        Close(order, status);
 
         Assert.Throws<DomainException>(() => change(order));
         Assert.Equal(1, Assert.Single(order.Lines).Quantity);
@@ -242,7 +243,93 @@ public class OrderTests
         Assert.Equal(PaymentMethod.Cash, order.PaymentMethod);
     }
 
-    /// <summary>No domain method closes an order yet, so tests set the status directly.</summary>
-    private static void SetStatus(Order order, OrderStatus status) =>
-        typeof(Order).GetProperty(nameof(Order.Status))!.SetValue(order, status);
+    [Theory]
+    [InlineData(OrderStatus.Paid)]
+    [InlineData(OrderStatus.Cancelled)]
+    public void Closing_an_open_order_sets_the_status_and_its_time_and_keeps_the_totals(OrderStatus status)
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, new Percentage(8.875m), new Percentage(3m));
+        order.AddItem(new MenuItem("Che", Money.Usd(0.70m)), 1, null);
+        order.ApplyDiscount(OrderDiscount.PercentOfSubtotal(new Percentage(15m)));
+        order.SetTip(new Percentage(15m));
+        order.SetPaymentMethod(PaymentMethod.Card);
+        var totalsBefore = order.CalculateTotals();
+
+        Close(order, status);
+
+        Assert.Equal(status, order.Status);
+        Assert.Equal(status == OrderStatus.Paid ? ClosedAt : null, order.PaidAt);
+        Assert.Equal(status == OrderStatus.Cancelled ? ClosedAt : null, order.CancelledAt);
+        var totals = order.CalculateTotals();
+        Assert.Equal(totalsBefore, totals);
+        Assert.Equal(Money.Usd(0.70m), totals.Subtotal);
+        Assert.Equal(Money.Usd(0.11m), totals.Discount); // 15% of 0.70 = 0.105, midpoint away from zero
+        Assert.Equal(Money.Usd(0.02m), totals.Surcharge); // 3% of 0.59 = 0.0177
+        Assert.Equal(Money.Usd(0.05m), totals.Tax); // 8.875% of 0.61 = 0.0541375
+        Assert.Equal(Money.Usd(0.09m), totals.Tip); // 15% of 0.59 = 0.0885
+        Assert.Equal(Money.Usd(0.75m), totals.Total);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Paid)]
+    [InlineData(OrderStatus.Cancelled)]
+    public void An_empty_order_can_be_closed(OrderStatus status)
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, new Percentage(8.875m), Percentage.Zero);
+
+        Close(order, status);
+
+        Assert.Equal(status, order.Status);
+        Assert.Empty(order.Lines);
+        Assert.Equal(Money.Usd(0.00m), order.CalculateTotals().Total);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Paid, OrderStatus.Paid)]
+    [InlineData(OrderStatus.Paid, OrderStatus.Cancelled)]
+    [InlineData(OrderStatus.Cancelled, OrderStatus.Cancelled)]
+    [InlineData(OrderStatus.Cancelled, OrderStatus.Paid)]
+    public void A_closed_order_cannot_be_paid_or_cancelled_again(OrderStatus first, OrderStatus second)
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        order.AddItem(Burger, 1, null);
+        Close(order, first);
+        var (paidAt, cancelledAt) = (order.PaidAt, order.CancelledAt);
+
+        Assert.Throws<DomainException>(() => Close(order, second, ClosedAt.AddMinutes(5)));
+        Assert.Equal(first, order.Status);
+        Assert.Equal(paidAt, order.PaidAt);
+        Assert.Equal(cancelledAt, order.CancelledAt);
+        Assert.Equal(Money.Usd(12.99m), order.CalculateTotals().Total);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Paid)]
+    [InlineData(OrderStatus.Cancelled)]
+    public void The_closing_time_is_kept_in_utc(OrderStatus status)
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        var closedAt = new DateTimeOffset(2026, 10, 27, 16, 15, 0, TimeSpan.FromHours(7));
+
+        Close(order, status, closedAt);
+
+        var stored = status == OrderStatus.Paid ? order.PaidAt : order.CancelledAt;
+        Assert.Equal(closedAt, stored);
+        Assert.Equal(TimeSpan.Zero, stored!.Value.Offset);
+    }
+
+    private static void Close(Order order, OrderStatus status, DateTimeOffset? at = null)
+    {
+        switch (status)
+        {
+            case OrderStatus.Paid:
+                order.Pay(at ?? ClosedAt);
+                break;
+            case OrderStatus.Cancelled:
+                order.Cancel(at ?? ClosedAt);
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(status), status, "Paid or Cancelled");
+        }
+    }
 }

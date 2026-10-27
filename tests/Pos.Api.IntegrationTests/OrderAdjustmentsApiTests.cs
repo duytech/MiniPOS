@@ -1,10 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Npgsql;
-using Pos.Infrastructure.Persistence;
 
 namespace Pos.Api.IntegrationTests;
 
@@ -198,7 +194,7 @@ public class OrderAdjustmentsApiTests(PosApiFactory factory) : IClassFixture<Pos
         Func<HttpClient, Guid, Task<HttpResponseMessage>> change)
     {
         var orderId = await OrderWithSubtotalAsync(10.00m);
-        await SetStatusAsync(orderId, "Paid");
+        await _client.CloseOrderAsync(orderId, "Paid");
 
         var response = await change(_client, orderId);
 
@@ -211,7 +207,7 @@ public class OrderAdjustmentsApiTests(PosApiFactory factory) : IClassFixture<Pos
     {
         var orderId = await OrderWithSubtotalAsync(10.00m);
         var tea = await _client.CreateMenuItemAsync("Tea", 2.00m);
-        await SetStatusAsync(orderId, "Paid");
+        await _client.CloseOrderAsync(orderId, "Paid");
 
         var response = await _client.AddItemAsync(orderId, tea, 1);
 
@@ -236,23 +232,6 @@ public class OrderAdjustmentsApiTests(PosApiFactory factory) : IClassFixture<Pos
         var list = await _client.GetFromJsonAsync<JsonElement>($"/api/orders?search={number}&pageSize=100");
         var listed = list.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("id").GetGuid() == orderId);
         Assert.Equal(order.Money("total"), listed.Money("total"));
-    }
-
-    /// <summary>No endpoint closes an order yet, so the test sets the status in the database.</summary>
-    private async Task SetStatusAsync(Guid orderId, string status)
-    {
-        string connectionString;
-        using (var scope = factory.Services.CreateScope())
-        {
-            connectionString = scope.ServiceProvider.GetRequiredService<PosDbContext>().Database.GetConnectionString()!;
-        }
-
-        await using var conn = new NpgsqlConnection(connectionString);
-        await conn.OpenAsync();
-        await using var cmd = new NpgsqlCommand("UPDATE orders SET status = @s WHERE id = @o", conn);
-        cmd.Parameters.AddWithValue("s", status);
-        cmd.Parameters.AddWithValue("o", orderId);
-        Assert.Equal(1, await cmd.ExecuteNonQueryAsync());
     }
 
     private static StringContent Json(string body) => new(body, System.Text.Encoding.UTF8, "application/json");

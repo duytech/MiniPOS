@@ -1,10 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Npgsql;
-using Pos.Infrastructure.Persistence;
 
 namespace Pos.Api.IntegrationTests;
 
@@ -175,7 +171,7 @@ public class ChangeOrderLineQuantityApiTests(PosApiFactory factory) : IClassFixt
     public async Task Changing_a_quantity_on_a_closed_order_is_422_and_leaves_it_unchanged(string status)
     {
         var (orderId, _, teaLine) = await OrderWithPhoAndTeaAsync(10.00m, 1, 2.00m);
-        await SetStatusAsync(orderId, status);
+        await _client.CloseOrderAsync(orderId, status);
 
         var response = await _client.ChangeLineQuantityAsync(orderId, teaLine, 3);
 
@@ -212,20 +208,4 @@ public class ChangeOrderLineQuantityApiTests(PosApiFactory factory) : IClassFixt
         Assert.Equal(order.Money("total"), listed.Money("total"));
     }
 
-    /// <summary>No endpoint closes an order yet, so the test sets the status in the database.</summary>
-    private async Task SetStatusAsync(Guid orderId, string status)
-    {
-        string connectionString;
-        using (var scope = factory.Services.CreateScope())
-        {
-            connectionString = scope.ServiceProvider.GetRequiredService<PosDbContext>().Database.GetConnectionString()!;
-        }
-
-        await using var conn = new NpgsqlConnection(connectionString);
-        await conn.OpenAsync();
-        await using var cmd = new NpgsqlCommand("UPDATE orders SET status = @s WHERE id = @o", conn);
-        cmd.Parameters.AddWithValue("s", status);
-        cmd.Parameters.AddWithValue("o", orderId);
-        Assert.Equal(1, await cmd.ExecuteNonQueryAsync());
-    }
 }

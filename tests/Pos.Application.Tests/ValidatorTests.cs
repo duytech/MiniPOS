@@ -4,8 +4,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Pos.Application.MenuItems.CreateMenuItem;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Application.Orders.ApplyDiscount;
+using Pos.Application.Orders.CancelOrder;
 using Pos.Application.Orders.ChangeOrderLineQuantity;
 using Pos.Application.Orders.ListOrders;
+using Pos.Application.Orders.PayOrder;
 using Pos.Application.Orders.RemoveDiscount;
 using Pos.Application.Orders.RemoveOrderLine;
 using Pos.Application.Orders.RemoveTip;
@@ -137,6 +139,8 @@ public class ValidatorTests
         Assert.False(Validator<RemoveTipCommand>().Validate(new RemoveTipCommand(Guid.Empty)).IsValid);
         Assert.False(Validator<SetPaymentMethodCommand>()
             .Validate(new SetPaymentMethodCommand(Guid.Empty, PaymentMethod.Card)).IsValid);
+        Assert.False(Validator<PayOrderCommand>().Validate(new PayOrderCommand(Guid.Empty)).IsValid);
+        Assert.False(Validator<CancelOrderCommand>().Validate(new CancelOrderCommand(Guid.Empty)).IsValid);
     }
 
     [Theory]

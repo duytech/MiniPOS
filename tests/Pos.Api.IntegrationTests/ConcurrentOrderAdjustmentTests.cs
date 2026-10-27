@@ -8,8 +8,9 @@ using Pos.Infrastructure.Persistence;
 namespace Pos.Api.IntegrationTests;
 
 /// <summary>
-/// Discount, tip and payment method changes racing each other and add-item requests on the same order.
-/// The invariant: no 5xx, every rejected request is a 409, and the stored row shows exactly the accepted changes.
+/// Discount, tip, payment method, pay and cancel requests racing each other and add-item requests on the same order.
+/// The invariant: no 5xx, every rejected request is a 409 (or a 422 once a racing request closed the order), and the
+/// stored row shows exactly the accepted changes.
 /// </summary>
 public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixture<PosApiFactory>
 {
@@ -261,6 +262,82 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         Assert.Equal(discounted ? "10.00" : "0.00", order.Money("discount"));
     }
 
+    /// <summary>
+    /// Every pay would succeed alone; together exactly one wins. The others see the paid order (422) or lose the race on
+    /// the concurrency token (409).
+    /// </summary>
+    [Fact]
+    public async Task Parallel_pays_accept_exactly_one()
+    {
+        var (orderId, _) = await OrderWithOneItemAsync();
+
+        var results = await ConcurrentlyAsync(Enumerable.Range(0, ConcurrentRequests)
+            .Select(_ => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+            {
+                using var response = await _client.PayOrderAsync(orderId);
+                return (response.StatusCode, "pay");
+            })));
+
+        var accepted = AssertOnlyOkConflictOrUnprocessable(results);
+        Assert.Single(accepted);
+        Assert.Contains(results, r => r.Item1 == HttpStatusCode.Conflict); // the requests really raced
+        Assert.Equal("Paid", await StoredAsync<string>(orderId, "status"));
+        Assert.True(await StoredAsync<bool>(orderId, "paid_at IS NOT NULL"));
+        Assert.True(await StoredAsync<bool>(orderId, "cancelled_at IS NULL"));
+    }
+
+    [Fact]
+    public async Task Parallel_pays_and_cancels_accept_exactly_one_and_store_its_status()
+    {
+        var (orderId, _) = await OrderWithOneItemAsync();
+
+        var results = await ConcurrentlyAsync(Enumerable.Range(0, ConcurrentRequests / 2)
+            .SelectMany(_ => new Func<Task<(HttpStatusCode, string)>>[]
+            {
+                async () =>
+                {
+                    using var response = await _client.PayOrderAsync(orderId);
+                    return (response.StatusCode, "Paid");
+                },
+                async () =>
+                {
+                    using var response = await _client.CancelOrderAsync(orderId);
+                    return (response.StatusCode, "Cancelled");
+                },
+            }));
+
+        var winner = Assert.Single(AssertOnlyOkConflictOrUnprocessable(results));
+        Assert.Equal(winner, await StoredAsync<string>(orderId, "status"));
+        Assert.Equal(winner == "Paid", await StoredAsync<bool>(orderId, "paid_at IS NOT NULL"));
+        Assert.Equal(winner == "Cancelled", await StoredAsync<bool>(orderId, "cancelled_at IS NOT NULL"));
+    }
+
+    /// <summary>Adds that commit before the pay are kept; adds that load the paid order are 422; nothing is lost.</summary>
+    [Fact]
+    public async Task Pay_racing_add_items_keeps_exactly_the_accepted_adds()
+    {
+        var (orderId, menuItemId) = await OrderWithOneItemAsync();
+
+        var requests = Enumerable.Range(0, ConcurrentRequests)
+            .Select(_ => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+            {
+                using var response = await _client.AddItemAsync(orderId, menuItemId, 1);
+                return (response.StatusCode, "add");
+            }))
+            .Append(async () =>
+            {
+                using var response = await _client.PayOrderAsync(orderId);
+                return (response.StatusCode, "pay");
+            });
+        var results = await ConcurrentlyAsync(requests);
+
+        var accepted = AssertOnlyOkConflictOrUnprocessable(results);
+        Assert.Equal(1 + accepted.Count(a => a == "add"), await StoredAsync<int>(
+            orderId, "(SELECT SUM(quantity)::int FROM order_lines WHERE order_id = o.id)"));
+        Assert.Equal(accepted.Contains("pay") ? "Paid" : "Open", await StoredAsync<string>(orderId, "status"));
+        Assert.Equal(accepted.Contains("pay"), await StoredAsync<bool>(orderId, "paid_at IS NOT NULL"));
+    }
+
     private Task<string> StoredLineQuantitiesAsync(Guid orderId) => StoredAsync<string>(
         orderId, "(SELECT COALESCE(string_agg(id::text || ':' || quantity, ',' ORDER BY id::text COLLATE \"C\"), '') " +
                  "FROM order_lines WHERE order_id = o.id)");
@@ -309,6 +386,25 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
             .Select(g => $"{(int)g.Key} x{g.Count()}")
             .ToList();
         Assert.True(unexpected.Count == 0, $"Expected only 200 or 409, got: {string.Join(", ", unexpected)}");
+
+        var accepted = results.Where(r => r.Status == HttpStatusCode.OK).Select(r => r.Label).ToList();
+        Assert.NotEmpty(accepted);
+        return accepted;
+    }
+
+    /// <summary>
+    /// For races where a request can legitimately find the order already closed (422). Returns the label of every
+    /// accepted (200) request.
+    /// </summary>
+    private static List<string> AssertOnlyOkConflictOrUnprocessable(
+        IReadOnlyList<(HttpStatusCode Status, string Label)> results)
+    {
+        var unexpected = results
+            .Where(r => r.Status is not (HttpStatusCode.OK or HttpStatusCode.Conflict or HttpStatusCode.UnprocessableEntity))
+            .GroupBy(r => r.Status)
+            .Select(g => $"{(int)g.Key} x{g.Count()}")
+            .ToList();
+        Assert.True(unexpected.Count == 0, $"Expected only 200, 409 or 422, got: {string.Join(", ", unexpected)}");
 
         var accepted = results.Where(r => r.Status == HttpStatusCode.OK).Select(r => r.Label).ToList();
         Assert.NotEmpty(accepted);

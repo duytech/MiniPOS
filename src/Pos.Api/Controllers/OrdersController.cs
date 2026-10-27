@@ -5,10 +5,12 @@ using Pos.Application.Common;
 using Pos.Application.Orders;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Application.Orders.ApplyDiscount;
+using Pos.Application.Orders.CancelOrder;
 using Pos.Application.Orders.ChangeOrderLineQuantity;
 using Pos.Application.Orders.CreateOrder;
 using Pos.Application.Orders.GetOrder;
 using Pos.Application.Orders.ListOrders;
+using Pos.Application.Orders.PayOrder;
 using Pos.Application.Orders.RemoveDiscount;
 using Pos.Application.Orders.RemoveOrderLine;
 using Pos.Application.Orders.RemoveTip;
@@ -175,6 +177,30 @@ public sealed class OrdersController : ControllerBase
         [FromServices] ICommandHandler<SetPaymentMethodCommand, OrderDto> handler,
         CancellationToken cancellationToken) =>
         handler.HandleAsync(new SetPaymentMethodCommand(id, request.PaymentMethod!.Value), cancellationToken);
+
+    [HttpPost("{id:guid}/pay")]
+    [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public Task<OrderDto> Pay(
+        Guid id,
+        [FromServices] ICommandHandler<PayOrderCommand, OrderDto> handler,
+        CancellationToken cancellationToken) =>
+        handler.HandleAsync(new PayOrderCommand(id), cancellationToken);
+
+    [HttpPost("{id:guid}/cancel")]
+    [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public Task<OrderDto> Cancel(
+        Guid id,
+        [FromServices] ICommandHandler<CancelOrderCommand, OrderDto> handler,
+        CancellationToken cancellationToken) =>
+        handler.HandleAsync(new CancelOrderCommand(id), cancellationToken);
 }
 
 public sealed record AddOrderItemRequest(Guid MenuItemId, int Quantity, string? Notes);

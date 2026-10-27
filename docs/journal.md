@@ -669,3 +669,45 @@ là một chuỗi hợp lệ. Chỉ visual check mới thấy. Đây là lý do 
 - Chưa chạy lại agent với skill đã sửa (3 chỗ lệch đều nhỏ, không ở logic).
 - Route title cố định "Order · Mini POS", không có số order.
 - Danh sách không giữ bộ lọc khi quay lại (user chọn để sau).
+
+### Ngày 3: sub-agent planner + implementer (2026-10-27)
+**Đã làm:** `.claude/agents/planner.md` (tool chỉ có `Read, Glob, Grep`: không sửa file, không chạy lệnh; có rule
+còn mở thì chỉ trả câu hỏi rồi dừng, đủ rule thì trả plan theo tầng + bảng test + verify) và
+`.claude/agents/implementer.md` (nạp sẵn skill `add-endpoint` + `add-angular-feature`; chỉ làm theo plan đã duyệt,
+thiếu rule thì dừng hỏi, không commit/push, tự chạy integration test + Vitest trước khi báo). Agent chỉ được nạp khi
+session khởi động: session tạo file không gọi được (`Agent type 'planner' not found`), phải chạy ở session mới.
+
+**Thử chuỗi** với task "let the cashier close an order - mark it as paid or cancelled - through the API", **không đưa
+rule nào**:
+| Cổng | Kết quả |
+|---|---|
+| Planner, lần 1 | Thử tạo `plans/planner-probe.txt`: **không được** (không có tool ghi). 11 tool call, dừng và hỏi **8 câu**: transition nào, lặp lại pay/cancel, order rỗng, pay ghi gì, timestamp, lý do hủy, dạng endpoint, phạm vi. Mỗi câu kèm lựa chọn và code thay đổi gì. Tự đọc được những gì code đã trả lời (`OrderStatus`, `EnsureOpen`, web đã chỉ đọc khi đóng) |
+| User trả lời | Chỉ Open → Paid/Cancelled; lặp lại → 422; order rỗng đóng được; pay chỉ đổi status (dùng `PaymentMethod` đã lưu); lưu `PaidAt`/`CancelledAt`; hủy không cần lý do; `POST .../pay` và `.../cancel`; chỉ API |
+| Planner, lần 2 | Plan đầy đủ (`plans/tuan-3-ngay-3-dong-order.md`): file theo tầng, ca test có số (0.70, 15% → 0.105 → 0.11), 3 concurrency test, và **tự tìm 5 chỗ code cũ** đặt status bằng SQL/reflection cần thay bằng endpoint mới, cả dòng trong templates của skill. Tự nhận ra mẫu concurrency của skill ("mỗi request tự nó thành công") không hợp với chuyển trạng thái |
+| User duyệt | Kèm giả định planner tự đặt: không backfill `paid_at`/`cancelled_at` cho order đã đóng |
+| Implementer | 46 tool call, ~11 phút. `Order.Pay/Cancel` (qua `EnsureOpen`), folder `PayOrder`/`CancelOrder`, migration 2 cột nullable, action 200/400/404/409/422. +10 Domain, +18 integration (15 + 3 concurrency); bỏ hết helper SQL/reflection. Không commit |
+| Mình kiểm | Build 0 warning; 115 / 61 / 8 / 140 test xanh. API thật: pay 200 (`paidAt`, total 2.23 không đổi), pay lại / cancel / add-item → 422, `GET` trả `Paid` |
+
+Race thật (implementer log status code 5 lần rồi bỏ log): 10 pay song song luôn 1 × 200 + 9 × 409; pay ↔ cancel
+mỗi bên đều từng thắng.
+
+**Chỗ lệch tìm được:**
+| Chỗ lệch | Ai | Sửa |
+|---|---|---|
+| Giả định "không backfill dữ liệu cũ" nằm trong "Rules used" và "Out of scope", không phải câu hỏi; mình phải tự hỏi lại lúc duyệt | planner | `planner.md`: cột mới trên dòng cũ (backfill hay null) là câu hỏi |
+| Skill `add-endpoint` chỉ có mẫu concurrency "N request mỗi cái tự thành công", sai với chuyển trạng thái (chỉ một request thắng được) | skill (planner tự bù) | Thêm dòng bảng test: chuyển trạng thái → đúng một 200, còn lại 409/422, ít nhất một 409 |
+| Thêm `ApiClient.CloseOrderAsync(id, "Paid"/"Cancelled")` ngoài plan | implementer | Không sửa: helper nhỏ, có báo trong report |
+| So `paidAt` đến 1 µs: response giữ tick 100 ns, Postgres giữ µs | implementer | Không sửa: `createdAt` đã như vậy; ghi câu hỏi mở |
+| Tự bật Docker Desktop để chạy `docker compose up -d` | implementer | Không sửa: chỉ là máy local, có báo |
+
+**So với Ngày 1–2:** trước đây skill + một agent vừa hỏi vừa làm; giờ hai cổng tách rõ. Planner không thể sửa code nên
+"hỏi trước khi làm" là bắt buộc bằng tool, không chỉ bằng chữ. Implementer không hỏi thêm câu nào và không vi phạm
+CLAUDE.md. Lỗi duy nhất đáng kể nằm ở planner (giả định ngầm) và ở skill (mẫu test), không ở code.
+
+**Giả định / câu hỏi còn mở:**
+- `paidAt`/`cancelledAt` trong response pay/cancel có 7 chữ số thập phân, `GET` sau đó có 6 (giống `createdAt`). Có
+  cần làm tròn đến µs trong Domain không?
+- 422 khi pay/cancel order đã đóng dùng message chung của `EnsureOpen`: "The order is Paid; only an open order can be
+  changed."
+- Kiểm API thật tạo thêm món "Probe tea" và order #14 (Paid) trong DB dev.
+- Chưa chạy lại planner với `planner.md` đã sửa. Ngày 4 thêm `reviewer`; Ngày 7 chạy cả chuỗi với Split bill.

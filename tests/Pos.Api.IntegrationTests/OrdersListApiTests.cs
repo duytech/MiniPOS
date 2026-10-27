@@ -1,9 +1,6 @@
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Pos.Infrastructure.Persistence;
 
 namespace Pos.Api.IntegrationTests;
 
@@ -85,7 +82,7 @@ public class OrdersListApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
         var token = NewToken();
         var open = await CreateOrderWithItemAsync($"Pho {token}");
         var paid = await CreateOrderWithItemAsync($"Pho {token}");
-        await SetStatusAsync(paid, "Paid");
+        await _client.CloseOrderAsync(paid, "Paid");
 
         var paidList = await ListAsync($"search={token}&status=Paid");
         var openList = await ListAsync($"search={token}&status=Open");
@@ -162,14 +159,6 @@ public class OrdersListApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
         var orderId = await _client.CreateOrderAsync();
         Assert.Equal(HttpStatusCode.OK, (await _client.AddItemAsync(orderId, menuItem, 1)).StatusCode);
         return orderId;
-    }
-
-    /// <summary>There is no endpoint that changes the status yet, so tests set it in the database.</summary>
-    private async Task SetStatusAsync(Guid orderId, string status)
-    {
-        using var scope = factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<PosDbContext>();
-        await db.Database.ExecuteSqlAsync($"UPDATE orders SET status = {status} WHERE id = {orderId}");
     }
 
     private static List<Guid> Ids(JsonElement list) =>
