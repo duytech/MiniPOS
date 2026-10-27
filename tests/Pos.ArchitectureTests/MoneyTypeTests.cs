@@ -28,6 +28,27 @@ public class MoneyTypeTests
         AssertNone(offenders, "Use Money (or decimal inside Money/Percentage) instead of double/float/Half");
     }
 
+    /// <summary>Methods outside Domain allowed to call a rounding method, keyed by <c>Type.FullName.Method</c>.</summary>
+    private static readonly Dictionary<string, string> RoundingAllowed = new()
+    {
+        ["Pos.Api.Json.MoneyJsonConverter.Read"] = "rejects JSON with more than 2 decimals; computes no amount",
+        ["Pos.Api.Json.PercentageJsonConverter.Read"] = "rejects JSON with more than 4 decimals; computes no amount",
+    };
+
+    [Fact]
+    public void Only_domain_rounds_amounts()
+    {
+        var offenders =
+            from layer in new[] { Layers.Application, Layers.Infrastructure, Layers.Api }
+            from call in RoundingScanner.Scan(layer)
+            where !RoundingAllowed.ContainsKey(call.Caller)
+            select $"{call.Caller}: {call.Call}";
+
+        AssertNone(offenders,
+            "Totals are computed only by Domain: call the order's pricing method instead of rounding here " +
+            "(or add the method to RoundingAllowed with a reason)");
+    }
+
     [Fact]
     public void Domain_and_application_signatures_use_money_not_raw_decimal()
     {
