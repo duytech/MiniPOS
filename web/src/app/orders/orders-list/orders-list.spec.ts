@@ -1,6 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { OrderSummary, PagedResult } from '../order.models';
 import { OrdersList, PAGE_SIZE, SEARCH_DEBOUNCE_MS } from './orders-list';
@@ -62,7 +63,7 @@ describe('OrdersList', () => {
     vi.useFakeTimers();
     TestBed.configureTestingModule({
       imports: [OrdersList],
-      providers: [provideHttpClient(), provideHttpClientTesting()],
+      providers: [provideHttpClient(), provideHttpClientTesting(), provideRouter([])],
     });
     fixture = TestBed.createComponent(OrdersList);
     http = TestBed.inject(HttpTestingController);
@@ -94,6 +95,15 @@ describe('OrdersList', () => {
 
     expect(rows()[0].textContent).toContain('$15.40');
     expect(rows()[1].textContent).toContain('$0.00');
+  });
+
+  it('links only the order number to the order detail page', () => {
+    loadFirstPage(page([order({ id: 'abc', number: 12 })]));
+
+    const links = rows()[0].querySelectorAll('a');
+    expect(links.length).toBe(1);
+    expect(links[0].textContent?.trim()).toBe('#12');
+    expect(links[0].getAttribute('href')).toBe('/orders/abc');
   });
 
   it('debounces the search and sends only the last text', () => {

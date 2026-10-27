@@ -25,3 +25,32 @@ export interface OrderListQuery {
   page: number;
   pageSize: number;
 }
+
+export type PaymentMethod = 'Cash' | 'Card';
+
+/** One line of an order (`OrderLineDto`). `unitPrice` and `lineTotal` are computed by the API; the UI only displays them. */
+export interface OrderLine {
+  id: string;
+  menuItemId: string;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+  notes: string | null;
+  lineTotal: number;
+}
+
+/** An order (`OrderDto`). Every money field is computed by the API; the UI only displays them. */
+export interface Order {
+  id: string;
+  number: number;
+  status: OrderStatus;
+  createdAt: string;
+  paymentMethod: PaymentMethod;
+  lines: OrderLine[];
+  subtotal: number;
+  discount: number;
+  surcharge: number;
+  tax: number;
+  tip: number;
+  total: number;
+}
