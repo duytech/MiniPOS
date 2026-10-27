@@ -525,3 +525,44 @@ bỏ qua option `-C`/`-c` sau `git`.
   cùng lệnh chưa stage gì lúc hook chạy. Commit một phần (stage vài file) có thể bị chặn bởi lỗi ở file không commit.
 - Mỗi commit có `.cs` thay đổi tốn thêm ~6–13 s. Hook `Stop` vẫn giữ nguyên.
 - Vẫn không chạy integration test và Vitest.
+
+### Sau Ngày 7: arch test "chỉ Domain làm tròn" (2026-10-27)
+**Lý do:** đột biến M6 của Ngày 7 (handler tự tính total phần = `decimal.Round(total / N)`) vi phạm "Totals are computed
+only by Domain" nhưng không check cấu trúc nào bắt; nó chỉ đỏ vì số tình cờ lệch ở integration test.
+
+**Đã làm:** `RoundingScanner` (Mono.Cecil, cùng cách với `FloatingPointScanner`) tìm mọi lời gọi `Round`, `Floor`,
+`Ceiling`, `Truncate` của `decimal`/`Math`/`MathF` trong IL của Application, Infrastructure, Api, kể cả trong lambda và
+method async (tên được đưa về method trong source: `<HandleAsync>b__0` → `HandleAsync`). Test
+`Only_domain_rounds_amounts`. Allowlist `RoundingAllowed` kèm lý do: `MoneyJsonConverter.Read` và
+`PercentageJsonConverter.Read` dùng `decimal.Round(x, n) != x` để từ chối JSON quá số chữ số, không tính tiền.
+
+**Kiểm chứng** (đột biến trong `SplitOrderEvenlyHandler`, chỉ chạy arch test):
+| Đột biến | Arch test |
+|---|---|
+| Allowlist rỗng | đỏ (2 converter) |
+| M6 `decimal.Round(total / N)` trong method async | **đỏ** (trước đây xanh) |
+| `Math.Round` trong lambda | đỏ |
+| `decimal.Floor(total × 100 / N) / 100` | đỏ |
+| Làm tròn qua `ToString("0.00")` rồi `decimal.Parse` | **xanh** |
+| Tính lại total bằng toán tử `Money` (`p.Subtotal + p.Surcharge + …`) | **xanh** |
+
+**Chuyện đáng kể:** lần chạy đột biến đầu, script trả file bằng `git checkout -- tests/…` và **xóa luôn test mới chưa
+commit**. Kết quả "6/6 xanh" trông như test không bắt được gì, thật ra test không còn tồn tại. Số test (6 thay vì 7) là
+dấu hiệu duy nhất. Sửa: commit test trước, chỉ trả `src/`. Bài học: verifier của verifier cũng cần kiểm số test chạy.
+
+**Thêm: arch test "chỉ Domain cộng trừ Money"** (cùng PR). `RoundingScanner` đổi thành `CallScanner` nhận điều kiện:
+`IsRounding` và `IsMoneyArithmetic` (`Money` `op_Addition`, `op_Subtraction`, `op_Multiply`). Test
+`Only_domain_adds_up_money`, không cần allowlist (ngoài Domain hiện không có chỗ nào dùng). Đột biến trong
+`SplitOrderEvenlyHandler`, chạy arch test và integration test:
+| Đột biến | Arch test | Integration |
+|---|---|---|
+| Total = `p.Subtotal + p.Surcharge + p.Tax + p.Tip` (quên discount) trong lambda | **đỏ** (`op_Addition`) | 1 |
+| `parts[0].Total - parts[0].Discount` trong method async | **đỏ** (`op_Subtraction`) | 1 |
+| `parts[^1].Total * N` | **đỏ** (`op_Multiply`) | 3 |
+| Cộng `.Amount` (decimal) rồi bọc `new Money(…)` | xanh | 1 |
+| Làm tròn qua `ToString("0.00")` + `decimal.Parse` | xanh | 3 |
+
+**Giả định / câu hỏi còn mở:**
+- Hai cách vẫn lọt arch test: cộng trừ trên `.Amount` (decimal) rồi bọc lại thành `Money`, và làm tròn qua chuỗi. Cả
+  hai đều bị integration test bắt với số hiện có, nhưng chỉ vì số lệch. Có thể cấm toán tử `decimal` trên `Money.Amount`
+  ngoài Domain, nhưng các validator so sánh `decimal` hợp lệ, nên rule sẽ phức tạp hơn. Chưa làm.
