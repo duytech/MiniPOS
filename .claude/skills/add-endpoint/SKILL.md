@@ -6,7 +6,7 @@ description: Adds or changes an HTTP endpoint of the Mini POS API (src/Pos.Api) 
 # Add an endpoint
 
 CLAUDE.md holds the rules (money, errors, concurrency, paging). This skill is the order of work and the files to copy.
-Read `references/templates.md` before writing code.
+Read `references/templates.md` (in this skill's folder, next to this file) before writing code.
 
 ## 0. Business rules first: stop and ask
 
@@ -43,8 +43,9 @@ Do not pick a limit, default or merge behavior yourself. Not-found ids are 404 a
 In the area's controller (`src/Pos.Api/Controllers/`):
 - Route under `api/<area>`, ids as `{id:guid}`. Body → a `sealed record XxxRequest` at the bottom of the file, with
   `[Required]` on nullable value types that must be sent. Required query params: `[FromQuery, BindRequired]`.
-- `[ProducesResponseType]` for 200/201 and each error it can return: 400 (validator or binding), 404, 409 (any order
-  change: concurrency token), 422 (Domain rule).
+- `[ProducesResponseType]` for 200/201 and each error it can return: 400 whenever the command/query has a validator
+  (`{id:guid}` accepts `00000000-…`, which `NotEmpty` rejects) or a body/query to bind, 404, 409 (any order change:
+  concurrency token), 422 (Domain rule). Some older actions (`RemoveTip`, `RemoveDiscount`) miss the 400: don't copy that.
 - Inject the handler with `[FromServices]`. No logic in the controller. Errors are mapped by
   `src/Pos.Api/Errors/ApiExceptionHandler.cs`; a 500 is always a bug.
 
@@ -56,9 +57,11 @@ In the area's controller (`src/Pos.Api/Controllers/`):
 | Any | Integration tests in `tests/Pos.Api.IntegrationTests`: happy path, each 4xx it declares |
 | Returns money | Assert raw JSON strings with exactly 2 decimals (`order.Money("total") == "15.40"`); a midpoint (x.xx5) case; list total == `GET /api/orders/{id}` total |
 | Changes Domain money | Domain unit test with exact cents and a midpoint case (`tests/Pos.Domain.Tests`) |
-| Changes an order | Concurrency test: N parallel requests (alone and racing add-item), only 200/409, and the stored rows show exactly the accepted requests |
+| Changes an order | Concurrency test: N parallel requests that would each succeed alone (e.g. removing *different* lines), then the same racing add-item; only 200/409, and the stored rows show exactly the accepted requests. When a race can legitimately break a Domain rule (a removal racing a fixed discount), allow that 422 too and assert the rule holds in the stored rows |
 
 Copy helpers from the existing test classes (see templates); add new HTTP helpers to `ApiClient.cs`.
+Tests check money against what the API returns (`GET /api/orders/{id}`), never against a total summed in SQL or LINQ:
+that would be a second total implementation. SQL in tests reads stored columns (quantities, ids, rates) only.
 
 ## 5. Verify
 

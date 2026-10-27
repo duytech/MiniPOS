@@ -46,7 +46,7 @@ Kết quả: agent tự sửa đến khi mọi check pass; ít nhất một rule
 
 Kết quả: một tính năng chạy trọn chuỗi plan → implement → review → verify, có bạn duyệt ở mỗi cổng, và agent tự xem được UI đã render.
 
-- [ ] Ngày 1: Viết skill `add-endpoint`: Controller → Command/Query → Handler → validator → test.
+- [x] Ngày 1: Viết skill `add-endpoint`: Controller → Command/Query → Handler → validator → test.
 - [ ] Ngày 2: Viết skill `add-angular-feature`: component + service + RxJS + Tailwind, theo quy ước trong `CLAUDE.md`.
 - [ ] Ngày 3: Tạo sub-agent `planner` (chỉ đọc, xuất kế hoạch) và `implementer` (được sửa code).
 - [ ] Ngày 4: Tạo sub-agent `reviewer` (chỉ đọc), đối chiếu diff với `CLAUDE.md` và business rule về tiền.

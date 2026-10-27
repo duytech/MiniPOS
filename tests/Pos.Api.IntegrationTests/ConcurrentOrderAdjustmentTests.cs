@@ -167,13 +167,12 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         var unexpected = results.Where(r => r.Item1 is not (HttpStatusCode.OK or HttpStatusCode.Conflict
             or HttpStatusCode.UnprocessableEntity)).ToList();
         Assert.Empty(unexpected);
-        var subtotal = await StoredAsync<decimal>(
-            orderId, "(SELECT COALESCE(SUM(unit_price * quantity), 0) FROM order_lines WHERE order_id = o.id)");
-        var discount = await StoredAsync<decimal?>(orderId, "discount_amount");
-        Assert.True(discount is null || discount <= subtotal, $"Stored discount {discount} > stored subtotal {subtotal}");
+        var order = await _client.GetOrderAsync(orderId);
         var removedPho = results.Any(r => r is (HttpStatusCode.OK, "remove"));
-        Assert.Equal(removedPho ? 2.00m : 11.50m, subtotal);
-        Assert.Equal(!removedPho, results.Any(r => r is (HttpStatusCode.OK, "discount")));
+        var discounted = results.Any(r => r is (HttpStatusCode.OK, "discount"));
+        Assert.Equal(!removedPho, discounted);
+        Assert.Equal(removedPho ? "2.00" : "11.50", order.Money("subtotal"));
+        Assert.Equal(discounted ? "5.00" : "0.00", order.Money("discount"));
     }
 
     private async Task<List<Guid>> AddDistinctLinesAsync(Guid orderId, int count)
