@@ -15,11 +15,9 @@ surrounding code.**
   (ESLint) · `npx ng test --watch=false` (Vitest + jsdom, no browser; `fakeAsync` does not work, use
   `vi.useFakeTimers()`)
 
-- A `PostToolUse` hook (`.claude/hooks/verify-on-edit.mjs`) checks each edited file: `.cs` → build + the tests that
-  need no DB; `web/src/**/*.ts|html` → eslint on the file + `ngc` (`tsc` for specs). When it reports errors, fix them
-  before the next step. It does not run integration tests or Vitest: run those before you finish.
-  Changes that only compile together (new code + its `using`s) go in one `Edit`/`Write`; split edits make the
-  hook report an error for the half-done state.
+- A `Stop` hook (`.claude/hooks/verify-on-edit.mjs`) checks the uncommitted changes when you finish a turn: `.cs` →
+  build + the tests that need no DB; `web/src/**/*.ts|html` → eslint on those files + `ngc` (`tsc` for specs). When it
+  reports errors, fix them. It does not run integration tests or Vitest: run those before you finish.
 - No `Co-Authored-By: Claude` in commits, PRs or issues. A `PreToolUse` hook (`.claude/hooks/block-claude-coauthor.mjs`)
   blocks such commands.
 - Never commit or push to `main`: branch, push the branch, open a PR. A `PreToolUse` hook
