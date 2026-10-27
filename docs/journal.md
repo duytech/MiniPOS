@@ -550,7 +550,19 @@ method async (tên được đưa về method trong source: `<HandleAsync>b__0` 
 commit**. Kết quả "6/6 xanh" trông như test không bắt được gì, thật ra test không còn tồn tại. Số test (6 thay vì 7) là
 dấu hiệu duy nhất. Sửa: commit test trước, chỉ trả `src/`. Bài học: verifier của verifier cũng cần kiểm số test chạy.
 
+**Thêm: arch test "chỉ Domain cộng trừ Money"** (cùng PR). `RoundingScanner` đổi thành `CallScanner` nhận điều kiện:
+`IsRounding` và `IsMoneyArithmetic` (`Money` `op_Addition`, `op_Subtraction`, `op_Multiply`). Test
+`Only_domain_adds_up_money`, không cần allowlist (ngoài Domain hiện không có chỗ nào dùng). Đột biến trong
+`SplitOrderEvenlyHandler`, chạy arch test và integration test:
+| Đột biến | Arch test | Integration |
+|---|---|---|
+| Total = `p.Subtotal + p.Surcharge + p.Tax + p.Tip` (quên discount) trong lambda | **đỏ** (`op_Addition`) | 1 |
+| `parts[0].Total - parts[0].Discount` trong method async | **đỏ** (`op_Subtraction`) | 1 |
+| `parts[^1].Total * N` | **đỏ** (`op_Multiply`) | 3 |
+| Cộng `.Amount` (decimal) rồi bọc `new Money(…)` | xanh | 1 |
+| Làm tròn qua `ToString("0.00")` + `decimal.Parse` | xanh | 3 |
+
 **Giả định / câu hỏi còn mở:**
-- Hai cách vẫn lọt arch test: làm tròn qua chuỗi, và tính lại tổng bằng toán tử `Money` ngoài Domain. Chưa chạy
-  integration test với hai đột biến này. Có thể cấm `Money.op_Addition`/`op_Subtraction`/`op_Multiply` ngoài Domain
-  (hiện không có chỗ nào dùng), nhưng làm tròn qua chuỗi thì quét IL khó bắt.
+- Hai cách vẫn lọt arch test: cộng trừ trên `.Amount` (decimal) rồi bọc lại thành `Money`, và làm tròn qua chuỗi. Cả
+  hai đều bị integration test bắt với số hiện có, nhưng chỉ vì số lệch. Có thể cấm toán tử `decimal` trên `Money.Amount`
+  ngoài Domain, nhưng các validator so sánh `decimal` hợp lệ, nên rule sẽ phức tạp hơn. Chưa làm.
