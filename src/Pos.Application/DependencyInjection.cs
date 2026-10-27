@@ -15,6 +15,7 @@ using Pos.Application.Orders.RemoveDiscount;
 using Pos.Application.Orders.RemoveTip;
 using Pos.Application.Orders.SetPaymentMethod;
 using Pos.Application.Orders.SetTip;
+using Pos.Application.Orders.SplitOrderEvenly;
 
 namespace Pos.Application;
 
@@ -37,6 +38,7 @@ public static class DependencyInjection
         services.AddCommandHandler<SetPaymentMethodCommand, OrderDto, SetPaymentMethodHandler>();
         services.AddScoped<IQueryHandler<GetOrderQuery, OrderDto>, GetOrderHandler>();
         services.AddQueryHandler<ListOrdersQuery, PagedResult<OrderSummaryDto>, ListOrdersHandler>();
+        services.AddQueryHandler<SplitOrderEvenlyQuery, IReadOnlyList<SplitPartDto>, SplitOrderEvenlyHandler>();
 
         return services;
     }

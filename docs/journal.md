@@ -464,3 +464,41 @@ DB lưu đúng các request 200). Kiểm thêm: 409 thật sự xảy ra (9–18
   đọc), nên tip lớn không gây lỗi DB.
 - Fixed discount được kiểm với subtotal lúc áp dụng; nếu sau này có xóa món, discount có thể vượt subtotal.
 - `OrderDto` không trả `tipRate` / discount rate (chỉ số tiền): frontend sau này có thể cần.
+
+### Ngày 7: task dễ lỗi làm tròn: chia đều hóa đơn cho N người (2026-10-27)
+**Đã làm:** `Order.SplitEvenly(int parts)` trong Domain, ra API `GET /api/orders/{id}/split-even?parts=N` (chỉ tính,
+không lưu, nên không có concurrency test). Order tính xong trước; rồi subtotal, discount, surcharge, tax, tip **mỗi khoản
+chia riêng** cho N, làm tròn xuống (`ToZero`), cent dư của từng khoản dồn vào **phần đầu** (đã hỏi). Total từng phần =
+cộng các khoản của phần đó. Validator: `1 ≤ Parts ≤ 20`, `[BindRequired]` cho query (thiếu `parts` → 400, không lặng lẽ
+thành 0). Test: 12 Domain (có ca 0.195 → 0.19, $0.05 / 10 → 0.05 + 9 × 0.00), 1 validator theory, 7 integration
+(chuỗi JSON 2 chữ số, tổng các phần == total của `GET`, 400/404).
+
+**Kiểm chứng verifier** (đột biến từng chỗ rồi trả lại):
+| Đột biến | Domain test | Integration | Arch test |
+|---|---|---|---|
+| M1 chia bằng `AwayFromZero` thay `ToZero` | 2 exact-cent → **7** sau khi siết theory | 1 | 0 |
+| M2 bỏ dồn cent dư | 8 | 2 | 0 |
+| M3 cent dư vào phần cuối | 7 | 2 | 0 |
+| M4 total phần = total order / N (không cộng từ các khoản) | 1 → **6** sau khi siết theory | **0** | 0 |
+| M5 chia qua `double` + `Math.Floor` | **0** | **0** | 1 (`FloatingPointScanner`) |
+| M6 handler tự tính total phần = total / N | 0 | 2 | **0** |
+
+**Chuyện đáng kể (câu chuyện phỏng vấn "AI output looked correct but was wrong"):**
+- Test bất biến "mọi khoản của các phần cộng lại đúng bằng order" **xanh với M1 và M4**. M1 làm phần đầu thành
+  **−0.04** ($0.05 / 10: mỗi phần 0.01, phần đầu nhận 0.05 − 0.09); tổng vẫn đúng vì cent dư âm bù lại. M4 làm total
+  phần lệch với các khoản của chính nó (2.77 thay 2.80) nhưng tổng 4 phần vẫn 11.05. "Cộng lại đúng" là điều kiện cần,
+  không đủ. Siết theory: mỗi phần `Total == Subtotal − Discount + Surcharge + Tax + Tip`, và chênh lệch phần đầu so với
+  phần khác của mỗi khoản nằm trong `[0, N−1]` cent. Sau đó M1 và M4 đỏ 5/6 case theory.
+- M4 qua hết integration test: ca $10 / 4 cho ra đúng 2.79 / 2.76 dù công thức sai (trùng hợp số). Ca $100 / 3 qua
+  M1 vì 33.333… làm tròn kiểu nào cũng 33.33. Một ca số đẹp không chứng minh gì; cần ca midpoint (0.195) và ca N > số cent.
+- M5 (`double`) qua mọi test nghiệp vụ, chỉ arch test IL của Ngày 3 bắt. Lặp lại bài học Ngày 3.
+- M6 (tính lại total ngoài Domain) vi phạm thẳng "Totals are computed only by Domain" nhưng **không check cấu trúc nào
+  bắt**; chỉ đỏ vì số lệch ở integration test. Nếu số trùng, nó lọt. Lỗ hổng verifier: chưa có arch test cấm
+  `decimal.Round`/`Math.Round` ngoài Domain.
+
+**Giả định / câu hỏi còn mở:**
+- N lúc đầu không giới hạn trên, nhưng `parts=2000000000` sẽ tạo ~2 tỉ phần trong bộ nhớ (hết bộ nhớ = 500). Đã hỏi
+  lại, user chọn **N ≤ 20** (2026-10-27): `SplitOrderEvenlyValidator.MaxParts`, `parts` 21 hoặc 2000000000 → 400.
+  Integration test: 20 phần của $1.09 → 0.14 + 19 × 0.05.
+- Chia đều được ở mọi status (giống `GET`), kể cả order đã đóng.
+- Phần có thể là 0.00 khi N > số cent; không chặn.
