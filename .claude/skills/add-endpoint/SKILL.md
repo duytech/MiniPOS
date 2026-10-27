@@ -58,6 +58,7 @@ In the area's controller (`src/Pos.Api/Controllers/`):
 | Returns money | Assert raw JSON strings with exactly 2 decimals (`order.Money("total") == "15.40"`); a midpoint (x.xx5) case; list total == `GET /api/orders/{id}` total |
 | Changes Domain money | Domain unit test with exact cents and a midpoint case (`tests/Pos.Domain.Tests`) |
 | Changes an order | Concurrency test: N parallel requests that would each succeed alone (e.g. removing *different* lines), then the same racing add-item; only 200/409, and the stored rows show exactly the accepted requests. When a race can legitimately break a Domain rule (a removal racing a fixed discount), allow that 422 too and assert the rule holds in the stored rows |
+| Moves the order to another status (pay, cancel) | Only one request can ever win, so the "each would succeed alone" pattern does not fit: N parallel requests → exactly one 200, the rest 409/422, at least one 409; competing transitions (pay vs cancel) → the stored status is the winner's; the transition racing add-item → stored quantity = the accepted adds |
 
 Copy helpers from the existing test classes (see templates); add new HTTP helpers to `ApiClient.cs`.
 Tests check money against what the API returns (`GET /api/orders/{id}`), never against a total summed in SQL or LINQ:

@@ -14,6 +14,12 @@ public class Order
 
     public OrderStatus Status { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
+
+    /// <summary>When the order was paid; null while it is open or when it was cancelled.</summary>
+    public DateTimeOffset? PaidAt { get; private set; }
+
+    /// <summary>When the order was cancelled; null while it is open or when it was paid.</summary>
+    public DateTimeOffset? CancelledAt { get; private set; }
     public Currency Currency { get; private set; }
 
     /// <summary>Sales tax rate in effect when the order was created; later rate changes don't affect it.</summary>
@@ -171,7 +177,31 @@ public class Order
         PaymentMethod = paymentMethod;
     }
 
-    /// <summary>Items, discount, tip and payment method can only change while the order is open.</summary>
+    /// <summary>
+    /// Closes the order as paid, with the stored payment method, for the whole order. Only an open order can be paid
+    /// (an empty one too); Paid is final. The totals are not changed.
+    /// </summary>
+    public void Pay(DateTimeOffset paidAt)
+    {
+        EnsureOpen();
+        Status = OrderStatus.Paid;
+        PaidAt = paidAt.ToUniversalTime();
+    }
+
+    /// <summary>
+    /// Closes the order as cancelled. Only an open order can be cancelled (an empty one too); Cancelled is final.
+    /// </summary>
+    public void Cancel(DateTimeOffset cancelledAt)
+    {
+        EnsureOpen();
+        Status = OrderStatus.Cancelled;
+        CancelledAt = cancelledAt.ToUniversalTime();
+    }
+
+    /// <summary>
+    /// Items, discount, tip and payment method can only change while the order is open, and only an open order can be
+    /// paid or cancelled: Paid and Cancelled are final.
+    /// </summary>
     private void EnsureOpen()
     {
         if (Status != OrderStatus.Open)

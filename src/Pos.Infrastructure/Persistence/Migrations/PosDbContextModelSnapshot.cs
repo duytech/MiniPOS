@@ -48,6 +48,10 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTimeOffset?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
                     b.Property<decimal>("CardSurchargeRate")
                         .HasColumnType("numeric(7,4)")
                         .HasColumnName("card_surcharge_rate");
@@ -76,6 +80,10 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .HasColumnName("number");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Number"));
+
+                    b.Property<DateTimeOffset?>("PaidAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paid_at");
 
                     b.Property<string>("PaymentMethod")
                         .IsRequired()

@@ -53,4 +53,10 @@ Accept: application/json
 GET {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}
 Accept: application/json
 
+### Pay the whole order with its payment method (closes it; later changes are 422)
+POST {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}/pay
+
+### Cancel an open order (422 once it is paid or cancelled)
+POST {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}/cancel
+
 ###

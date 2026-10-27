@@ -48,7 +48,7 @@ Kết quả: một tính năng chạy trọn chuỗi plan → implement → revi
 
 - [x] Ngày 1: Viết skill `add-endpoint`: Controller → Command/Query → Handler → validator → test.
 - [x] Ngày 2: Viết skill `add-angular-feature`: component + service + RxJS + Tailwind, theo quy ước trong `CLAUDE.md`.
-- [ ] Ngày 3: Tạo sub-agent `planner` (chỉ đọc, xuất kế hoạch) và `implementer` (được sửa code).
+- [x] Ngày 3: Tạo sub-agent `planner` (chỉ đọc, xuất kế hoạch) và `implementer` (được sửa code).
 - [ ] Ngày 4: Tạo sub-agent `reviewer` (chỉ đọc), đối chiếu diff với `CLAUDE.md` và business rule về tiền.
 - [ ] Ngày 5: Cài Playwright MCP. Viết skill bắt agent mở trang, chụp màn hình và đọc accessibility snapshot sau mỗi lần sửa UI.
 - [ ] Ngày 6: Thử visual loop với dữ liệu xấu: tên món rất dài, 200 món, mạng chậm (throttle). Ghi lại lỗi agent tự phát hiện.

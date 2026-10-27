@@ -48,6 +48,24 @@ internal static class ApiClient
     public static Task<HttpResponseMessage> SetPaymentMethodAsync(this HttpClient client, Guid orderId, string paymentMethod) =>
         client.PutAsJsonAsync($"/api/orders/{orderId}/payment-method", new { paymentMethod });
 
+    public static Task<HttpResponseMessage> PayOrderAsync(this HttpClient client, Guid orderId) =>
+        client.PostAsync($"/api/orders/{orderId}/pay", null);
+
+    public static Task<HttpResponseMessage> CancelOrderAsync(this HttpClient client, Guid orderId) =>
+        client.PostAsync($"/api/orders/{orderId}/cancel", null);
+
+    /// <summary>Closes the order through the API: <c>"Paid"</c> pays it, <c>"Cancelled"</c> cancels it.</summary>
+    public static async Task CloseOrderAsync(this HttpClient client, Guid orderId, string status)
+    {
+        var response = status switch
+        {
+            "Paid" => await client.PayOrderAsync(orderId),
+            "Cancelled" => await client.CancelOrderAsync(orderId),
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Paid or Cancelled"),
+        };
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
     public static async Task<JsonElement> GetOrderAsync(this HttpClient client, Guid orderId)
     {
         var response = await client.GetAsync($"/api/orders/{orderId}");
