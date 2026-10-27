@@ -107,8 +107,21 @@ public class OrderSplitEvenTests
         Assert.Equal(totals.Tax, Sum(parts.Select(p => p.Tax)));
         Assert.Equal(totals.Tip, Sum(parts.Select(p => p.Tip)));
         Assert.Equal(totals.Total, Sum(parts.Select(p => p.Total)));
+        Assert.All(parts, p => Assert.Equal(p.Subtotal - p.Discount + p.Surcharge + p.Tax + p.Tip, p.Total));
         Assert.All(parts.Skip(1), p => Assert.Equal(parts[^1].Total, p.Total));
+        // Shares are rounded down, so the first part takes between 0 and N − 1 extra cents of each amount.
+        Assert.All(parts.Skip(1), p =>
+        {
+            AssertLeftover(parts[0].Subtotal, p.Subtotal, partCount);
+            AssertLeftover(parts[0].Discount, p.Discount, partCount);
+            AssertLeftover(parts[0].Surcharge, p.Surcharge, partCount);
+            AssertLeftover(parts[0].Tax, p.Tax, partCount);
+            AssertLeftover(parts[0].Tip, p.Tip, partCount);
+        });
     }
+
+    private static void AssertLeftover(Money first, Money other, int partCount) =>
+        Assert.InRange((first - other).Amount, 0m, (partCount - 1) * 0.01m);
 
     [Theory]
     [InlineData(0)]
