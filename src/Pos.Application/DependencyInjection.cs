@@ -12,6 +12,7 @@ using Pos.Application.Orders.CreateOrder;
 using Pos.Application.Orders.GetOrder;
 using Pos.Application.Orders.ListOrders;
 using Pos.Application.Orders.RemoveDiscount;
+using Pos.Application.Orders.RemoveOrderLine;
 using Pos.Application.Orders.RemoveTip;
 using Pos.Application.Orders.SetPaymentMethod;
 using Pos.Application.Orders.SetTip;
@@ -31,6 +32,7 @@ public static class DependencyInjection
 
         services.AddCommandHandler<CreateOrderCommand, OrderDto, CreateOrderHandler>();
         services.AddCommandHandler<AddOrderItemCommand, OrderDto, AddOrderItemHandler>();
+        services.AddCommandHandler<RemoveOrderLineCommand, OrderDto, RemoveOrderLineHandler>();
         services.AddCommandHandler<ApplyDiscountCommand, OrderDto, ApplyDiscountHandler>();
         services.AddCommandHandler<RemoveDiscountCommand, OrderDto, RemoveDiscountHandler>();
         services.AddCommandHandler<SetTipCommand, OrderDto, SetTipHandler>();

@@ -122,8 +122,48 @@ public class OrderTests
         Assert.Equal(int.MaxValue, Assert.Single(order.Lines).Quantity);
     }
 
+    [Fact]
+    public void Removing_a_line_keeps_the_other_lines()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        var burger = order.AddItem(Burger, 2, null);
+        var fries = order.AddItem(Fries, 1, null);
+
+        order.RemoveLine(burger);
+
+        Assert.Same(fries, Assert.Single(order.Lines));
+        Assert.Equal(Money.Usd(3.35m), order.CalculateTotals().Total);
+    }
+
+    [Fact]
+    public void Removing_the_last_line_leaves_the_order_open_and_empty()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        var burger = order.AddItem(Burger, 1, null);
+
+        order.RemoveLine(burger);
+
+        Assert.Empty(order.Lines);
+        Assert.Equal(OrderStatus.Open, order.Status);
+        Assert.Equal(Money.Usd(0.00m), order.CalculateTotals().Total);
+    }
+
+    [Fact]
+    public void Removing_a_line_of_another_order_is_a_domain_error()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        order.AddItem(Burger, 1, null);
+        var other = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        var otherLine = other.AddItem(Burger, 1, null);
+
+        Assert.Throws<DomainException>(() => order.RemoveLine(otherLine));
+        Assert.Single(order.Lines);
+    }
+
     public static TheoryData<OrderStatus, Action<Order>> ClosedOrderChanges => new()
     {
+        { OrderStatus.Paid, o => o.RemoveLine(o.Lines[0]) },
+        { OrderStatus.Cancelled, o => o.RemoveLine(o.Lines[0]) },
         { OrderStatus.Paid, o => o.AddItem(Burger, 1, null) },
         { OrderStatus.Paid, o => o.AddItem(Fries, 1, null) },
         { OrderStatus.Cancelled, o => o.AddItem(Burger, 1, null) },

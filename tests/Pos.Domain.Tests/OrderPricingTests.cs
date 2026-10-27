@@ -91,6 +91,52 @@ public class OrderPricingTests
     }
 
     [Fact]
+    public void Percent_discount_follows_the_subtotal_after_a_line_is_removed_and_rounds_away_from_zero()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        order.AddItem(new MenuItem("Pho", Money.Usd(0.70m)), 1, notes: null);
+        var tea = order.AddItem(new MenuItem("Tea", Money.Usd(2.00m)), 1, notes: null);
+        order.ApplyDiscount(OrderDiscount.PercentOfSubtotal(new Percentage(15m)));
+        Assert.Equal(Money.Usd(0.41m), order.CalculateTotals().Discount); // 15% of 2.70 = 0.405
+
+        order.RemoveLine(tea);
+
+        var totals = order.CalculateTotals();
+        Assert.Equal(Money.Usd(0.70m), totals.Subtotal);
+        Assert.Equal(Money.Usd(0.11m), totals.Discount); // 15% of 0.70 = 0.105
+        Assert.Equal(Money.Usd(0.59m), totals.Total);
+    }
+
+    [Fact]
+    public void Fixed_discount_equal_to_the_new_subtotal_allows_removing_a_line()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        order.AddItem(new MenuItem("Pho", Money.Usd(7.70m)), 1, notes: null);
+        var tea = order.AddItem(new MenuItem("Tea", Money.Usd(2.00m)), 1, notes: null);
+        order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(7.70m)));
+
+        order.RemoveLine(tea);
+
+        var totals = order.CalculateTotals();
+        Assert.Equal(Money.Usd(7.70m), totals.Discount);
+        Assert.Equal(Money.Usd(0.00m), totals.Total);
+    }
+
+    [Fact]
+    public void Fixed_discount_more_than_the_new_subtotal_rejects_removing_a_line()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        order.AddItem(new MenuItem("Pho", Money.Usd(7.70m)), 1, notes: null);
+        var tea = order.AddItem(new MenuItem("Tea", Money.Usd(2.00m)), 1, notes: null);
+        order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(7.71m)));
+
+        Assert.Throws<DomainException>(() => order.RemoveLine(tea));
+
+        Assert.Equal(2, order.Lines.Count);
+        Assert.Equal(Money.Usd(1.99m), order.CalculateTotals().Total);
+    }
+
+    [Fact]
     public void Tax_is_rounded_to_cents()
     {
         var totals = OrderWith(10.00m, NycTax).CalculateTotals(); // 0.8875

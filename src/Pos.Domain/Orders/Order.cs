@@ -83,6 +83,30 @@ public class Order
     }
 
     /// <summary>
+    /// Removes the line from the order; removing the last line leaves the order open and empty. A percent discount
+    /// follows the new subtotal. A fixed discount must not be more than the new subtotal: the removal is rejected and
+    /// the discount has to be changed or removed first.
+    /// </summary>
+    public void RemoveLine(OrderLine line)
+    {
+        EnsureOpen();
+        if (!_lines.Contains(line))
+        {
+            throw new DomainException($"Line {line.Id} is not on this order.");
+        }
+
+        var newSubtotal = CalculateSubtotal() - line.LineTotal;
+        if (DiscountAmount is { } discount && discount.Amount > newSubtotal.Amount)
+        {
+            throw new DomainException(
+                $"Removing the line would leave a subtotal of {newSubtotal}, less than the discount of {discount}. " +
+                "Change or remove the discount first.");
+        }
+
+        _lines.Remove(line);
+    }
+
+    /// <summary>
     /// Replaces any existing discount. The discount cannot exceed the subtotal at the time it is applied.
     /// </summary>
     public void ApplyDiscount(OrderDiscount discount)

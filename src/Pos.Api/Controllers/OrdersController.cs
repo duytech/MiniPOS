@@ -9,6 +9,7 @@ using Pos.Application.Orders.CreateOrder;
 using Pos.Application.Orders.GetOrder;
 using Pos.Application.Orders.ListOrders;
 using Pos.Application.Orders.RemoveDiscount;
+using Pos.Application.Orders.RemoveOrderLine;
 using Pos.Application.Orders.RemoveTip;
 using Pos.Application.Orders.SetPaymentMethod;
 using Pos.Application.Orders.SetTip;
@@ -79,6 +80,20 @@ public sealed class OrdersController : ControllerBase
         handler.HandleAsync(
             new AddOrderItemCommand(id, request.MenuItemId, request.Quantity, request.Notes),
             cancellationToken);
+
+    /// <summary>Removes a line. A fixed discount larger than the new subtotal makes this a 422.</summary>
+    [HttpDelete("{id:guid}/lines/{lineId:guid}")]
+    [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public Task<OrderDto> RemoveLine(
+        Guid id,
+        Guid lineId,
+        [FromServices] ICommandHandler<RemoveOrderLineCommand, OrderDto> handler,
+        CancellationToken cancellationToken) =>
+        handler.HandleAsync(new RemoveOrderLineCommand(id, lineId), cancellationToken);
 
     [HttpPut("{id:guid}/discount")]
     [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]

@@ -6,6 +6,7 @@ using Pos.Application.Orders.AddOrderItem;
 using Pos.Application.Orders.ApplyDiscount;
 using Pos.Application.Orders.ListOrders;
 using Pos.Application.Orders.RemoveDiscount;
+using Pos.Application.Orders.RemoveOrderLine;
 using Pos.Application.Orders.RemoveTip;
 using Pos.Application.Orders.SetPaymentMethod;
 using Pos.Application.Orders.SetTip;
@@ -130,10 +131,21 @@ public class ValidatorTests
     {
         Assert.False(Validator<ApplyDiscountCommand>().Validate(new ApplyDiscountCommand(Guid.Empty, Percentage.Zero, null)).IsValid);
         Assert.False(Validator<RemoveDiscountCommand>().Validate(new RemoveDiscountCommand(Guid.Empty)).IsValid);
+        Assert.False(Validator<RemoveOrderLineCommand>().Validate(new RemoveOrderLineCommand(Guid.Empty, Guid.NewGuid())).IsValid);
         Assert.False(Validator<SetTipCommand>().Validate(new SetTipCommand(Guid.Empty, Percentage.Zero)).IsValid);
         Assert.False(Validator<RemoveTipCommand>().Validate(new RemoveTipCommand(Guid.Empty)).IsValid);
         Assert.False(Validator<SetPaymentMethodCommand>()
             .Validate(new SetPaymentMethodCommand(Guid.Empty, PaymentMethod.Card)).IsValid);
+    }
+
+    [Fact]
+    public void Remove_line_requires_both_ids()
+    {
+        var result = Validator<RemoveOrderLineCommand>().Validate(new RemoveOrderLineCommand(Guid.Empty, Guid.Empty));
+
+        Assert.Equal(["OrderId", "LineId"], result.Errors.Select(e => e.PropertyName));
+        Assert.True(Validator<RemoveOrderLineCommand>()
+            .Validate(new RemoveOrderLineCommand(Guid.NewGuid(), Guid.NewGuid())).IsValid);
     }
 
     [Theory]
