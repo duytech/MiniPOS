@@ -525,3 +525,32 @@ bỏ qua option `-C`/`-c` sau `git`.
   cùng lệnh chưa stage gì lúc hook chạy. Commit một phần (stage vài file) có thể bị chặn bởi lỗi ở file không commit.
 - Mỗi commit có `.cs` thay đổi tốn thêm ~6–13 s. Hook `Stop` vẫn giữ nguyên.
 - Vẫn không chạy integration test và Vitest.
+
+### Sau Ngày 7: arch test "chỉ Domain làm tròn" (2026-10-27)
+**Lý do:** đột biến M6 của Ngày 7 (handler tự tính total phần = `decimal.Round(total / N)`) vi phạm "Totals are computed
+only by Domain" nhưng không check cấu trúc nào bắt; nó chỉ đỏ vì số tình cờ lệch ở integration test.
+
+**Đã làm:** `RoundingScanner` (Mono.Cecil, cùng cách với `FloatingPointScanner`) tìm mọi lời gọi `Round`, `Floor`,
+`Ceiling`, `Truncate` của `decimal`/`Math`/`MathF` trong IL của Application, Infrastructure, Api, kể cả trong lambda và
+method async (tên được đưa về method trong source: `<HandleAsync>b__0` → `HandleAsync`). Test
+`Only_domain_rounds_amounts`. Allowlist `RoundingAllowed` kèm lý do: `MoneyJsonConverter.Read` và
+`PercentageJsonConverter.Read` dùng `decimal.Round(x, n) != x` để từ chối JSON quá số chữ số, không tính tiền.
+
+**Kiểm chứng** (đột biến trong `SplitOrderEvenlyHandler`, chỉ chạy arch test):
+| Đột biến | Arch test |
+|---|---|
+| Allowlist rỗng | đỏ (2 converter) |
+| M6 `decimal.Round(total / N)` trong method async | **đỏ** (trước đây xanh) |
+| `Math.Round` trong lambda | đỏ |
+| `decimal.Floor(total × 100 / N) / 100` | đỏ |
+| Làm tròn qua `ToString("0.00")` rồi `decimal.Parse` | **xanh** |
+| Tính lại total bằng toán tử `Money` (`p.Subtotal + p.Surcharge + …`) | **xanh** |
+
+**Chuyện đáng kể:** lần chạy đột biến đầu, script trả file bằng `git checkout -- tests/…` và **xóa luôn test mới chưa
+commit**. Kết quả "6/6 xanh" trông như test không bắt được gì, thật ra test không còn tồn tại. Số test (6 thay vì 7) là
+dấu hiệu duy nhất. Sửa: commit test trước, chỉ trả `src/`. Bài học: verifier của verifier cũng cần kiểm số test chạy.
+
+**Giả định / câu hỏi còn mở:**
+- Hai cách vẫn lọt arch test: làm tròn qua chuỗi, và tính lại tổng bằng toán tử `Money` ngoài Domain. Chưa chạy
+  integration test với hai đột biến này. Có thể cấm `Money.op_Addition`/`op_Subtraction`/`op_Multiply` ngoài Domain
+  (hiện không có chỗ nào dùng), nhưng làm tròn qua chuỗi thì quét IL khó bắt.

@@ -40,9 +40,16 @@ internal static class RoundingScanner
         return type;
     }
 
-    /// <summary><c>&lt;HandleAsync&gt;d__1.MoveNext</c> → <c>HandleAsync</c>; other methods keep their name.</summary>
+    /// <summary>
+    /// The method written in source: <c>&lt;HandleAsync&gt;d__1.MoveNext</c> (async) and <c>&lt;HandleAsync&gt;b__0</c>
+    /// (lambda) → <c>HandleAsync</c>; other methods keep their name.
+    /// </summary>
     private static string SourceMethodName(TypeDefinition type, MethodDefinition method) =>
-        type.Name.StartsWith('<') && type.Name.IndexOf('>', StringComparison.Ordinal) > 1
-            ? type.Name[1..type.Name.IndexOf('>', StringComparison.Ordinal)]
-            : method.Name;
+        Unmangle(method.Name) ?? Unmangle(type.Name) ?? method.Name;
+
+    private static string? Unmangle(string name)
+    {
+        var end = name.IndexOf('>', StringComparison.Ordinal);
+        return name.StartsWith('<') && end > 1 ? name[1..end] : null;
+    }
 }
