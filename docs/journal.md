@@ -502,3 +502,26 @@ thành 0). Test: 12 Domain (có ca 0.195 → 0.19, $0.05 / 10 → 0.05 + 9 × 0.
   Integration test: 20 phần của $1.09 → 0.14 + 19 × 0.05.
 - Chia đều được ở mọi status (giống `GET`), kể cả order đã đóng.
 - Phần có thể là 0.00 khi N > số cent; không chặn.
+
+### Sau Ngày 7: verify trước `git commit` (2026-10-27)
+**Lý do:** ở Ngày 7, agent commit ngay trong lượt. Hook `Stop` chỉ xem thay đổi **chưa commit**, nên lúc lượt kết thúc nó
+không còn gì để kiểm: code vẫn được kiểm vì agent tự chạy build/test, nhưng hook không bảo vệ gì.
+
+**Đã làm:** `verify-on-edit.mjs --before-commit` chạy như hook `PreToolUse` (Bash, PowerShell). Lệnh không chạy
+`git commit` → thoát ngay. Có `git commit` → cùng các check như hook `Stop` trên thay đổi chưa commit (working tree,
+gồm cả file đã stage); đỏ → exit 2, commit bị chặn. Nhận diện lệnh: bỏ heredoc, here-string và chuỗi trong ngoặc trước,
+bỏ qua option `-C`/`-c` sau `git`.
+
+**Kiểm chứng** (đột biến "cent dư vào phần cuối" đặt sẵn, đưa JSON giống Claude Code vào script):
+| Lệnh | Kết quả |
+|---|---|
+| `git status`, `git log`, `echo "git commit -m x"`, heredoc chứa `git commit` | 0, < 1 s |
+| `git commit -m "x"` | 2, ~13 s, in test Domain đỏ |
+| `git add -A && git commit -qm …`, `git -C . commit`, here-string PowerShell, `cd … && git commit --amend` | 2 |
+| Không còn đột biến, chỉ đổi `.mjs`/`.json` | 0 |
+
+**Giả định / câu hỏi còn mở:**
+- Kiểm working tree, không phải đúng phần được stage: build chạy trên file đang có, và `git add -A && git commit` trong
+  cùng lệnh chưa stage gì lúc hook chạy. Commit một phần (stage vài file) có thể bị chặn bởi lỗi ở file không commit.
+- Mỗi commit có `.cs` thay đổi tốn thêm ~6–13 s. Hook `Stop` vẫn giữ nguyên.
+- Vẫn không chạy integration test và Vitest.

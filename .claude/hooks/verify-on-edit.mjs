@@ -2,6 +2,9 @@
 //   .cs / .csproj / .props          -> dotnet build Pos.slnx, then the tests that need no database
 //   web/**/*.ts, web/**/*.html      -> eslint on the changed files, then the Angular compiler (types + templates)
 // A failure exits with code 2 and prints the errors on stderr, which keeps Claude working to fix them.
+// With --before-commit it is a PreToolUse hook (Bash, PowerShell) instead: it runs the same checks only when the
+// command runs `git commit`, and exit 2 blocks the commit. Otherwise a commit made during the turn leaves the Stop
+// hook nothing uncommitted to check.
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -15,6 +18,28 @@ const FAST_TEST_PROJECTS = [
 
 const input = JSON.parse(readFileSync(0, 'utf8').replace(/^﻿/, '') || '{}');
 const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
+const beforeCommit = process.argv.includes('--before-commit');
+
+/**
+ * Whether a shell command runs `git commit`. Heredoc and here-string bodies and quoted strings are dropped first, so a
+ * commit message or an echo that mentions "git commit" does not count.
+ */
+function runsGitCommit(command) {
+  const masked = command
+    .replace(/<<-?\s*['"]?(\w+)['"]?[^\n]*\n[\s\S]*?\n\s*\1\b/g, '')
+    .replace(/@(['"])\r?\n[\s\S]*?\r?\n\1@/g, '""')
+    .replace(/"[^"]*"|'[^']*'/g, '""');
+  return masked.split(/&&|\|\||[;|\n]/).some((segment) => {
+    const words = segment.trim().split(/\s+/);
+    const at = words.findIndex((w) => /^git(\.exe)?$/i.test(w));
+    if (at < 0) return false;
+    let i = at + 1;
+    while (words[i]?.startsWith('-')) i += words[i] === '-C' || words[i] === '-c' ? 2 : 1;
+    return words[i] === 'commit';
+  });
+}
+
+if (beforeCommit && !runsGitCommit(input.tool_input?.command ?? '')) process.exit(0);
 
 /** Modified, added and untracked files (deleted ones need no lint), relative to the repo root with forward slashes. */
 const status = spawnSync('git status --porcelain --untracked-files=all', { cwd: root, shell: true, encoding: 'utf8' });
@@ -110,8 +135,9 @@ if (webFiles.length) {
 }
 
 if (failures.length) {
-  process.stderr.write(
-    ['Checks failed on the uncommitted changes. Fix these before finishing:', ...failures].join('\n') + '\n',
-  );
+  const heading = beforeCommit
+    ? 'Commit blocked: checks failed on the uncommitted changes. Fix these, then commit again:'
+    : 'Checks failed on the uncommitted changes. Fix these before finishing:';
+  process.stderr.write([heading, ...failures].join('\n') + '\n');
   process.exit(2);
 }

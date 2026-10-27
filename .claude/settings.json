@@ -13,6 +13,11 @@
             "type": "command",
             "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/block-main-branch.mjs\"",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/verify-on-edit.mjs\" --before-commit",
+            "timeout": 300
           }
         ]
       }
