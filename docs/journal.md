@@ -594,7 +594,34 @@ mà skill không nói.
 | Test race tính subtotal bằng `SUM(unit_price * quantity)` trong SQL | Skill chưa nói; CLAUDE.md cấm total trong SQL nhưng chỉ nói về code | Skill: test so tiền với `GET`, SQL chỉ đọc cột lưu sẵn. Đã sửa test của agent |
 
 **Giả định / câu hỏi còn mở:**
-- Chưa chạy lại agent với skill đã sửa, và chưa đột biến skill (bỏ một dòng checklist xem agent còn làm không).
+- Chưa đột biến skill (bỏ một dòng checklist xem agent còn làm không).
 - `RemoveTip`/`RemoveDiscount` thiếu `[ProducesResponseType]` 400 trong code hiện có; chưa sửa.
 - `Order.RemoveLine` vẫn ném `DomainException` khi dòng không thuộc order, nhưng qua API thì handler trả 404 trước.
 - Sub-agent chạy worktree từ `main` chứ không phải nhánh hiện tại: muốn thử skill chưa merge thì phải để ý.
+
+**Chạy lại với skill đã sửa:** `PUT /api/orders/{id}/lines/{lineId}/quantity`, sub-agent mới, **không đưa business
+rule nào** (lần 1 đưa sẵn 4 rule nên bước 0 chưa được thử). Agent chạy trên nhánh tách từ nhánh skill, trong checkout
+chính (worktree tạo từ `main` không có skill mới).
+- Sau 6 tool call (đọc `Order`, `OrderLine`, `RemoveLine`, `AddItem`), agent **dừng và hỏi 7 câu**, không viết dòng code
+  nào: body là số lượng mới hay +/-, quantity 0 (400 hay xóa dòng), giới hạn trên, status, discount cố định lớn hơn
+  subtotal mới, đổi về cùng số lượng, response. Cả 7 đều là rule thật mà task không nói; không câu nào thừa. User trả lời:
+  thay thế, 0 → 400, không giới hạn, chỉ `Open`, discount → 422, cùng số lượng → 200 không đổi, 200 + `OrderDto`.
+- Được resume với câu trả lời, xong trong ~4 phút, 18 tool call: `Order.ChangeLineQuantity`, folder
+  `ChangeOrderLineQuantity`, action có 400/404/409/422, 9 Domain test, 18 integration test, 3 concurrency test.
+  Toàn bộ 296 test xanh (105 / 61 / 8 / 122), mình build và chạy lại để xác nhận.
+
+| | Lần 1 (`DELETE` line, có sẵn rule) | Lần 2 (`PUT` quantity, không có rule, skill đã sửa) |
+|---|---|---|
+| Hỏi business rule trước khi code | không cần (đã cho sẵn) | **7 câu, dừng trước khi code** |
+| Vi phạm CLAUDE.md trong code production | 0 | 0 |
+| Lệch so với skill / do skill thiếu | 4 (đường dẫn templates, mẫu concurrency, thiếu 400, cộng tiền bằng SQL trong test) | **0** |
+| Concurrency test | 3, phải tự suy ra "các dòng khác nhau" | 3, đúng mẫu mới (các dòng khác nhau, đua add-item, đua discount cho phép 422) |
+| Test so tiền | 1 chỗ `SUM(unit_price * quantity)` trong SQL | chỉ đọc từ `GET` |
+| 400 trên action | có (tự suy) | có (theo skill) |
+
+**Nhận xét:**
+- 4 chỗ sửa skill sau lần 1 đều có tác dụng ở lần 2; không thấy chỗ lệch mới.
+- Kiểm tra "fixed discount ≤ subtotal mới" giờ có 3 bản trong `Order` (`ApplyDiscount`, `RemoveLine`,
+  `ChangeLineQuantity`). Không vi phạm rule nào, nhưng nên gom về một helper private.
+- Không giới hạn quantity: `int.MaxValue` × 2.00 cho total ~4.29 tỷ, trả 200. Đúng như đã chốt; total không lưu trong DB
+  nên không tràn cột numeric(12,2).
