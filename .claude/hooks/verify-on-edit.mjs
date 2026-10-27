@@ -50,9 +50,25 @@ const changed = (status.stdout ?? '')
 const ext = (file) => path.extname(file).toLowerCase();
 const dotnetChanged = changed.some((file) => ['.cs', '.csproj', '.props'].includes(ext(file)));
 const webFiles = changed.filter((file) => file.startsWith('web/src/') && ['.ts', '.html'].includes(ext(file)));
-if (!dotnetChanged && webFiles.length === 0) process.exit(0);
+// Source files must be UTF-8. A tool that writes the system code page (Windows PowerShell's Set-Content) turns "·"
+// into a single byte that compilers, linters and tests accept, but browsers show as "�".
+const TEXT_EXTENSIONS = ['.cs', '.csproj', '.props', '.ts', '.html', '.css', '.json', '.md', '.mjs'];
+const notUtf8 = changed.filter((file) => {
+  if (!TEXT_EXTENSIONS.includes(ext(file))) return false;
+  try {
+    new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(path.join(root, file)));
+    return false;
+  } catch {
+    return true;
+  }
+});
+
+if (!dotnetChanged && webFiles.length === 0 && notUtf8.length === 0) process.exit(0);
 
 const failures = [];
+if (notUtf8.length) {
+  failures.push('✗ not UTF-8 (rewrite these files as UTF-8):', ...notUtf8.map((file) => `  ${file}`));
+}
 
 /** Keeps the distinct lines that match (compilers repeat the same error per target). */
 const matching = (pattern) => (lines) => [...new Set(lines.filter((line) => pattern.test(line)).map((l) => l.trim()))];

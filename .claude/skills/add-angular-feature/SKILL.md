@@ -14,7 +14,9 @@ Before any code, list every behavior the task does not state and ask the user in
 - What the user sees on each error the API can return (404, 409 conflict, 422 rule broken): the ProblemDetails
   `detail`, a fixed text, a reload?
 - Confirmation before destructive actions (delete, cancel)?
-- What refreshes after a change, and what happens to a second click while a change is in flight?
+- What refreshes after a change, and what happens to a second click while a change is in flight? If clicks queue,
+  also: what happens to a queued click that is no longer valid when its turn comes (a second Remove of the same line,
+  − below the minimum)?
 - Where the page is reached from and where it goes back to; what is shown or disabled when an action isn't allowed
   (e.g. a closed order).
 
@@ -46,7 +48,10 @@ from `src/Pos.Api/Controllers` and the DTOs in `src/Pos.Application`.
 ## 3. Route and template
 
 - Lazy route in `web/src/app/app.routes.ts` with `loadComponent` and a `title` (`'<Page> · Mini POS'`). Links use
-  `routerLink`, not `href` strings built by hand.
+  `routerLink`, not `href` strings built by hand. Route params reach the component as inputs
+  (`withComponentInputBinding()` is on in `app.config.ts`).
+- Write files with the Edit/Write tools. Windows PowerShell's `Set-Content`/`Out-File` write the system code page and
+  turn `·` into a byte the browser shows as `�`; build, lint and Vitest don't notice, the commit hook does.
 - Tailwind, in the style of `orders-list.html` (slate/emerald palette, `rounded-md`, `tabular-nums` for money).
 - Accessibility (ESLint template rules): every input has a label (`sr-only` if hidden), buttons are `<button
   type="button">`, status messages `role="status"`, errors `role="alert"`, clickable things are buttons or links.
@@ -69,6 +74,8 @@ first failure: later ones are often fallout (`http.verify()` in `afterEach`).
 
 - In `web/`: `npm run build`, `npm run lint`, `npx ng test --watch=false`.
 - The `PreToolUse` hook runs eslint + `ngc` before `git commit`; Vitest and the build are yours to run.
-- If the API and DB can run (`docker compose up -d`, `dotnet run --project src/Pos.Api --launch-profile http`,
-  `npm start`), open the page and try each action once.
+- Open the page against the real API and try each action once: `docker compose up -d`, then the `api` and `web`
+  entries of `.claude/launch.json` (preview_start), or `dotnet run --project src/Pos.Api --launch-profile http` and
+  `npm start`. Check the browser tab title too. Unit tests mock HTTP: they do not prove the URLs, bodies or error
+  shapes match the API. If you could not run it, say so in the summary.
 - Summary: the behaviors you were given, the operator you chose for each write and why, anything still open.

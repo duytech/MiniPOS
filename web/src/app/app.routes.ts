@@ -9,7 +9,7 @@ export const routes: Routes = [
   },
   {
     path: 'orders/:id',
-    title: 'Order · Mini POS',
+    title: 'Order Â· Mini POS',
     loadComponent: () => import('./orders/order-detail/order-detail').then((m) => m.OrderDetail),
   },
 ];
