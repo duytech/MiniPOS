@@ -40,13 +40,26 @@ public class MoneyTypeTests
     {
         var offenders =
             from layer in new[] { Layers.Application, Layers.Infrastructure, Layers.Api }
-            from call in RoundingScanner.Scan(layer)
+            from call in CallScanner.Scan(layer, CallScanner.IsRounding)
             where !RoundingAllowed.ContainsKey(call.Caller)
             select $"{call.Caller}: {call.Call}";
 
         AssertNone(offenders,
             "Totals are computed only by Domain: call the order's pricing method instead of rounding here " +
             "(or add the method to RoundingAllowed with a reason)");
+    }
+
+    [Fact]
+    public void Only_domain_adds_up_money()
+    {
+        var offenders =
+            from layer in new[] { Layers.Application, Layers.Infrastructure, Layers.Api }
+            from call in CallScanner.Scan(layer, CallScanner.IsMoneyArithmetic)
+            select $"{call.Caller}: {call.Call}";
+
+        AssertNone(offenders,
+            "Totals are computed only by Domain: take the amount from the order's pricing method instead of " +
+            "adding, subtracting or multiplying Money here");
     }
 
     [Fact]

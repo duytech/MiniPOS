@@ -5,17 +5,27 @@ using Mono.Cecil.Cil;
 namespace Pos.ArchitectureTests;
 
 /// <summary>
-/// Finds every call to a rounding method on decimal or Math (Round, Floor, Ceiling, Truncate) in an assembly's IL,
-/// including calls inside lambdas and async methods. Rounding an amount is part of pricing, which only Domain does.
+/// Finds calls in an assembly's IL, including calls inside lambdas and async methods, which reflection over signatures
+/// does not see. Each call is reported with the method written in source that makes it.
 /// </summary>
-internal static class RoundingScanner
+internal static class CallScanner
 {
     private static readonly HashSet<string> RoundingTypes = ["System.Decimal", "System.Math", "System.MathF"];
 
     private static readonly HashSet<string> RoundingMethods = ["Round", "Floor", "Ceiling", "Truncate"];
 
-    /// <summary>Each call as <c>Declaring.Type.Method: called method</c>, where the declaring type is the source type.</summary>
-    public static IEnumerable<(string Caller, string Call)> Scan(Assembly assembly)
+    private static readonly HashSet<string> MoneyOperators = ["op_Addition", "op_Subtraction", "op_Multiply"];
+
+    /// <summary>Round, Floor, Ceiling or Truncate on decimal or Math: rounding an amount is part of pricing.</summary>
+    public static bool IsRounding(MethodReference called) =>
+        RoundingTypes.Contains(called.DeclaringType.FullName) && RoundingMethods.Contains(called.Name);
+
+    /// <summary>Money's +, - and * operators: adding up amounts outside Domain re-implements a total.</summary>
+    public static bool IsMoneyArithmetic(MethodReference called) =>
+        called.DeclaringType.FullName == typeof(Pos.Domain.Common.Money).FullName && MoneyOperators.Contains(called.Name);
+
+    /// <summary>Each matching call as (<c>Type.FullName.Method</c> of the caller in source, called method).</summary>
+    public static IEnumerable<(string Caller, string Call)> Scan(Assembly assembly, Func<MethodReference, bool> matches)
     {
         using var module = ModuleDefinition.ReadModule(assembly.Location);
 
@@ -25,8 +35,7 @@ internal static class RoundingScanner
         {
             if (instruction.OpCode.Code is Code.Call or Code.Callvirt or Code.Ldftn
                 && instruction.Operand is MethodReference called
-                && RoundingTypes.Contains(called.DeclaringType.FullName)
-                && RoundingMethods.Contains(called.Name))
+                && matches(called))
             {
                 yield return ($"{SourceType(type).FullName}.{SourceMethodName(type, method)}", called.FullName);
             }
