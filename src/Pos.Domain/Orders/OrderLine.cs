@@ -47,4 +47,6 @@ public class OrderLine
             throw new DomainException("The line quantity is too large.");
         }
     }
+
+    internal void ChangeQuantity(int quantity) => Quantity = quantity;
 }

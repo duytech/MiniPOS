@@ -92,6 +92,197 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         }
     }
 
+    [Fact]
+    public async Task Parallel_removals_of_different_lines_delete_exactly_the_accepted_lines()
+    {
+        var orderId = await _client.CreateOrderAsync();
+        var lineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
+
+        var results = await ConcurrentlyAsync(lineIds.Select(lineId => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+        {
+            using var response = await _client.RemoveLineAsync(orderId, lineId);
+            return (response.StatusCode, lineId.ToString());
+        })));
+
+        var accepted = AssertOnlyOkOrConflict(results);
+        var expected = lineIds.Select(id => id.ToString()).Except(accepted).Order(StringComparer.Ordinal);
+        Assert.Equal(string.Join(",", expected), await StoredLineIdsAsync(orderId));
+    }
+
+    [Fact]
+    public async Task Parallel_line_removals_and_add_items_lose_neither()
+    {
+        var (orderId, menuItemId) = await OrderWithOneItemAsync();
+        var removableLineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
+
+        var requests = removableLineIds.SelectMany(lineId => new Func<Task<(HttpStatusCode, string)>>[]
+        {
+            async () =>
+            {
+                using var response = await _client.AddItemAsync(orderId, menuItemId, 1);
+                return (response.StatusCode, "add");
+            },
+            async () =>
+            {
+                using var response = await _client.RemoveLineAsync(orderId, lineId);
+                return (response.StatusCode, lineId.ToString());
+            },
+        });
+        var results = await ConcurrentlyAsync(requests);
+
+        var accepted = AssertOnlyOkOrConflict(results);
+        Assert.Equal(1 + accepted.Count(a => a == "add"), await StoredAsync<int>(
+            orderId, $"(SELECT quantity FROM order_lines WHERE order_id = o.id AND menu_item_id = '{menuItemId}')"));
+        var storedLineIds = (await StoredLineIdsAsync(orderId)).Split(',');
+        var expectedRemaining = removableLineIds.Select(id => id.ToString()).Except(accepted);
+        Assert.Equal(
+            expectedRemaining.Order(StringComparer.Ordinal),
+            storedLineIds.Where(id => removableLineIds.Contains(Guid.Parse(id))).Order(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// Subtotal 11.50 (Pho 9.50 + Tea 2.00). A fixed 5.00 discount and removing Pho are each fine alone, but not both:
+    /// whatever the interleaving, the stored discount must never be more than the stored subtotal.
+    /// </summary>
+    [Fact]
+    public async Task Line_removal_racing_a_fixed_discount_never_leaves_the_discount_above_the_subtotal()
+    {
+        var (orderId, _) = await OrderWithOneItemAsync();
+        (await _client.AddItemAsync(orderId, await _client.CreateMenuItemAsync("Tea", 2.00m), 1)).EnsureSuccessStatusCode();
+        var phoLineId = Guid.Parse(await StoredAsync<string>(
+            orderId, "(SELECT id::text FROM order_lines WHERE order_id = o.id AND unit_price = 9.50)"));
+
+        var requests = Enumerable.Range(0, ConcurrentRequests).Select(_ => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+            {
+                using var response = await _client.ApplyDiscountAsync(orderId, new { amount = 5.00m });
+                return (response.StatusCode, "discount");
+            }))
+            .Append(async () =>
+            {
+                using var response = await _client.RemoveLineAsync(orderId, phoLineId);
+                return (response.StatusCode, "remove");
+            });
+        var results = await ConcurrentlyAsync(requests);
+
+        var unexpected = results.Where(r => r.Item1 is not (HttpStatusCode.OK or HttpStatusCode.Conflict
+            or HttpStatusCode.UnprocessableEntity)).ToList();
+        Assert.Empty(unexpected);
+        var order = await _client.GetOrderAsync(orderId);
+        var removedPho = results.Any(r => r is (HttpStatusCode.OK, "remove"));
+        var discounted = results.Any(r => r is (HttpStatusCode.OK, "discount"));
+        Assert.Equal(!removedPho, discounted);
+        Assert.Equal(removedPho ? "2.00" : "11.50", order.Money("subtotal"));
+        Assert.Equal(discounted ? "5.00" : "0.00", order.Money("discount"));
+    }
+
+    [Fact]
+    public async Task Parallel_quantity_changes_of_different_lines_store_exactly_the_accepted_quantities()
+    {
+        var orderId = await _client.CreateOrderAsync();
+        var lineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
+
+        var results = await ConcurrentlyAsync(lineIds.Select(lineId => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+        {
+            using var response = await _client.ChangeLineQuantityAsync(orderId, lineId, 5);
+            return (response.StatusCode, lineId.ToString());
+        })));
+
+        var accepted = AssertOnlyOkOrConflict(results);
+        var expected = lineIds
+            .Select(id => $"{id}:{(accepted.Contains(id.ToString()) ? 5 : 1)}")
+            .Order(StringComparer.Ordinal);
+        Assert.Equal(string.Join(",", expected), await StoredLineQuantitiesAsync(orderId));
+    }
+
+    [Fact]
+    public async Task Parallel_quantity_changes_and_add_items_lose_neither()
+    {
+        var (orderId, menuItemId) = await OrderWithOneItemAsync();
+        var changedLineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
+
+        var requests = changedLineIds.SelectMany(lineId => new Func<Task<(HttpStatusCode, string)>>[]
+        {
+            async () =>
+            {
+                using var response = await _client.AddItemAsync(orderId, menuItemId, 1);
+                return (response.StatusCode, "add");
+            },
+            async () =>
+            {
+                using var response = await _client.ChangeLineQuantityAsync(orderId, lineId, 4);
+                return (response.StatusCode, lineId.ToString());
+            },
+        });
+        var results = await ConcurrentlyAsync(requests);
+
+        var accepted = AssertOnlyOkOrConflict(results);
+        Assert.Equal(1 + accepted.Count(a => a == "add"), await StoredAsync<int>(
+            orderId, $"(SELECT quantity FROM order_lines WHERE order_id = o.id AND menu_item_id = '{menuItemId}')"));
+        var expected = changedLineIds
+            .Select(id => $"{id}:{(accepted.Contains(id.ToString()) ? 4 : 1)}")
+            .Order(StringComparer.Ordinal);
+        var stored = (await StoredLineQuantitiesAsync(orderId)).Split(',')
+            .Where(entry => changedLineIds.Contains(Guid.Parse(entry.Split(':')[0])));
+        Assert.Equal(expected, stored.Order(StringComparer.Ordinal));
+    }
+
+    /// <summary>
+    /// Bun cha 9.50 × 2 = 19.00. A fixed 10.00 discount and lowering Bun cha to 1 (subtotal 9.50) are each fine alone,
+    /// but not both: whatever the interleaving, the stored discount must never be more than the stored subtotal.
+    /// </summary>
+    [Fact]
+    public async Task Quantity_decrease_racing_a_fixed_discount_never_leaves_the_discount_above_the_subtotal()
+    {
+        var (orderId, menuItemId) = await OrderWithOneItemAsync();
+        (await _client.AddItemAsync(orderId, menuItemId, 1)).EnsureSuccessStatusCode();
+        var lineId = Guid.Parse(await StoredAsync<string>(
+            orderId, "(SELECT id::text FROM order_lines WHERE order_id = o.id)"));
+
+        var requests = Enumerable.Range(0, ConcurrentRequests).Select(_ => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+            {
+                using var response = await _client.ApplyDiscountAsync(orderId, new { amount = 10.00m });
+                return (response.StatusCode, "discount");
+            }))
+            .Append(async () =>
+            {
+                using var response = await _client.ChangeLineQuantityAsync(orderId, lineId, 1);
+                return (response.StatusCode, "decrease");
+            });
+        var results = await ConcurrentlyAsync(requests);
+
+        var unexpected = results.Where(r => r.Item1 is not (HttpStatusCode.OK or HttpStatusCode.Conflict
+            or HttpStatusCode.UnprocessableEntity)).ToList();
+        Assert.Empty(unexpected);
+        var order = await _client.GetOrderAsync(orderId);
+        var decreased = results.Any(r => r is (HttpStatusCode.OK, "decrease"));
+        var discounted = results.Any(r => r is (HttpStatusCode.OK, "discount"));
+        Assert.Equal(!decreased, discounted);
+        Assert.Equal(decreased ? "9.50" : "19.00", order.Money("subtotal"));
+        Assert.Equal(discounted ? "10.00" : "0.00", order.Money("discount"));
+    }
+
+    private Task<string> StoredLineQuantitiesAsync(Guid orderId) => StoredAsync<string>(
+        orderId, "(SELECT COALESCE(string_agg(id::text || ':' || quantity, ',' ORDER BY id::text COLLATE \"C\"), '') " +
+                 "FROM order_lines WHERE order_id = o.id)");
+
+    private async Task<List<Guid>> AddDistinctLinesAsync(Guid orderId, int count)
+    {
+        var lineIds = new List<Guid>();
+        for (var i = 0; i < count; i++)
+        {
+            var menuItemId = await _client.CreateMenuItemAsync($"Side {i}", 1.25m);
+            var response = await _client.AddItemAsync(orderId, menuItemId, 1);
+            response.EnsureSuccessStatusCode();
+            lineIds.Add((await response.ReadJsonAsync()).GetProperty("lines").EnumerateArray()
+                .Single(l => l.GetProperty("menuItemId").GetGuid() == menuItemId).GetProperty("id").GetGuid());
+        }
+
+        return lineIds;
+    }
+
+    private Task<string> StoredLineIdsAsync(Guid orderId) => StoredAsync<string>(
+        orderId, "(SELECT COALESCE(string_agg(id::text, ',' ORDER BY id::text COLLATE \"C\"), '') FROM order_lines WHERE order_id = o.id)");
+
     private Task<HttpResponseMessage> SendChangeAsync(string change, Guid orderId) => change switch
     {
         "apply-discount" => _client.ApplyDiscountAsync(orderId, new { rate = 10 }),

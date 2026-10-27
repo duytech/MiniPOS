@@ -566,3 +566,62 @@ dấu hiệu duy nhất. Sửa: commit test trước, chỉ trả `src/`. Bài h
 - Hai cách vẫn lọt arch test: cộng trừ trên `.Amount` (decimal) rồi bọc lại thành `Money`, và làm tròn qua chuỗi. Cả
   hai đều bị integration test bắt với số hiện có, nhưng chỉ vì số lệch. Có thể cấm toán tử `decimal` trên `Money.Amount`
   ngoài Domain, nhưng các validator so sánh `decimal` hợp lệ, nên rule sẽ phức tạp hơn. Chưa làm.
+
+## Tuần 3
+
+### Ngày 1: skill `add-endpoint` (2026-10-27)
+**Đã làm:** `.claude/skills/add-endpoint/SKILL.md` (bước 0 hỏi business rule → Domain → Application → API → bảng
+test theo loại endpoint → verify) và `references/templates.md` (file mẫu để chép: `SetTip`, `RemoveTip`,
+`SplitOrderEvenly`, test adjustment, test concurrency). Skill không chép lại CLAUDE.md, chỉ nêu thứ tự và file mẫu.
+
+**Thử skill:** giao `DELETE /api/orders/{id}/lines/{lineId}` cho một sub-agent mới (worktree riêng, không có ngữ cảnh
+phiên này), chỉ kèm 4 business rule đã chốt với user: chỉ order `Open` (khác → 422); discount cố định lớn hơn
+subtotal mới → chặn, 422; xóa dòng cuối được; trả 200 + `OrderDto`. Agent dùng Skill tool, đọc templates, xong trong
+~5 phút, 45 tool call: `Order.RemoveLine`, folder `RemoveOrderLine`, action có 400/404/409/422, 8 Domain test (có
+midpoint 0.105 → 0.11), 14 integration test, 3 concurrency test (xóa các dòng khác nhau song song; xóa đua với
+add-item; xóa đua với discount cố định). 263 test xanh, 409 thật sự xảy ra. Không hỏi thêm câu nào ngoài 4 rule.
+
+**So với trước:** Ngày 3 (không hướng dẫn) agent sai nhiều quy ước; Ngày 6 (CLAUDE.md + hook) phải có mình làm. Lần này
+code production không vi phạm quy tắc nào trong CLAUDE.md, và agent tự nghĩ ra ca race "xóa dòng ↔ discount cố định"
+mà skill không nói.
+
+**Chỗ lệch tìm được và đã sửa skill:**
+| Chỗ lệch | Nguyên nhân | Sửa |
+|---|---|---|
+| Đọc `references/templates.md` theo đường dẫn tương đối, không thấy | Worktree tạo từ `main`, chưa có skill; Skill tool nạp từ checkout chính | Ghi rõ "trong folder của skill, cạnh SKILL.md" |
+| Template concurrency "N request song song, alone" sai cho xóa (xóa cùng dòng → 404 là đúng) | Template viết theo `SetTip` | "N request mà mỗi cái tự nó thành công (vd. các dòng khác nhau)"; cho phép 422 khi race phá rule Domain |
+| Template controller (`RemoveTip`) thiếu 400 dù validator có thể trả 400 | Code cũ thiếu | Template có 400; skill nói không chép chỗ thiếu này |
+| Test race tính subtotal bằng `SUM(unit_price * quantity)` trong SQL | Skill chưa nói; CLAUDE.md cấm total trong SQL nhưng chỉ nói về code | Skill: test so tiền với `GET`, SQL chỉ đọc cột lưu sẵn. Đã sửa test của agent |
+
+**Giả định / câu hỏi còn mở:**
+- Chưa đột biến skill (bỏ một dòng checklist xem agent còn làm không).
+- `RemoveTip`/`RemoveDiscount` thiếu `[ProducesResponseType]` 400 trong code hiện có; chưa sửa.
+- `Order.RemoveLine` vẫn ném `DomainException` khi dòng không thuộc order, nhưng qua API thì handler trả 404 trước.
+- Sub-agent chạy worktree từ `main` chứ không phải nhánh hiện tại: muốn thử skill chưa merge thì phải để ý.
+
+**Chạy lại với skill đã sửa:** `PUT /api/orders/{id}/lines/{lineId}/quantity`, sub-agent mới, **không đưa business
+rule nào** (lần 1 đưa sẵn 4 rule nên bước 0 chưa được thử). Agent chạy trên nhánh tách từ nhánh skill, trong checkout
+chính (worktree tạo từ `main` không có skill mới).
+- Sau 6 tool call (đọc `Order`, `OrderLine`, `RemoveLine`, `AddItem`), agent **dừng và hỏi 7 câu**, không viết dòng code
+  nào: body là số lượng mới hay +/-, quantity 0 (400 hay xóa dòng), giới hạn trên, status, discount cố định lớn hơn
+  subtotal mới, đổi về cùng số lượng, response. Cả 7 đều là rule thật mà task không nói; không câu nào thừa. User trả lời:
+  thay thế, 0 → 400, không giới hạn, chỉ `Open`, discount → 422, cùng số lượng → 200 không đổi, 200 + `OrderDto`.
+- Được resume với câu trả lời, xong trong ~4 phút, 18 tool call: `Order.ChangeLineQuantity`, folder
+  `ChangeOrderLineQuantity`, action có 400/404/409/422, 9 Domain test, 18 integration test, 3 concurrency test.
+  Toàn bộ 296 test xanh (105 / 61 / 8 / 122), mình build và chạy lại để xác nhận.
+
+| | Lần 1 (`DELETE` line, có sẵn rule) | Lần 2 (`PUT` quantity, không có rule, skill đã sửa) |
+|---|---|---|
+| Hỏi business rule trước khi code | không cần (đã cho sẵn) | **7 câu, dừng trước khi code** |
+| Vi phạm CLAUDE.md trong code production | 0 | 0 |
+| Lệch so với skill / do skill thiếu | 4 (đường dẫn templates, mẫu concurrency, thiếu 400, cộng tiền bằng SQL trong test) | **0** |
+| Concurrency test | 3, phải tự suy ra "các dòng khác nhau" | 3, đúng mẫu mới (các dòng khác nhau, đua add-item, đua discount cho phép 422) |
+| Test so tiền | 1 chỗ `SUM(unit_price * quantity)` trong SQL | chỉ đọc từ `GET` |
+| 400 trên action | có (tự suy) | có (theo skill) |
+
+**Nhận xét:**
+- 4 chỗ sửa skill sau lần 1 đều có tác dụng ở lần 2; không thấy chỗ lệch mới.
+- Kiểm tra "fixed discount ≤ subtotal mới" giờ có 3 bản trong `Order` (`ApplyDiscount`, `RemoveLine`,
+  `ChangeLineQuantity`). Không vi phạm rule nào, nhưng nên gom về một helper private.
+- Không giới hạn quantity: `int.MaxValue` × 2.00 cho total ~4.29 tỷ, trả 200. Đúng như đã chốt; total không lưu trong DB
+  nên không tràn cột numeric(12,2).

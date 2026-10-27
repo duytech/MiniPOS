@@ -83,6 +83,59 @@ public class Order
     }
 
     /// <summary>
+    /// Removes the line from the order; removing the last line leaves the order open and empty. A percent discount
+    /// follows the new subtotal. A fixed discount must not be more than the new subtotal: the removal is rejected and
+    /// the discount has to be changed or removed first.
+    /// </summary>
+    public void RemoveLine(OrderLine line)
+    {
+        EnsureOpen();
+        if (!_lines.Contains(line))
+        {
+            throw new DomainException($"Line {line.Id} is not on this order.");
+        }
+
+        var newSubtotal = CalculateSubtotal() - line.LineTotal;
+        if (DiscountAmount is { } discount && discount.Amount > newSubtotal.Amount)
+        {
+            throw new DomainException(
+                $"Removing the line would leave a subtotal of {newSubtotal}, less than the discount of {discount}. " +
+                "Change or remove the discount first.");
+        }
+
+        _lines.Remove(line);
+    }
+
+    /// <summary>
+    /// Sets the line's quantity to <paramref name="quantity"/>; the same quantity as now leaves the order unchanged.
+    /// A percent discount and the tip follow the new subtotal. A fixed discount must not be more than the new
+    /// subtotal: the change is rejected and the discount has to be changed or removed first.
+    /// </summary>
+    public void ChangeLineQuantity(OrderLine line, int quantity)
+    {
+        EnsureOpen();
+        if (!_lines.Contains(line))
+        {
+            throw new DomainException($"Line {line.Id} is not on this order.");
+        }
+
+        if (quantity == line.Quantity)
+        {
+            return;
+        }
+
+        var newSubtotal = CalculateSubtotal() - line.LineTotal + line.UnitPrice * quantity;
+        if (DiscountAmount is { } discount && discount.Amount > newSubtotal.Amount)
+        {
+            throw new DomainException(
+                $"A quantity of {quantity} would leave a subtotal of {newSubtotal}, less than the discount of " +
+                $"{discount}. Change or remove the discount first.");
+        }
+
+        line.ChangeQuantity(quantity);
+    }
+
+    /// <summary>
     /// Replaces any existing discount. The discount cannot exceed the subtotal at the time it is applied.
     /// </summary>
     public void ApplyDiscount(OrderDiscount discount)
