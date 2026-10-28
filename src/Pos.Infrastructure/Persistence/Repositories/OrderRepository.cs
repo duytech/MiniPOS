@@ -10,7 +10,11 @@ internal sealed class OrderRepository(PosDbContext db) : IOrderRepository
     private const string LikeEscape = "\\";
 
     public Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
-        db.Orders.Include(o => o.Lines).FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
+        db.Orders
+            .Include(o => o.Lines)
+            .Include(o => o.SavedSplitParts).ThenInclude(p => p.Lines)
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
 
     public async Task<(IReadOnlyList<Order> Orders, int TotalCount)> ListAsync(
         OrderStatus? status, OrderSearch? search, int page, int pageSize, CancellationToken cancellationToken)

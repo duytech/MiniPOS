@@ -40,5 +40,12 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
             .HasForeignKey(OrderLineConfiguration.OrderIdProperty)
             .OnDelete(DeleteBehavior.Cascade);
         builder.Navigation(o => o.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
+
+        builder.Ignore(o => o.HasSavedSplit);
+        builder.HasMany(o => o.SavedSplitParts).WithOne()
+            .HasForeignKey(SavedSplitPartConfiguration.OrderIdProperty)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(o => o.SavedSplitParts).HasField("_savedSplitParts")
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

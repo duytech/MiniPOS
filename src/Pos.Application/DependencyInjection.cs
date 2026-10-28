@@ -12,11 +12,15 @@ using Pos.Application.Orders.CancelOrder;
 using Pos.Application.Orders.ChangeOrderLineQuantity;
 using Pos.Application.Orders.CreateOrder;
 using Pos.Application.Orders.GetOrder;
+using Pos.Application.Orders.GetSplit;
 using Pos.Application.Orders.ListOrders;
 using Pos.Application.Orders.PayOrder;
+using Pos.Application.Orders.PreviewSplit;
 using Pos.Application.Orders.RemoveDiscount;
 using Pos.Application.Orders.RemoveOrderLine;
+using Pos.Application.Orders.RemoveSplit;
 using Pos.Application.Orders.RemoveTip;
+using Pos.Application.Orders.SaveSplit;
 using Pos.Application.Orders.SetPaymentMethod;
 using Pos.Application.Orders.SetTip;
 using Pos.Application.Orders.SplitOrderEvenly;
@@ -47,6 +51,10 @@ public static class DependencyInjection
         services.AddScoped<IQueryHandler<GetOrderQuery, OrderDto>, GetOrderHandler>();
         services.AddQueryHandler<ListOrdersQuery, PagedResult<OrderSummaryDto>, ListOrdersHandler>();
         services.AddQueryHandler<SplitOrderEvenlyQuery, IReadOnlyList<SplitPartDto>, SplitOrderEvenlyHandler>();
+        services.AddQueryHandler<GetSplitQuery, OrderSplitDto, GetSplitHandler>();
+        services.AddQueryHandler<PreviewSplitQuery, OrderSplitDto, PreviewSplitHandler>();
+        services.AddCommandHandler<SaveSplitCommand, OrderSplitDto, SaveSplitHandler>();
+        services.AddCommandHandler<RemoveSplitCommand, bool, RemoveSplitHandler>();
 
         return services;
     }
