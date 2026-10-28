@@ -54,3 +54,24 @@ export interface Order {
   tip: number;
   total: number;
 }
+
+/** One part of a split (`SplitPartDto`). Every money field is computed by the API; the UI only displays them. */
+export interface SplitPart {
+  lineIds: string[];
+  subtotal: number;
+  discount: number;
+  surcharge: number;
+  tax: number;
+  tip: number;
+  total: number;
+}
+
+/** A split by item (`OrderSplitDto`): the parts in saved or requested order. */
+export interface OrderSplit {
+  parts: SplitPart[];
+}
+
+/** Body of `PUT /api/orders/{id}/split` and `POST /api/orders/{id}/split/preview`: the line ids of each part, in order. */
+export interface SaveSplitRequest {
+  parts: { lineIds: string[] }[];
+}

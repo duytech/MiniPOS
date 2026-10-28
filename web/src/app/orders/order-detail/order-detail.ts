@@ -6,6 +6,7 @@ import { RouterLink } from '@angular/router';
 import { EMPTY, Observable, Subject, catchError, concatMap, defer, map, merge, of, scan, startWith, switchMap } from 'rxjs';
 
 import { Order, OrderLine, OrderStatus } from '../order.models';
+import { OrderSplitSection } from '../order-split/order-split';
 import { OrdersApi } from '../orders-api';
 
 export const CHANGED_MESSAGE = 'The order changed. Showing the latest version.';
@@ -27,7 +28,7 @@ type Patch = Partial<DetailState>;
 
 @Component({
   selector: 'app-order-detail',
-  imports: [CurrencyPipe, RouterLink],
+  imports: [CurrencyPipe, RouterLink, OrderSplitSection],
   templateUrl: './order-detail.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -38,6 +39,7 @@ export class OrderDetail {
   readonly id = input.required<string>();
 
   private readonly writes = new Subject<LineWrite>();
+  private readonly reloads = new Subject<void>();
 
   /**
    * One pipeline for the screen. Loading uses switchMap: a new id makes the previous load useless.
@@ -45,6 +47,8 @@ export class OrderDetail {
    * Writes use concatMap: every click counts and runs in order, one request at a time. Each write reads the order
    * the previous one returned, so three quick clicks on + send quantity 3, 4, 5 and add 3. exhaustMap would drop
    * clicks and switchMap would only cancel the request on the client, not on the server.
+   *
+   * Reloads (the split section saw a conflict) use switchMap: they are reads, the newest one wins.
    */
   protected readonly state: Signal<DetailState> = toSignal(
     toObservable(this.id).pipe(
@@ -52,6 +56,7 @@ export class OrderDetail {
         merge(
           this.load(id),
           this.writes.pipe(concatMap((write) => this.runWrite(id, write))),
+          this.reloads.pipe(switchMap(() => this.reload(id))),
         ),
       ),
       scan((state: DetailState, patch: Patch) => ({ ...state, ...patch }), INITIAL_STATE),
@@ -74,6 +79,11 @@ export class OrderDetail {
     this.writes.next({ kind: 'step', lineId: line.id, step: -1 });
   }
 
+  /** The split section saw a 409 (or its split vanished): show the latest order and say why. */
+  protected splitChanged(): void {
+    this.reloads.next();
+  }
+
   protected statusClass(status: OrderStatus): string {
     switch (status) {
       case 'Open':
@@ -93,6 +103,14 @@ export class OrderDetail {
       ),
       // A different order: start from an empty screen, not the previous order's lines.
       startWith<Patch>(INITIAL_STATE),
+    );
+  }
+
+  private reload(id: string): Observable<Patch> {
+    return this.api.get(id).pipe(
+      map((order): Patch => ({ order, loading: false, error: CHANGED_MESSAGE })),
+      catchError(() => of<Patch>({ loading: false, error: GENERIC_ERROR })),
+      startWith<Patch>({ loading: true }), // keeps `order`: the previous data stays on screen
     );
   }
 
@@ -127,10 +145,7 @@ export class OrderDetail {
   private writeFailed(id: string, error: HttpErrorResponse): Observable<Patch> {
     if (error.status === 409 || error.status === 404) {
       // Someone else changed the order (or removed the line): show the latest version.
-      return this.api.get(id).pipe(
-        map((order): Patch => ({ order, loading: false, error: CHANGED_MESSAGE })),
-        catchError(() => of<Patch>({ loading: false, error: GENERIC_ERROR })),
-      );
+      return this.reload(id);
     }
     if (error.status === 422) {
       const detail = (error.error as { detail?: unknown } | null)?.detail;

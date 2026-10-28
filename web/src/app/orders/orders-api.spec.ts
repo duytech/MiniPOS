@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 
-import { Order, OrderListQuery } from './order.models';
+import { Order, OrderListQuery, OrderSplit, SaveSplitRequest } from './order.models';
 import { OrdersApi } from './orders-api';
 
 describe('OrdersApi', () => {
@@ -120,5 +120,60 @@ describe('OrdersApi', () => {
     req.flush(order);
 
     expect(received).toEqual(order);
+  });
+
+  const split: OrderSplit = {
+    parts: [
+      { lineIds: ['l1'], subtotal: 60, discount: 0, surcharge: 0, tax: 5.33, tip: 0, total: 65.33 },
+      { lineIds: ['l2'], subtotal: 40, discount: 0, surcharge: 0, tax: 3.55, tip: 0, total: 43.55 },
+    ],
+  };
+  const splitRequest: SaveSplitRequest = { parts: [{ lineIds: ['l1'] }, { lineIds: ['l2', 'l3'] }] };
+
+  it('gets the saved split with GET and returns it unchanged', () => {
+    let received: unknown;
+    api.getSplit('o1').subscribe((result) => (received = result));
+
+    const req = http.expectOne('/api/orders/o1/split');
+    expect(req.request.method).toBe('GET');
+    expect(req.request.body).toBeNull();
+    req.flush(split);
+
+    expect(received).toEqual(split);
+  });
+
+  it('previews a split with POST { parts } and returns the parts the API sent back', () => {
+    let received: unknown;
+    api.previewSplit('o1', splitRequest).subscribe((result) => (received = result));
+
+    const req = http.expectOne('/api/orders/o1/split/preview');
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ parts: [{ lineIds: ['l1'] }, { lineIds: ['l2', 'l3'] }] });
+    req.flush(split);
+
+    expect(received).toEqual(split);
+  });
+
+  it('saves a split with PUT { parts } and returns the split the API sent back', () => {
+    let received: unknown;
+    api.saveSplit('o1', splitRequest).subscribe((result) => (received = result));
+
+    const req = http.expectOne('/api/orders/o1/split');
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ parts: [{ lineIds: ['l1'] }, { lineIds: ['l2', 'l3'] }] });
+    req.flush(split);
+
+    expect(received).toEqual(split);
+  });
+
+  it('removes the saved split with DELETE and completes on 204', () => {
+    let completed = false;
+    api.removeSplit('o1').subscribe({ complete: () => (completed = true) });
+
+    const req = http.expectOne('/api/orders/o1/split');
+    expect(req.request.method).toBe('DELETE');
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(completed).toBe(true);
   });
 });

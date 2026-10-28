@@ -1,0 +1,157 @@
+@if (visible()) {
+  <section data-testid="split-section" class="mt-8" aria-labelledby="split-heading">
+    <div class="mb-3 flex items-center gap-3">
+      <h3 id="split-heading" class="text-lg font-semibold text-slate-900">Split bill</h3>
+      @if (busy()) {
+        <span data-testid="split-loading" class="inline-flex items-center gap-1.5 text-xs text-slate-500" role="status">
+          <span class="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600"></span>
+          Updating…
+        </span>
+      }
+    </div>
+
+    @if (state().message) {
+      <div
+        data-testid="split-message"
+        class="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+        role="status"
+      >
+        {{ state().message }}
+      </div>
+    }
+
+    @if (state().error) {
+      <div
+        data-testid="split-error"
+        class="mb-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+        role="alert"
+      >
+        {{ state().error }}
+      </div>
+    }
+
+    @if (tooFewLines()) {
+      <p
+        data-testid="split-too-few-lines"
+        class="rounded-md border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-600"
+      >
+        Add at least 2 lines to split the bill.
+      </p>
+    } @else {
+      @if (editable()) {
+        <div class="mb-4 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+          <label class="mb-4 flex items-center gap-2 text-sm font-medium text-slate-700">
+            Parts
+            <select
+              #partCount
+              data-testid="split-part-count"
+              (change)="setPartCount(partCount.value)"
+              class="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 focus:outline-none"
+            >
+              @for (n of partCountChoices(); track n) {
+                <option [value]="n" [selected]="n === state().draft.partCount">{{ n }}</option>
+              }
+            </select>
+          </label>
+
+          <ul class="divide-y divide-slate-100 text-sm">
+            @for (line of order().lines; track line.id) {
+              <li class="py-2">
+                <label class="flex items-center justify-between gap-3">
+                  <span class="min-w-0 wrap-anywhere text-slate-900">
+                    {{ line.name }} <span class="text-slate-500">× {{ line.quantity }}</span>
+                  </span>
+                  <select
+                    #linePart
+                    data-testid="split-line-part"
+                    (change)="assign(line.id, linePart.value)"
+                    class="shrink-0 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 focus:outline-none"
+                  >
+                    <option value="" [selected]="partOf(line.id) === null">Unassigned</option>
+                    @for (part of partChoices(); track part) {
+                      <option [value]="part" [selected]="partOf(line.id) === part">Part {{ part + 1 }}</option>
+                    }
+                  </select>
+                </label>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+
+      @if (state().parts; as split) {
+        <div
+          class="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm transition-opacity"
+          [class.opacity-60]="busy()"
+        >
+          <table class="min-w-full divide-y divide-slate-200 text-sm">
+            <thead class="bg-slate-50 text-left text-xs font-medium tracking-wide text-slate-500 uppercase">
+              <tr>
+                <th scope="col" class="px-2 py-3 sm:px-4">Part</th>
+                <th scope="col" class="px-2 py-3 text-right sm:px-4">Subtotal</th>
+                <th scope="col" class="px-2 py-3 text-right sm:px-4">Discount</th>
+                <th scope="col" class="px-2 py-3 text-right sm:px-4">Surcharge</th>
+                <th scope="col" class="px-2 py-3 text-right sm:px-4">Tax</th>
+                <th scope="col" class="px-2 py-3 text-right sm:px-4">Tip</th>
+                <th scope="col" class="px-2 py-3 text-right sm:px-4">Total</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100 tabular-nums">
+              @for (part of split.parts; track $index) {
+                <tr data-testid="split-part-row">
+                  <td class="px-2 py-3 sm:px-4">
+                    <div class="font-medium text-slate-900">Part {{ $index + 1 }}</div>
+                    <div class="text-xs wrap-anywhere text-slate-500" data-testid="split-part-lines">
+                      {{ namesOf(part.lineIds) }}
+                    </div>
+                  </td>
+                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4" data-testid="split-part-subtotal">
+                    {{ part.subtotal | currency: 'USD' }}
+                  </td>
+                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4" data-testid="split-part-discount">
+                    {{ part.discount | currency: 'USD' }}
+                  </td>
+                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4" data-testid="split-part-surcharge">
+                    {{ part.surcharge | currency: 'USD' }}
+                  </td>
+                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4" data-testid="split-part-tax">
+                    {{ part.tax | currency: 'USD' }}
+                  </td>
+                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4" data-testid="split-part-tip">
+                    {{ part.tip | currency: 'USD' }}
+                  </td>
+                  <td class="px-2 py-3 text-right font-semibold text-slate-900 sm:px-4" data-testid="split-part-total">
+                    {{ part.total | currency: 'USD' }}
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      @if (editable()) {
+        <div class="mt-4 flex flex-wrap justify-end gap-2">
+          @if (state().saved) {
+            <button
+              type="button"
+              data-testid="split-remove"
+              (click)="removeSplit()"
+              class="rounded-md border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+            >
+              Remove split
+            </button>
+          }
+          <button
+            type="button"
+            data-testid="split-save"
+            (click)="save()"
+            class="rounded-md bg-emerald-600 px-3 py-2 text-sm font-medium text-white shadow-sm hover:bg-emerald-700"
+          >
+            Save split
+          </button>
+        </div>
+      }
+    }
+  </section>
+}

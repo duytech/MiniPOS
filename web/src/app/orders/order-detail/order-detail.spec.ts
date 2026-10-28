@@ -3,7 +3,7 @@ import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@a
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { Order, OrderLine } from '../order.models';
+import { Order, OrderLine, OrderSplit } from '../order.models';
 import { CHANGED_MESSAGE, GENERIC_ERROR, OrderDetail } from './order-detail';
 
 describe('OrderDetail', () => {
@@ -11,6 +11,7 @@ describe('OrderDetail', () => {
   let http: HttpTestingController;
 
   const ORDER_URL = '/api/orders/o1';
+  const SPLIT_URL = `${ORDER_URL}/split`;
 
   const line = (overrides: Partial<OrderLine> = {}): OrderLine => ({
     id: 'l1',
@@ -63,9 +64,21 @@ describe('OrderDetail', () => {
     expect(req.request.method).toBe('DELETE');
     return req;
   };
-  const flush = (req: TestRequest, body: Order) => {
+  /** Each order shown makes the split section read the saved split; answer "no split" unless a test says otherwise. */
+  const flushSplitReads = (body: OrderSplit | null = null) => {
+    for (const req of http.match((r) => r.method === 'GET' && r.url === SPLIT_URL)) {
+      if (body) {
+        req.flush(body);
+      } else {
+        req.flush({ status: 404 }, { status: 404, statusText: 'Not Found' });
+      }
+    }
+    fixture.detectChanges();
+  };
+  const flush = (req: TestRequest, body: Order, split: OrderSplit | null = null) => {
     req.flush(body);
     fixture.detectChanges();
+    flushSplitReads(split);
   };
   const fail = (req: TestRequest, status: number, body: object | null = null) => {
     req.flush(body, { status, statusText: 'Error' });
@@ -295,6 +308,51 @@ describe('OrderDetail', () => {
 
     expect(text('error')).toBe(GENERIC_ERROR);
     expect(el('not-found')).toBeNull();
+  });
+
+  it('reloads the order when the split section reports a change, keeping the previous order on screen meanwhile', () => {
+    const lines = [line(), line({ id: 'l2', name: 'Iced tea', unitPrice: 3, quantity: 1, lineTotal: 3 })];
+    const split: OrderSplit = {
+      parts: [
+        { lineIds: ['l1'], subtotal: 25, discount: 0, surcharge: 0, tax: 2.06, tip: 0, total: 27.06 },
+        { lineIds: ['l2'], subtotal: 3, discount: 0, surcharge: 0, tax: 0.25, tip: 0, total: 3.25 },
+      ],
+    };
+    fixture.componentRef.setInput('id', 'o1');
+    fixture.detectChanges();
+    flush(expectGet(), order({ lines, subtotal: 28, tax: 2.31, total: 30.31 }), split);
+
+    click('split-save');
+    const save = http.expectOne((r) => r.method === 'PUT' && r.url === SPLIT_URL);
+    fail(save, 409, { status: 409, detail: 'The data was changed by another request. Reload and try again.' });
+
+    // The reload is pending: the previous order stays with the loading indicator.
+    const reload = expectGet();
+    expect(el('loading')).not.toBeNull();
+    expect(text('total')).toBe('$30.31');
+
+    flush(reload, order({ lines, subtotal: 28, tax: 2.31, tip: 5, total: 35.31 }), split);
+
+    expect(text('error')).toBe(CHANGED_MESSAGE);
+    expect(text('tip')).toBe('$5.00');
+    expect(text('total')).toBe('$35.31');
+    expect(el('loading')).toBeNull();
+  });
+
+  it('keeps the split amounts out of the order totals block', () => {
+    const lines = [line(), line({ id: 'l2', name: 'Iced tea', unitPrice: 3, quantity: 1, lineTotal: 3 })];
+    fixture.componentRef.setInput('id', 'o1');
+    fixture.detectChanges();
+    flush(expectGet(), order({ lines, subtotal: 28, total: 30.31 }), {
+      parts: [
+        { lineIds: ['l1'], subtotal: 25, discount: 0, surcharge: 0, tax: 2.06, tip: 0, total: 27.06 },
+        { lineIds: ['l2'], subtotal: 3, discount: 0, surcharge: 0, tax: 0.25, tip: 0, total: 3.25 },
+      ],
+    });
+
+    expect(el('split-section')).not.toBeNull();
+    expect(el('totals')?.querySelector('[data-testid="split-section"]')).toBeNull();
+    expect(el('totals')?.querySelectorAll('[data-testid^="split-"]').length).toBe(0);
   });
 
   it.each(['Paid', 'Cancelled'] as const)('is read-only when the order is %s', (status) => {
