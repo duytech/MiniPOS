@@ -66,6 +66,24 @@ internal static class ApiClient
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>Body of PUT and preview split: one array of line ids per part, in part order.</summary>
+    public static object SplitBody(params IEnumerable<Guid>[] parts) =>
+        new { parts = parts.Select(lineIds => new { lineIds }).ToArray() };
+
+    public static Task<HttpResponseMessage> GetSplitAsync(this HttpClient client, Guid orderId) =>
+        client.GetAsync($"/api/orders/{orderId}/split");
+
+    /// <summary>Body is sent as given; <see cref="SplitBody"/> builds a valid one.</summary>
+    public static Task<HttpResponseMessage> SaveSplitAsync(this HttpClient client, Guid orderId, object body) =>
+        client.PutAsJsonAsync($"/api/orders/{orderId}/split", body);
+
+    /// <summary>Body is sent as given; <see cref="SplitBody"/> builds a valid one.</summary>
+    public static Task<HttpResponseMessage> PreviewSplitAsync(this HttpClient client, Guid orderId, object body) =>
+        client.PostAsJsonAsync($"/api/orders/{orderId}/split/preview", body);
+
+    public static Task<HttpResponseMessage> RemoveSplitAsync(this HttpClient client, Guid orderId) =>
+        client.DeleteAsync($"/api/orders/{orderId}/split");
+
     public static async Task<JsonElement> GetOrderAsync(this HttpClient client, Guid orderId)
     {
         var response = await client.GetAsync($"/api/orders/{orderId}");

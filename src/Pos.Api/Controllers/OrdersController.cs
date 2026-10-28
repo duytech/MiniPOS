@@ -9,11 +9,15 @@ using Pos.Application.Orders.CancelOrder;
 using Pos.Application.Orders.ChangeOrderLineQuantity;
 using Pos.Application.Orders.CreateOrder;
 using Pos.Application.Orders.GetOrder;
+using Pos.Application.Orders.GetSplit;
 using Pos.Application.Orders.ListOrders;
 using Pos.Application.Orders.PayOrder;
+using Pos.Application.Orders.PreviewSplit;
 using Pos.Application.Orders.RemoveDiscount;
 using Pos.Application.Orders.RemoveOrderLine;
+using Pos.Application.Orders.RemoveSplit;
 using Pos.Application.Orders.RemoveTip;
+using Pos.Application.Orders.SaveSplit;
 using Pos.Application.Orders.SetPaymentMethod;
 using Pos.Application.Orders.SetTip;
 using Pos.Application.Orders.SplitOrderEvenly;
@@ -68,6 +72,63 @@ public sealed class OrdersController : ControllerBase
         [FromServices] IQueryHandler<SplitOrderEvenlyQuery, IReadOnlyList<SplitPartDto>> handler,
         CancellationToken cancellationToken) =>
         handler.HandleAsync(new SplitOrderEvenlyQuery(id, parts), cancellationToken);
+
+    /// <summary>The saved split by item, priced with the current order; works in any status. No saved split → 404.</summary>
+    [HttpGet("{id:guid}/split")]
+    [ProducesResponseType<OrderSplitDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    public Task<OrderSplitDto> GetSplit(
+        Guid id,
+        [FromServices] IQueryHandler<GetSplitQuery, OrderSplitDto> handler,
+        CancellationToken cancellationToken) =>
+        handler.HandleAsync(new GetSplitQuery(id), cancellationToken);
+
+    /// <summary>
+    /// Saves the split by item (at least two parts, every line in exactly one part), replacing any saved one. Only
+    /// the line assignment is stored; a real change to the order clears it.
+    /// </summary>
+    [HttpPut("{id:guid}/split")]
+    [ProducesResponseType<OrderSplitDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public Task<OrderSplitDto> SaveSplit(
+        Guid id,
+        SaveSplitRequest request,
+        [FromServices] ICommandHandler<SaveSplitCommand, OrderSplitDto> handler,
+        CancellationToken cancellationToken) =>
+        handler.HandleAsync(new SaveSplitCommand(id, request.Parts?.Select(p => p?.LineIds).ToList()), cancellationToken);
+
+    /// <summary>Prices a split by item like <see cref="SaveSplit"/> without saving anything.</summary>
+    [HttpPost("{id:guid}/split/preview")]
+    [ProducesResponseType<OrderSplitDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public Task<OrderSplitDto> PreviewSplit(
+        Guid id,
+        SaveSplitRequest request,
+        [FromServices] IQueryHandler<PreviewSplitQuery, OrderSplitDto> handler,
+        CancellationToken cancellationToken) =>
+        handler.HandleAsync(new PreviewSplitQuery(id, request.Parts?.Select(p => p?.LineIds).ToList()), cancellationToken);
+
+    /// <summary>Removes the saved split: missing order → 404, no saved split → 404, order not open → 422.</summary>
+    [HttpDelete("{id:guid}/split")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
+    public async Task<IActionResult> RemoveSplit(
+        Guid id,
+        [FromServices] ICommandHandler<RemoveSplitCommand, bool> handler,
+        CancellationToken cancellationToken)
+    {
+        await handler.HandleAsync(new RemoveSplitCommand(id), cancellationToken);
+        return NoContent();
+    }
 
     [HttpPost("{id:guid}/items")]
     [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]
@@ -213,3 +274,8 @@ public sealed record ApplyDiscountRequest(Percentage? Rate, Money? Amount);
 public sealed record SetTipRequest([Required] Percentage? Rate);
 
 public sealed record SetPaymentMethodRequest([Required] PaymentMethod? PaymentMethod);
+
+/// <summary>A split by item: the line ids of each part, in part order. Used by PUT and preview.</summary>
+public sealed record SaveSplitRequest(IReadOnlyList<SplitPartRequest?>? Parts);
+
+public sealed record SplitPartRequest(IReadOnlyList<Guid>? LineIds);

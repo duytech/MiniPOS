@@ -6,11 +6,15 @@ using Pos.Application.Orders.AddOrderItem;
 using Pos.Application.Orders.ApplyDiscount;
 using Pos.Application.Orders.CancelOrder;
 using Pos.Application.Orders.ChangeOrderLineQuantity;
+using Pos.Application.Orders.GetSplit;
 using Pos.Application.Orders.ListOrders;
 using Pos.Application.Orders.PayOrder;
+using Pos.Application.Orders.PreviewSplit;
 using Pos.Application.Orders.RemoveDiscount;
 using Pos.Application.Orders.RemoveOrderLine;
+using Pos.Application.Orders.RemoveSplit;
 using Pos.Application.Orders.RemoveTip;
+using Pos.Application.Orders.SaveSplit;
 using Pos.Application.Orders.SetPaymentMethod;
 using Pos.Application.Orders.SetTip;
 using Pos.Application.Orders.SplitOrderEvenly;
@@ -141,6 +145,58 @@ public class ValidatorTests
             .Validate(new SetPaymentMethodCommand(Guid.Empty, PaymentMethod.Card)).IsValid);
         Assert.False(Validator<PayOrderCommand>().Validate(new PayOrderCommand(Guid.Empty)).IsValid);
         Assert.False(Validator<CancelOrderCommand>().Validate(new CancelOrderCommand(Guid.Empty)).IsValid);
+        Assert.False(Validator<RemoveSplitCommand>().Validate(new RemoveSplitCommand(Guid.Empty)).IsValid);
+        Assert.True(Validator<RemoveSplitCommand>().Validate(new RemoveSplitCommand(Guid.NewGuid())).IsValid);
+    }
+
+    [Fact]
+    public void Get_split_requires_the_order_id()
+    {
+        Assert.False(Validator<GetSplitQuery>().Validate(new GetSplitQuery(Guid.Empty)).IsValid);
+        Assert.True(Validator<GetSplitQuery>().Validate(new GetSplitQuery(Guid.NewGuid())).IsValid);
+    }
+
+    /// <summary>
+    /// Shapes for the split by item body. Part counts, empty parts and which lines are in them are the order's rules
+    /// (422), so one part or an empty part is a valid shape here.
+    /// </summary>
+    public static TheoryData<string, bool> SplitShapes => new()
+    {
+        { "two-parts", true },
+        { "one-part", true },
+        { "no-parts", true },
+        { "empty-part", true },
+        { "parts-null", false },
+        { "part-null", false },
+        { "line-id-empty", false },
+        { "order-id-empty", false },
+    };
+
+    [Theory]
+    [MemberData(nameof(SplitShapes))]
+    public void Save_and_preview_split_check_the_shape_only(string shape, bool valid)
+    {
+        var (orderId, parts) = SplitShape(shape);
+
+        Assert.Equal(valid, Validator<SaveSplitCommand>().Validate(new SaveSplitCommand(orderId, parts)).IsValid);
+        Assert.Equal(valid, Validator<PreviewSplitQuery>().Validate(new PreviewSplitQuery(orderId, parts)).IsValid);
+    }
+
+    private static (Guid OrderId, IReadOnlyList<IReadOnlyList<Guid>?>? Parts) SplitShape(string shape)
+    {
+        Guid[] a = [Guid.NewGuid()];
+        Guid[] b = [Guid.NewGuid(), Guid.NewGuid()];
+        return shape switch
+        {
+            "two-parts" => (Guid.NewGuid(), [a, b]),
+            "one-part" => (Guid.NewGuid(), [a]),
+            "no-parts" => (Guid.NewGuid(), []),
+            "empty-part" => (Guid.NewGuid(), [a, []]),
+            "parts-null" => (Guid.NewGuid(), null),
+            "part-null" => (Guid.NewGuid(), [a, null]),
+            "line-id-empty" => (Guid.NewGuid(), [a, [Guid.NewGuid(), Guid.Empty]]),
+            _ => (Guid.Empty, [a, b]),
+        };
     }
 
     [Theory]

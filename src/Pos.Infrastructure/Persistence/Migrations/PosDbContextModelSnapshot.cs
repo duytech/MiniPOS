@@ -161,6 +161,45 @@ namespace Pos.Infrastructure.Persistence.Migrations
                     b.ToTable("order_lines", (string)null);
                 });
 
+            modelBuilder.Entity("Pos.Domain.Orders.SavedSplitLine", b =>
+                {
+                    b.Property<Guid>("PartId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("part_id");
+
+                    b.Property<Guid>("LineId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("line_id");
+
+                    b.HasKey("PartId", "LineId");
+
+                    b.HasIndex("LineId");
+
+                    b.ToTable("order_split_part_lines", (string)null);
+                });
+
+            modelBuilder.Entity("Pos.Domain.Orders.SavedSplitPart", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("OrderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("order_id");
+
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderId", "Position")
+                        .IsUnique();
+
+                    b.ToTable("order_split_parts", (string)null);
+                });
+
             modelBuilder.Entity("Pos.Domain.Orders.OrderLine", b =>
                 {
                     b.HasOne("Pos.Domain.MenuItems.MenuItem", null)
@@ -176,7 +215,38 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Pos.Domain.Orders.SavedSplitLine", b =>
+                {
+                    b.HasOne("Pos.Domain.Orders.OrderLine", null)
+                        .WithMany()
+                        .HasForeignKey("LineId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Pos.Domain.Orders.SavedSplitPart", null)
+                        .WithMany("Lines")
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Pos.Domain.Orders.SavedSplitPart", b =>
+                {
+                    b.HasOne("Pos.Domain.Orders.Order", null)
+                        .WithMany("SavedSplitParts")
+                        .HasForeignKey("OrderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Pos.Domain.Orders.Order", b =>
+                {
+                    b.Navigation("Lines");
+
+                    b.Navigation("SavedSplitParts");
+                });
+
+            modelBuilder.Entity("Pos.Domain.Orders.SavedSplitPart", b =>
                 {
                     b.Navigation("Lines");
                 });
