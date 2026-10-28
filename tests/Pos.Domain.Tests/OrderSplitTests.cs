@@ -121,27 +121,23 @@ public class OrderSplitTests
     }
 
     [Fact]
-    public void One_part_is_the_whole_order()
+    public void One_part_is_rejected()
     {
         var (order, l) = OrderWithLines(NycTax, 3.33m, 4.17m);
-        order.SetPaymentMethod(PaymentMethod.Card);
-        order.SetTip(new Percentage(18m));
 
-        var part = Assert.Single(order.Split([Part(l[0], l[1])]));
+        var error = Assert.Throws<DomainException>(() => order.Split([Part(l[0], l[1])]));
 
-        var totals = order.CalculateTotals();
-        Assert.Equal(
-            [totals.Subtotal, totals.Discount, totals.Surcharge, totals.Tax, totals.Tip, totals.Total],
-            [part.Subtotal, part.Discount, part.Surcharge, part.Tax, part.Tip, part.Total]);
-        Assert.Equal(l, part.LineIds);
+        Assert.Equal("A split needs at least two parts.", error.Message);
     }
 
     [Fact]
     public void Every_line_must_be_in_a_part()
     {
-        var (order, l) = OrderWithLines(NycTax, 3.33m, 4.17m);
+        var (order, l) = OrderWithLines(NycTax, 3.33m, 4.17m, 2.51m);
 
-        Assert.Throws<DomainException>(() => order.Split([Part(l[0])]));
+        var error = Assert.Throws<DomainException>(() => order.Split([Part(l[0]), Part(l[1])]));
+
+        Assert.Equal("Every line of the order must be in a part of the split.", error.Message);
     }
 
     [Fact]
@@ -169,10 +165,12 @@ public class OrderSplitTests
     }
 
     [Fact]
-    public void A_split_needs_a_part()
+    public void A_split_needs_at_least_two_parts()
     {
         var (order, _) = OrderWithLines(NycTax, 3.33m);
 
-        Assert.Throws<DomainException>(() => order.Split([]));
+        var error = Assert.Throws<DomainException>(() => order.Split([]));
+
+        Assert.Equal("A split needs at least two parts.", error.Message);
     }
 }

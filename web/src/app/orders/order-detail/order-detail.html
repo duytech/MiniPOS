@@ -158,6 +158,9 @@
         <dd class="tabular-nums" data-testid="total">{{ order.total | currency: 'USD' }}</dd>
       </div>
     </dl>
+
+    <!-- Outside data-testid="totals": the order summary selectors must not match part amounts. -->
+    <app-order-split [order]="order" (changed)="splitChanged()" />
   } @else if (state().loading) {
     <div class="flex items-center gap-2 py-10 text-sm text-slate-500" role="status" data-testid="initial-loading">
       <span class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600"></span>

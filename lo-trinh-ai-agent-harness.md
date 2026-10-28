@@ -55,12 +55,12 @@ Kết quả: một tính năng chạy trọn chuỗi plan → implement → test
   - [x] `tester` viết test từ plan, contract và business rule, không viết từ code. Có Playwright MCP; chỉ được sửa file trong `tests/` (Playwright E2E đặt ở `tests/e2e/`).
   - [x] Chặn ba lớp: hook `PreToolUse` cho `Edit|Write` từ chối path ngoài `tests/`; chạy trong worktree và loại cả lượt nếu `git diff --name-only` có file ngoài `tests/`; prompt cấm sửa code chính và cấm nới assertion để test pass.
   - [x] Giao `tester` dữ liệu xấu: tên món rất dài, 200 món, mạng chậm (throttle). Ghi lại lỗi `tester` phát hiện và lần nào nó cố sửa ngoài `tests/`.
-- [ ] Ngày 7: Chạy trọn tính năng Split bill qua cả chuỗi agent, backend và frontend **song song**.
-  - [ ] Sửa `planner`: khi task có cả API và web, xuất **contract** (route, request/response JSON, mã lỗi) và **danh sách file của từng task**; hai danh sách không được trùng file.
-  - [ ] Duyệt contract, rồi chạy hai `implementer` song song, mỗi agent một worktree (`isolation: worktree`): một làm backend (lưu split, endpoint), một làm frontend (trang chia hóa đơn, gọi API theo contract).
-  - [ ] Cùng lúc, `tester` viết test từ contract (edge case chia lẻ cent, 409, E2E trang chia hóa đơn), chưa nhìn code của hai `implementer`.
-  - [ ] Thêm bước **integrator** (agent hoặc bạn): merge hai nhánh, chạy toàn bộ verifier (build, test, lint, `ng test`), mở app kiểm tra end-to-end.
-  - [ ] Ghi vào `docs/journal.md`: conflict gặp phải (file trùng, contract lệch, DTO khác tên, số tiền khác định dạng) và cách xử lý; chỗ các agent trả về không nhất quán và cách bạn sửa harness.
+- [x] Ngày 7: Chạy trọn tính năng Split bill qua cả chuỗi agent, backend và frontend **song song**.
+  - [x] Sửa `planner`: khi task có cả API và web, xuất **contract** (route, request/response JSON, mã lỗi) và **danh sách file của từng task**; hai danh sách không được trùng file.
+  - [x] Duyệt contract, rồi chạy hai `implementer` song song, mỗi agent một worktree (`isolation: worktree`): một làm backend (lưu split, endpoint), một làm frontend (trang chia hóa đơn, gọi API theo contract).
+  - [x] Cùng lúc, `tester` viết test từ contract (edge case chia lẻ cent, 409, E2E trang chia hóa đơn), chưa nhìn code của hai `implementer`.
+  - [x] Thêm bước **integrator** (agent hoặc bạn): merge hai nhánh, chạy toàn bộ verifier (build, test, lint, `ng test`), mở app kiểm tra end-to-end.
+  - [x] Ghi vào `docs/journal.md`: conflict gặp phải (file trùng, contract lệch, DTO khác tên, số tiền khác định dạng) và cách xử lý; chỗ các agent trả về không nhất quán và cách bạn sửa harness.
 
 ## Tuần 4: AI code review và đóng gói hồ sơ
 

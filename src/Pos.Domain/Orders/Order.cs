@@ -6,6 +6,7 @@ namespace Pos.Domain.Orders;
 public class Order
 {
     private readonly List<OrderLine> _lines = [];
+    private readonly List<SavedSplitPart> _savedSplitParts = [];
 
     public Guid Id { get; private set; }
 
@@ -46,6 +47,11 @@ public class Order
 
     public IReadOnlyList<OrderLine> Lines => _lines;
 
+    /// <summary>The saved split by item (line assignment only, in part order); empty when there is none.</summary>
+    public IReadOnlyList<SavedSplitPart> SavedSplitParts => _savedSplitParts;
+
+    public bool HasSavedSplit => _savedSplitParts.Count > 0;
+
     private Order()
     {
     }
@@ -85,6 +91,7 @@ public class Order
             line.IncreaseQuantity(quantity);
         }
 
+        ClearSplit();
         return line;
     }
 
@@ -103,6 +110,7 @@ public class Order
 
         EnsureFixedDiscountFits(DiscountAmount, CalculateSubtotal() - line.LineTotal, "Removing the line");
         _lines.Remove(line);
+        ClearSplit();
     }
 
     /// <summary>
@@ -128,6 +136,7 @@ public class Order
             CalculateSubtotal() - line.LineTotal + line.UnitPrice * quantity,
             $"A quantity of {quantity}");
         line.ChangeQuantity(quantity);
+        ClearSplit();
     }
 
     /// <summary>
@@ -148,38 +157,68 @@ public class Order
 
         EnsureFixedDiscountFits(discount.Amount, CalculateSubtotal(), change: null);
 
+        if (DiscountRate == discount.Rate && DiscountAmount == discount.Amount)
+        {
+            return;
+        }
+
         DiscountRate = discount.Rate;
         DiscountAmount = discount.Amount;
+        ClearSplit();
     }
 
     public void RemoveDiscount()
     {
         EnsureOpen();
+        if (Discount is null)
+        {
+            return;
+        }
+
         DiscountRate = null;
         DiscountAmount = null;
+        ClearSplit();
     }
 
     public void SetTip(Percentage tipRate)
     {
         EnsureOpen();
+        if (TipRate == tipRate)
+        {
+            return;
+        }
+
         TipRate = tipRate;
+        ClearSplit();
     }
 
     public void RemoveTip()
     {
         EnsureOpen();
+        if (TipRate is null)
+        {
+            return;
+        }
+
         TipRate = null;
+        ClearSplit();
     }
 
     public void SetPaymentMethod(PaymentMethod paymentMethod)
     {
         EnsureOpen();
+        if (PaymentMethod == paymentMethod)
+        {
+            return;
+        }
+
         PaymentMethod = paymentMethod;
+        ClearSplit();
     }
 
     /// <summary>
     /// Closes the order as paid, with the stored payment method, for the whole order. Only an open order can be paid
-    /// (an empty one too); Paid is final. The totals are not changed.
+    /// (an empty one too); Paid is final. The totals are not changed, and a saved split is kept (display only).
     /// </summary>
     public void Pay(DateTimeOffset paidAt)
     {
@@ -190,6 +229,7 @@ public class Order
 
     /// <summary>
     /// Closes the order as cancelled. Only an open order can be cancelled (an empty one too); Cancelled is final.
+    /// A saved split is kept.
     /// </summary>
     public void Cancel(DateTimeOffset cancelledAt)
     {
@@ -253,12 +293,14 @@ public class Order
     /// The order's discount, surcharge, tax and tip are each shared by the part's share of the subtotal, rounded down
     /// to the cent; the leftover cents go to the part with the largest subtotal (the earlier part on a tie).
     /// So every amount of the parts adds up exactly to the order's amount, and the part totals to the order total.
+    /// A split needs at least two parts. Nothing is stored and any status is allowed (see <see cref="PreviewSplit"/>
+    /// and <see cref="SaveSplit"/> for the open-only versions).
     /// </summary>
     public IReadOnlyList<SplitPart> Split(IReadOnlyList<IReadOnlyCollection<Guid>> lineIdsPerPart)
     {
-        if (lineIdsPerPart.Count == 0)
+        if (lineIdsPerPart.Count < 2)
         {
-            throw new DomainException("A split needs at least one part.");
+            throw new DomainException("A split needs at least two parts.");
         }
 
         var linesById = _lines.ToDictionary(l => l.Id);
@@ -312,6 +354,42 @@ public class Order
             .ToList();
     }
 
+    /// <summary>Prices a split by item (see <see cref="Split"/>) without saving it. Only an open order.</summary>
+    public IReadOnlyList<SplitPart> PreviewSplit(IReadOnlyList<IReadOnlyCollection<Guid>> lineIdsPerPart)
+    {
+        EnsureOpen();
+        return Split(lineIdsPerPart);
+    }
+
+    /// <summary>
+    /// Saves the split by item (see <see cref="Split"/>), replacing any saved one. Only the line assignment is stored;
+    /// its amounts are recomputed on every read. Only an open order. A real change to the order's lines, discount, tip
+    /// or payment method clears it.
+    /// </summary>
+    public IReadOnlyList<SplitPart> SaveSplit(IReadOnlyList<IReadOnlyCollection<Guid>> lineIdsPerPart)
+    {
+        EnsureOpen();
+        var parts = Split(lineIdsPerPart);
+        _savedSplitParts.Clear();
+        _savedSplitParts.AddRange(lineIdsPerPart.Select((lineIds, position) => new SavedSplitPart(position, lineIds)));
+        return parts;
+    }
+
+    /// <summary>Removes the saved split. Only an open order.</summary>
+    public void RemoveSplit()
+    {
+        EnsureOpen();
+        ClearSplit();
+    }
+
+    /// <summary>The saved split priced with the current order, in any status; null when there is no saved split.</summary>
+    public IReadOnlyList<SplitPart>? GetSavedSplit() => HasSavedSplit
+        ? Split(_savedSplitParts
+            .OrderBy(p => p.Position)
+            .Select(p => (IReadOnlyCollection<Guid>)p.Lines.OrderBy(l => l.Position).Select(l => l.LineId).ToList())
+            .ToList())
+        : null;
+
     /// <summary>
     /// Splits the bill evenly between <paramref name="parts"/> people. The order is priced first; then its subtotal,
     /// discount, surcharge, tax and tip are each divided by the number of parts, rounded down to the cent, and the
@@ -343,6 +421,9 @@ public class Order
                 Total: subtotals[i] - discounts[i] + surcharges[i] + taxes[i] + tips[i]))
             .ToList();
     }
+
+    /// <summary>A saved split only fits the order it was made for: every real change of the order clears it.</summary>
+    private void ClearSplit() => _savedSplitParts.Clear();
 
     private Money CalculateSubtotal() => _lines.Aggregate(Money.Zero(Currency), (sum, line) => sum + line.LineTotal);
 
