@@ -65,7 +65,7 @@
         <tbody class="divide-y divide-slate-100">
           @for (line of order.lines; track line.id) {
             <tr data-testid="line-row">
-              <td class="px-2 py-3 sm:px-4">
+              <td class="px-2 py-3 wrap-anywhere sm:px-4">
                 <div class="font-medium text-slate-900" data-testid="line-name">{{ line.name }}</div>
                 <div class="text-xs text-slate-500 tabular-nums sm:hidden">{{ line.unitPrice | currency: 'USD' }} each</div>
                 @if (line.notes) {
