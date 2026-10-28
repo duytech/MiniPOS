@@ -50,7 +50,7 @@ Kết quả: một tính năng chạy trọn chuỗi plan → implement → test
 - [x] Ngày 2: Viết skill `add-angular-feature`: component + service + RxJS + Tailwind, theo quy ước trong `CLAUDE.md`.
 - [x] Ngày 3: Tạo sub-agent `planner` (chỉ đọc, xuất kế hoạch) và `implementer` (được sửa code).
 - [x] Ngày 4: Tạo sub-agent `reviewer` (chỉ đọc), đối chiếu diff với `CLAUDE.md` và business rule về tiền.
-- [ ] Ngày 5: Cài Playwright MCP. Viết skill bắt agent mở trang, chụp màn hình và đọc accessibility snapshot sau mỗi lần sửa UI.
+- [x] Ngày 5: Cài Playwright MCP. Viết skill bắt agent mở trang, chụp màn hình và đọc accessibility snapshot sau mỗi lần sửa UI.
 - [ ] Ngày 6: Tạo sub-agent `tester` và thử visual loop với dữ liệu xấu.
   - [ ] `tester` viết test từ plan, contract và business rule, không viết từ code. Có Playwright MCP; chỉ được sửa file trong `tests/` (Playwright E2E đặt ở `tests/e2e/`).
   - [ ] Chặn ba lớp: hook `PreToolUse` cho `Edit|Write` từ chối path ngoài `tests/`; chạy trong worktree và loại cả lượt nếu `git diff --name-only` có file ngoài `tests/`; prompt cấm sửa code chính và cấm nới assertion để test pass.

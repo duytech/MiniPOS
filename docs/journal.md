@@ -762,3 +762,58 @@ chưa làm.
 - Bash chỉ bị chặn bằng chữ trong prompt, chưa có hook nào chặn lệnh git ghi. Ngày 6 (`tester`) sẽ làm hook chặn
   path; có thể dùng cùng cách cho reviewer.
 - Chưa sửa 2 note của lượt 1 (test 409 có thể flaky, test 400 chưa kiểm ProblemDetails).
+
+### Ngày 5: Playwright MCP + skill `verify-ui` (2026-10-28)
+**Đã làm:** `.mcp.json` thêm server `playwright` (`@playwright/mcp@0.0.83 --isolated --output-dir .playwright-mcp`),
+`.playwright-mcp/` vào `.gitignore`. Skill `.claude/skills/verify-ui/SKILL.md`: dựng app (Docker, API, web), rồi mỗi
+trang đổi chạy một vòng navigate → snapshot (đối chiếu tiền với API) → screenshot → console → network → mỗi action
+một lần → khổ 375 × 812. `add-angular-feature` bước 5 trỏ sang skill này.
+
+Chạy thử trên dữ liệu có sẵn trong DB dev (không tạo dữ liệu mới): `/orders` (14 order) và `/orders/{id}` của order
+#10 (Open, 1 line Pho × 2). Không bấm +/−/Remove trên order #10 để khỏi đổi dữ liệu có sẵn.
+
+**Bắt được gì:**
+| Trang | Kết quả |
+|---|---|
+| `/orders` | Snapshot: 14 dòng, mọi total dạng `$x.xx` và khớp `GET /api/orders` (vd. #12 `$0.64`, #13 `$0.00`). Title `Orders · Mini POS`. Search + Status đều có nhãn. Console 0 lỗi/warning. Filter `Paid` rồi gõ `pho`: đúng 1 request mỗi lần (`status=Paid`, `search=pho&status=Paid`), có debounce, ra 1 dòng #12 |
+| `/orders/{id}` | Subtotal 15.40, discount 2.31, surcharge 0.39, tax 1.20, tip 2.36, total 17.04: khớp `GET /api/orders/{id}` từng cent. Nút có tên đọc được (`Decrease quantity of Pho`, `Remove Pho`). Console sạch, 1 request 200 |
+| Cả hai, 375 px | Trang không có scroll ngang (`scrollWidth` 375 = `clientWidth`), nhưng bảng cuộn ngang trong khung `overflow-x-auto`: list rộng 722 px trong khung 342 px, **cột Status và Total bị đẩy ra ngoài màn hình**; ở trang chi tiết **nút Remove nằm ngoài màn hình** |
+
+**Sửa lỗi 375 px** (sau khi được duyệt, commit thứ hai cùng PR). Dưới `sm` (640 px):
+- List: ẩn cột Created, ngày hiện nhỏ dưới số order; cell hẹp hơn (`px-2`); cột Items co lại và cắt `…`
+  (`w-full max-w-0 truncate`, vì `max-w-*` trên `td` không giới hạn bảng ở layout `auto`). Bảng 327 px trong khung
+  327 px, thấy cả Status và Total.
+- Chi tiết: ẩn cột Unit price, giá hiện dưới tên món (`$7.70 each`); nút Remove chỉ hiện `✕`, tên vẫn
+  `Remove Pho` (aria-label). Bảng 342/342, Remove nằm trong màn hình, cả với tên món rất dài (order #7).
+- Từ `sm` trở lên giữ nguyên như cũ (đã chụp lại 1280 px). `npm run lint`, `npm run build`, 38 test Vitest pass;
+  console 0 lỗi.
+- Lần đầu đo bảng ra `[]`: `browser_evaluate` chạy trước khi dữ liệu về. Thêm vào skill: `browser_wait_for` trước khi đo.
+
+**Lỗi trong skill (tên tool khớp hết, lệch ở tham số và cách tool trả kết quả):**
+| Chỗ lệch | Sửa trong `SKILL.md` |
+|---|---|
+| `browser_click` / `browser_type` nhận `target`, skill viết "with the `ref`" | ghi rõ `target` = ref trong snapshot (`e12`) |
+| `browser_console_messages` bắt buộc `level`, mặc định `info` | `level: "warning"` (lỗi + warning) |
+| `browser_network_requests` bắt buộc `static` | `static: false`, `filter: "/api/"` |
+| `browser_take_screenshot` bắt buộc `scale`; `filename` tương đối tính từ repo root, không từ `--output-dir` | `scale: "css"`, `fullPage: true`, truyền `.playwright-mcp/<page>.png` |
+| Kết quả screenshot chỉ là đường dẫn, agent không "nhìn" ảnh | phải mở PNG bằng `Read` |
+| Kết quả `browser_navigate` / click / type chỉ link tới file `.yml`, không có cây | gọi `browser_snapshot` riêng sau mỗi bước |
+| `browser_snapshot` có `target` trả về cây con và làm mất các ref khác (`Ref e15 not found`) | snapshot đầy đủ (hoặc `browser_find`) trước khi bấm phần tử khác |
+| "No horizontal scroll" không bắt được bảng cuộn trong khung riêng | thêm `browser_evaluate` so `scrollWidth` của bảng với khung, kiểm cột tiền + nút hành động |
+| `docker compose up -d` lỗi khi Docker Desktop chưa chạy | ghi: mở Docker Desktop, chờ `docker info` |
+| Chờ dữ liệu bằng sleep | dùng `browser_wait_for` với chữ mong đợi |
+
+**Ảnh chụp** (thư mục `.playwright-mcp/`, git bỏ qua nên không có trong PR):
+`day5-orders.png`, `day5-order-detail.png`, `day5-orders-mobile.png`, `day5-order-detail-mobile.png`; sau khi sửa:
+`day5-fix-orders-mobile.png`, `day5-fix-order-detail-mobile.png`, `day5-fix-order7-mobile.png`,
+`day5-fix-orders-desktop.png`, `day5-fix-order7-desktop.png`. Snapshot
+`.yml` và log console cùng thư mục.
+
+**Giả định / câu hỏi còn mở:**
+- Layout điện thoại ở trên là lựa chọn của mình (ẩn Created / Unit price, Remove thành `✕`), không phải spec. Cần
+  người làm UX xem lại.
+- Discount hiện `$2.31`, không có dấu trừ, trong khi nó được trừ khỏi subtotal. Có nên hiện `−$2.31`? (chỉ là hiển
+  thị, không tính toán ở frontend).
+- (Ghi sai lúc đầu: tưởng tên món dài ở list không có `title`. Template đã có `[title]`, mình chỉ đọc snapshot.)
+- Các action làm đổi order (+/−/Remove) chưa chạy qua skill vì không muốn đổi dữ liệu có sẵn. Lần sau nên tạo một
+  order riêng qua API để thử.

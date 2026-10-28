@@ -74,8 +74,7 @@ first failure: later ones are often fallout (`http.verify()` in `afterEach`).
 
 - In `web/`: `npm run build`, `npm run lint`, `npx ng test --watch=false`.
 - The `PreToolUse` hook runs eslint + `ngc` before `git commit`; Vitest and the build are yours to run.
-- Open the page against the real API and try each action once: `docker compose up -d`, then the `api` and `web`
-  entries of `.claude/launch.json` (preview_start), or `dotnet run --project src/Pos.Api --launch-profile http` and
-  `npm start`. Check the browser tab title too. Unit tests mock HTTP: they do not prove the URLs, bodies or error
-  shapes match the API. If you could not run it, say so in the summary.
+- Open the page against the real API and try each action once with the `verify-ui` skill (Playwright MCP:
+  snapshot, screenshot, console, network, phone width). Unit tests mock HTTP: they do not prove the URLs, bodies or
+  error shapes match the API. If you could not run it, say so in the summary.
 - Summary: the behaviors you were given, the operator you chose for each write and why, anything still open.
