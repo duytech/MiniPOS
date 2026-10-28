@@ -2,6 +2,7 @@
 const eslint = require("@eslint/js");
 const tseslint = require("typescript-eslint");
 const angular = require("angular-eslint");
+const sonarjs = require("eslint-plugin-sonarjs");
 
 module.exports = tseslint.config(
   {
@@ -13,7 +14,10 @@ module.exports = tseslint.config(
       ...angular.configs.tsRecommended,
     ],
     processor: angular.processInlineTemplates,
+    // Sonar for one rule only, as in the .NET build (S3776): no sonarjs preset, so no other sonarjs rule runs.
+    plugins: { sonarjs },
     rules: {
+      "sonarjs/cognitive-complexity": ["error", 15],
       "@angular-eslint/directive-selector": [
         "error",
         {

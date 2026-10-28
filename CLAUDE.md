@@ -15,7 +15,8 @@ surrounding code.**
 - Run API: `dotnet run --project src/Pos.Api --launch-profile http` → http://localhost:5191 (migrates on startup in Development)
 - Web (in `web/`): `npm start` → http://localhost:4200 (proxies `/api` to 5191) · `npm run build` · `npm run lint`
   (ESLint) · `npx ng test --watch=false` (Vitest + jsdom, no browser; `fakeAsync` does not work, use
-  `vi.useFakeTimers()`)
+  `vi.useFakeTimers()`). ESLint runs one Sonar rule, `sonarjs/cognitive-complexity` (max 15 per function, `.ts`
+  only), same as S3776 in .NET: split the function, don't raise the limit
 
 - A `Stop` hook (`.claude/hooks/verify-on-edit.mjs`) checks the uncommitted changes when you finish a turn: `.cs` →
   build + the tests that need no DB; `web/src/**/*.ts|html` → eslint on those files + `ngc` (`tsc` for specs). The
