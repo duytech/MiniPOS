@@ -129,7 +129,7 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
         }
     }
 
-    /// <summary>Parts in order, separated by '|'; the line ids of a part sorted (line order in a part is not stored).</summary>
+    /// <summary>Parts in order, separated by '|'; the line ids of a part sorted, to match the sorted SQL read of the stored rows (line order is checked in SplitByItemApiTests).</summary>
     private static string Describe(IEnumerable<IEnumerable<Guid>> parts) =>
         string.Join("|", parts.Select(part => string.Join(",", part.Select(id => id.ToString()).Order(StringComparer.Ordinal))));
 

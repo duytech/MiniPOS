@@ -74,6 +74,18 @@ public class SplitByItemApiTests(PosApiFactory factory) : IClassFixture<PosApiFa
     }
 
     [Fact]
+    public async Task Get_keeps_the_line_order_the_put_sent_within_a_part()
+    {
+        var (orderId, l) = await OrderWithLinesAsync(1.00m, 2.00m, 3.00m, 4.00m);
+        // Reverse of the order the lines were added in, so database row order would not give it back by chance.
+        (await _client.SaveSplitAsync(orderId, ApiClient.SplitBody([l[3], l[1], l[0]], [l[2]]))).EnsureSuccessStatusCode();
+
+        var parts = Parts(await GetSplitOkAsync(orderId));
+
+        Assert.Equal([[l[3], l[1], l[0]], [l[2]]], parts.Select(LineIds));
+    }
+
+    [Fact]
     public async Task A_second_put_replaces_the_split()
     {
         var (orderId, l) = await OrderWithLinesAsync(1.00m, 2.00m, 3.00m);

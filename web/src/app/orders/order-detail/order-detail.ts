@@ -48,15 +48,17 @@ export class OrderDetail {
    * the previous one returned, so three quick clicks on + send quantity 3, 4, 5 and add 3. exhaustMap would drop
    * clicks and switchMap would only cancel the request on the client, not on the server.
    *
-   * Reloads (the split section saw a conflict) use switchMap: they are reads, the newest one wins.
+   * Reloads (the split section saw a conflict) queue in the same concatMap: a reload read before a write committed
+   * must not land after it and put the older quantity back on screen, or the next + would send a stale quantity.
    */
   protected readonly state: Signal<DetailState> = toSignal(
     toObservable(this.id).pipe(
       switchMap((id) =>
         merge(
           this.load(id),
-          this.writes.pipe(concatMap((write) => this.runWrite(id, write))),
-          this.reloads.pipe(switchMap(() => this.reload(id))),
+          merge(this.writes, this.reloads.pipe(map(() => 'reload' as const))).pipe(
+            concatMap((job) => (job === 'reload' ? this.reload(id) : this.runWrite(id, job))),
+          ),
         ),
       ),
       scan((state: DetailState, patch: Patch) => ({ ...state, ...patch }), INITIAL_STATE),
