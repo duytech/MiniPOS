@@ -779,8 +779,15 @@ Chạy thử trên dữ liệu có sẵn trong DB dev (không tạo dữ liệu 
 | `/orders/{id}` | Subtotal 15.40, discount 2.31, surcharge 0.39, tax 1.20, tip 2.36, total 17.04: khớp `GET /api/orders/{id}` từng cent. Nút có tên đọc được (`Decrease quantity of Pho`, `Remove Pho`). Console sạch, 1 request 200 |
 | Cả hai, 375 px | Trang không có scroll ngang (`scrollWidth` 375 = `clientWidth`), nhưng bảng cuộn ngang trong khung `overflow-x-auto`: list rộng 722 px trong khung 342 px, **cột Status và Total bị đẩy ra ngoài màn hình**; ở trang chi tiết **nút Remove nằm ngoài màn hình** |
 
-Lỗi ở 375 px không sửa trong lần này: chọn cột nào ẩn hay đổi bảng thành thẻ trên điện thoại là quyết định UX, task
-không nói. Để lại câu hỏi bên dưới.
+**Sửa lỗi 375 px** (sau khi được duyệt, commit thứ hai cùng PR). Dưới `sm` (640 px):
+- List: ẩn cột Created, ngày hiện nhỏ dưới số order; cell hẹp hơn (`px-2`); cột Items co lại và cắt `…`
+  (`w-full max-w-0 truncate`, vì `max-w-*` trên `td` không giới hạn bảng ở layout `auto`). Bảng 327 px trong khung
+  327 px, thấy cả Status và Total.
+- Chi tiết: ẩn cột Unit price, giá hiện dưới tên món (`$7.70 each`); nút Remove chỉ hiện `✕`, tên vẫn
+  `Remove Pho` (aria-label). Bảng 342/342, Remove nằm trong màn hình, cả với tên món rất dài (order #7).
+- Từ `sm` trở lên giữ nguyên như cũ (đã chụp lại 1280 px). `npm run lint`, `npm run build`, 38 test Vitest pass;
+  console 0 lỗi.
+- Lần đầu đo bảng ra `[]`: `browser_evaluate` chạy trước khi dữ liệu về. Thêm vào skill: `browser_wait_for` trước khi đo.
 
 **Lỗi trong skill (tên tool khớp hết, lệch ở tham số và cách tool trả kết quả):**
 | Chỗ lệch | Sửa trong `SKILL.md` |
@@ -797,14 +804,16 @@ không nói. Để lại câu hỏi bên dưới.
 | Chờ dữ liệu bằng sleep | dùng `browser_wait_for` với chữ mong đợi |
 
 **Ảnh chụp** (thư mục `.playwright-mcp/`, git bỏ qua nên không có trong PR):
-`day5-orders.png`, `day5-order-detail.png`, `day5-orders-mobile.png`, `day5-order-detail-mobile.png`. Snapshot
+`day5-orders.png`, `day5-order-detail.png`, `day5-orders-mobile.png`, `day5-order-detail-mobile.png`; sau khi sửa:
+`day5-fix-orders-mobile.png`, `day5-fix-order-detail-mobile.png`, `day5-fix-order7-mobile.png`,
+`day5-fix-orders-desktop.png`, `day5-fix-order7-desktop.png`. Snapshot
 `.yml` và log console cùng thư mục.
 
 **Giả định / câu hỏi còn mở:**
-- Trên điện thoại: list nên ẩn cột nào (Created? Items?) để Total luôn thấy được, hay đổi thành thẻ? Trang chi tiết:
-  đưa Remove xuống dưới tên món?
+- Layout điện thoại ở trên là lựa chọn của mình (ẩn Created / Unit price, Remove thành `✕`), không phải spec. Cần
+  người làm UX xem lại.
 - Discount hiện `$2.31`, không có dấu trừ, trong khi nó được trừ khỏi subtotal. Có nên hiện `−$2.31`? (chỉ là hiển
   thị, không tính toán ở frontend).
-- Tên món dài ở list bị cắt bằng `…`, không có `title` để xem tên đủ (screen reader vẫn đọc đủ).
+- (Ghi sai lúc đầu: tưởng tên món dài ở list không có `title`. Template đã có `[title]`, mình chỉ đọc snapshot.)
 - Các action làm đổi order (+/−/Remove) chưa chạy qua skill vì không muốn đổi dữ liệu có sẵn. Lần sau nên tạo một
   order riêng qua API để thử.

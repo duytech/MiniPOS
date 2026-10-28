@@ -43,7 +43,7 @@ are not in your session, say so in the summary and stop: do not report the UI as
    text you expect instead of a fixed sleep.
 6. `browser_resize` to 375 × 812, snapshot + screenshot again: nothing cut off, no horizontal scroll. The page
    can have no horizontal scroll while a table scrolls inside its own `overflow-x-auto` box and hides columns, so
-   also run `browser_evaluate` on each `table` (`scrollWidth` vs its parent's `clientWidth`) and check that the
+   also run `browser_evaluate` (after `browser_wait_for` the data, or it measures an empty page) on each `table` (`scrollWidth` vs its parent's `clientWidth`) and check that the
    money columns and the action buttons are on screen without a sideways swipe. Resize back to 1280 × 800.
 
 ## 3. When something is wrong

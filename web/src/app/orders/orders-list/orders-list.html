@@ -57,31 +57,34 @@
       <table class="min-w-full divide-y divide-slate-200 text-sm">
         <thead class="bg-slate-50 text-left text-xs font-medium tracking-wide text-slate-500 uppercase">
           <tr>
-            <th scope="col" class="px-4 py-3">Order</th>
-            <th scope="col" class="px-4 py-3">Created</th>
-            <th scope="col" class="px-4 py-3">Items</th>
-            <th scope="col" class="px-4 py-3">Status</th>
-            <th scope="col" class="px-4 py-3 text-right">Total</th>
+            <th scope="col" class="px-2 py-3 sm:px-4">Order</th>
+            <th scope="col" class="hidden px-4 py-3 sm:table-cell">Created</th>
+            <th scope="col" class="px-2 py-3 sm:px-4">Items</th>
+            <th scope="col" class="px-2 py-3 sm:px-4">Status</th>
+            <th scope="col" class="px-2 py-3 text-right sm:px-4">Total</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-100">
           @for (order of page.items; track order.id) {
             <tr data-testid="order-row" class="hover:bg-slate-50">
-              <td class="px-4 py-3 font-medium text-slate-900">
+              <td class="px-2 py-3 font-medium text-slate-900 sm:px-4">
                 <a
                   data-testid="order-link"
                   [routerLink]="['/orders', order.id]"
                   class="text-emerald-700 hover:text-emerald-800 hover:underline"
                   >#{{ order.number }}</a
                 >
+                <div class="text-xs font-normal text-slate-500 sm:hidden">
+                  {{ order.createdAt | date: 'short' }}
+                </div>
               </td>
-              <td class="px-4 py-3 whitespace-nowrap text-slate-600">
+              <td class="hidden px-4 py-3 whitespace-nowrap text-slate-600 sm:table-cell">
                 {{ order.createdAt | date: 'short' }}
               </td>
-              <td class="max-w-xs truncate px-4 py-3 text-slate-600" [title]="order.itemNames.join(', ')">
+              <td class="w-full max-w-0 truncate px-2 py-3 text-slate-600 sm:w-auto sm:max-w-xs sm:px-4" [title]="order.itemNames.join(', ')">
                 {{ order.itemNames.length ? order.itemNames.join(', ') : '—' }}
               </td>
-              <td class="px-4 py-3">
+              <td class="px-2 py-3 sm:px-4">
                 <span
                   class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset"
                   [class]="statusClass(order.status)"
@@ -89,7 +92,7 @@
                   {{ order.status }}
                 </span>
               </td>
-              <td class="px-4 py-3 text-right font-medium text-slate-900 tabular-nums">
+              <td class="px-2 py-3 text-right font-medium text-slate-900 tabular-nums sm:px-4">
                 {{ order.total | currency: 'USD' }}
               </td>
             </tr>
