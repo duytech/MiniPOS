@@ -711,3 +711,54 @@ CLAUDE.md. Lỗi duy nhất đáng kể nằm ở planner (giả định ngầm)
   changed."
 - Kiểm API thật tạo thêm món "Probe tea" và order #14 (Paid) trong DB dev.
 - Chưa chạy lại planner với `planner.md` đã sửa. Ngày 4 thêm `reviewer`; Ngày 7 chạy cả chuỗi với Split bill.
+
+### Ngày 4: sub-agent reviewer (2026-10-28)
+**Đã làm:** `.claude/agents/reviewer.md`. Tool `Read, Glob, Grep, Bash`; prompt chỉ cho Bash chạy git đọc (`diff`,
+`log`, `show`, `status`, `merge-base`), không build, không test (hook đã lo). Đọc `CLAUDE.md`, plan nếu có, rồi diff
+(`main...HEAD` + chưa commit). Checklist theo nhóm của `CLAUDE.md`: tiền, test tiền, concurrency, API, kiến trúc,
+business rule bịa, frontend, config. Mỗi finding: mức (`blocker` / `should-fix` / `note`), `file:line`, rule bị phạm
+(trích nguyên văn), ca lỗi có số cent. Dòng cuối `Verdict: approve` hoặc `changes requested`. Không sửa code.
+
+Lần này cũng thấy lại chuyện của Ngày 3: agent mới tạo chưa gọi được trong session (`Agent type 'reviewer' not
+found`). Hai lượt đầu chạy bằng `general-purpose` + "đọc `reviewer.md` và làm đúng như vậy". Giữa chừng session nạp
+lại danh sách agent, nên lượt 3 chạy bằng `reviewer` thật.
+
+**Thử 1: commit Ngày 3 (pay / cancel), có plan.** `general-purpose` đóng vai reviewer, 7 tool call, ~50 s. Kết quả
+`approve`, 2 note:
+- Test "ít nhất một 409" có thể flaky: nếu 10 pay chạy lần lượt thì được 1 × 200 + 9 × 422, không có 409. Code đúng,
+  chỉ test có thể đỏ.
+- Test 400 chỉ kiểm status code, không kiểm body ProblemDetails (test 404/422 cùng file thì có kiểm).
+
+Reviewer tự tính lại các con số trong test (0.105 → 0.11, 13.01) và kiểm `xmin` được bump khi đổi line. Không có
+finding bịa.
+
+**Thử 2: diff cài lỗi.** Làm trong worktree tạm, không commit, xóa sau khi chạy. Task giả: "Let the cashier clear all
+lines of an open order with DELETE /api/orders/{id}/lines, and show each order's subtotal in the orders list."
+Không có plan.
+| Lỗi | Cài cố ý? | Lượt 2 (general-purpose) | Lượt 3 (`reviewer` thật) |
+|---|---|---|---|
+| Tax không làm tròn (`new Money(base × rate)`) | có | blocker, nhưng ca lỗi sai: "tax 0.08875" | blocker, đúng: `Money` ném lỗi khi lẻ cent, nên mọi `GET` order lỗi **500** |
+| Tip tính trên số đã cộng tax | có | blocker, 12.39 vs 12.52 | blocker, chỉ ra test cũ sẽ đỏ |
+| Chỉ làm tròn total ở cuối | có | blocker | blocker |
+| `double Subtotal` + LINQ tự cộng line trong `OrderSummaryDto` | có | blocker (`15.4`) | blocker (`15.4`) |
+| Giới hạn quantity ≤ 99 tự bịa | có | should-fix | blocker |
+| Endpoint mới không có test, không có concurrency test | có | should-fix | should-fix |
+| `ClearLines` bỏ qua kiểm fixed discount, total âm | **không** (lỗi thật của diff) | blocker + hỏi business | blocker + hỏi business |
+| Action chỉ khai 200/404, thiếu 409/422 | không | should-fix | note |
+| `ClearLines` chen giữa `<summary>` và `RemoveLine` | không | note | note |
+
+Kết quả: bắt đủ 6/6 lỗi cài, thêm 3 lỗi mình không cài. Không có finding bịa. Cả hai lượt đều tự để quyết định
+"xóa line khi có fixed discount: từ chối hay bỏ discount?" lại cho user. Cả hai cũng thấy phần UI ("show in the list")
+chưa làm.
+
+**Chỗ lệch tìm được:**
+| Chỗ lệch | Sửa |
+|---|---|
+| Lượt 2 đưa ca lỗi không có thật ("tax 0.08875"), vì không đọc constructor `Money`. Lượt 3 đọc nên thấy 500 | `reviewer.md`: trước khi viết ca lỗi, đi theo code mà ca đó chạy qua |
+| Thiếu concurrency test chỉ là `should-fix`, không phải `blocker` (plan mong blocker) | Không sửa: đúng thang trong prompt (blocker = sai thật; thiếu test = should-fix). Verdict vẫn là `changes requested` |
+| Mức của cùng một lỗi lệch giữa hai lượt (≤ 99: should-fix vs blocker; 409/422: should-fix vs note) | Không sửa: verdict giống nhau. Ghi lại để xem tiếp ở Ngày 7 |
+
+**Giả định / câu hỏi còn mở:**
+- Bash chỉ bị chặn bằng chữ trong prompt, chưa có hook nào chặn lệnh git ghi. Ngày 6 (`tester`) sẽ làm hook chặn
+  path; có thể dùng cùng cách cho reviewer.
+- Chưa sửa 2 note của lượt 1 (test 409 có thể flaky, test 400 chưa kiểm ProblemDetails).
