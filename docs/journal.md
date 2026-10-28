@@ -846,6 +846,13 @@ x≈2637, ngoài màn hình. Phạm rule "375 px không scroll ngang, cột ti�
 order 200 line và trang `/orders` đều qua. Tiền đúng ở mọi chỗ. Ngày 5 thử order #7 tên dài có khoảng trắng nên không
 thấy lỗi này.
 
+**Sửa (sau khi user duyệt "wrap long names", commit thứ hai cùng PR):** thêm `wrap-anywhere` (`overflow-wrap: anywhere`)
+vào ô Item của `order-detail.html`, nên tên và notes không có khoảng trắng xuống dòng ở bất kỳ ký tự nào. Không dùng
+`break-words`, vì với bảng layout `auto` nó không làm nhỏ min-content width và bảng vẫn bị kéo rộng. Spec giữ nguyên:
+`npx playwright test` **22/22 pass**. Ảnh 375 px: tên xuống nhiều dòng, line total và nút ✕ trong màn hình; 1280 px:
+tên xuống 5 dòng, mọi cột hiện. `npm run lint`, `npm run build`, 38 test Vitest pass. Vẫn chưa có rule về độ dài tối
+đa của tên hay cắt `…` (câu hỏi bên dưới).
+
 **Các lần cố sửa ngoài `tests/`:**
 - Lượt 1 dừng ngay: worktree của sub-agent cắt từ `main`, không phải từ branch hiện tại, nên không có `tests/e2e`.
   Tester không tự copy `package.json` từ branch khác (prompt cấm) mà hỏi lại. Lượt 2: cho phép nó
