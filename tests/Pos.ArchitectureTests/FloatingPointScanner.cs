@@ -19,27 +19,33 @@ internal static class FloatingPointScanner
     {
         using var module = ModuleDefinition.ReadModule(assembly.Location);
 
-        foreach (var type in module.GetTypes())
-        {
-            foreach (var field in type.Fields.Where(f => IsFloatingPoint(f.FieldType)))
-                yield return $"{type.FullName}.{field.Name}: field of type {field.FieldType.Name}";
+        // ToList: the module is disposed when this method returns.
+        return module.GetTypes().SelectMany(ScanType).ToList();
+    }
 
-            foreach (var method in type.Methods)
-            {
-                var where = $"{type.FullName}.{method.Name}";
+    private static IEnumerable<string> ScanType(TypeDefinition type)
+    {
+        foreach (var field in type.Fields.Where(f => IsFloatingPoint(f.FieldType)))
+            yield return $"{type.FullName}.{field.Name}: field of type {field.FieldType.Name}";
 
-                if (IsFloatingPoint(method.ReturnType) || method.Parameters.Any(p => IsFloatingPoint(p.ParameterType)))
-                    yield return $"{where}: signature";
+        foreach (var finding in type.Methods.SelectMany(ScanMethod))
+            yield return finding;
+    }
 
-                if (!method.HasBody) continue;
+    private static IEnumerable<string> ScanMethod(MethodDefinition method)
+    {
+        var where = $"{method.DeclaringType.FullName}.{method.Name}";
 
-                if (method.Body.Variables.Any(v => IsFloatingPoint(v.VariableType)))
-                    yield return $"{where}: local variable";
+        if (IsFloatingPoint(method.ReturnType) || method.Parameters.Any(p => IsFloatingPoint(p.ParameterType)))
+            yield return $"{where}: signature";
 
-                foreach (var instruction in method.Body.Instructions.Where(UsesFloatingPoint))
-                    yield return $"{where}: {instruction.OpCode} {instruction.Operand}";
-            }
-        }
+        if (!method.HasBody) yield break;
+
+        if (method.Body.Variables.Any(v => IsFloatingPoint(v.VariableType)))
+            yield return $"{where}: local variable";
+
+        foreach (var instruction in method.Body.Instructions.Where(UsesFloatingPoint))
+            yield return $"{where}: {instruction.OpCode} {instruction.Operand}";
     }
 
     private static bool UsesFloatingPoint(Instruction instruction) =>
