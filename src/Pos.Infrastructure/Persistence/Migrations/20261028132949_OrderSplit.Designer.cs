@@ -12,7 +12,7 @@ using Pos.Infrastructure.Persistence;
 namespace Pos.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(PosDbContext))]
-    [Migration("20261028131529_OrderSplit")]
+    [Migration("20261028132949_OrderSplit")]
     partial class OrderSplit
     {
         /// <inheritdoc />
@@ -174,6 +174,10 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("line_id");
 
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
                     b.HasKey("PartId", "LineId");
 
                     b.HasIndex("LineId");
@@ -197,8 +201,7 @@ namespace Pos.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrderId", "Position")
-                        .IsUnique();
+                    b.HasIndex("OrderId");
 
                     b.ToTable("order_split_parts", (string)null);
                 });

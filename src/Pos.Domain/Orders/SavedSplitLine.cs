@@ -5,12 +5,16 @@ public class SavedSplitLine
 {
     public Guid LineId { get; private set; }
 
+    /// <summary>Index of the line in its part, as it was saved (0 is the first line).</summary>
+    public int Position { get; private set; }
+
     private SavedSplitLine()
     {
     }
 
-    internal SavedSplitLine(Guid lineId)
+    internal SavedSplitLine(Guid lineId, int position)
     {
         LineId = lineId;
+        Position = position;
     }
 }

@@ -35,7 +35,8 @@ namespace Pos.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     line_id = table.Column<Guid>(type: "uuid", nullable: false),
-                    part_id = table.Column<Guid>(type: "uuid", nullable: false)
+                    part_id = table.Column<Guid>(type: "uuid", nullable: false),
+                    position = table.Column<int>(type: "integer", nullable: false)
                 },
                 constraints: table =>
                 {
@@ -60,10 +61,9 @@ namespace Pos.Infrastructure.Persistence.Migrations
                 column: "line_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_order_split_parts_order_id_position",
+                name: "IX_order_split_parts_order_id",
                 table: "order_split_parts",
-                columns: new[] { "order_id", "position" },
-                unique: true);
+                column: "order_id");
         }
 
         /// <inheritdoc />

@@ -8,6 +8,13 @@
       "port": 5191
     },
     {
+      "name": "api-e2e",
+      "runtimeExecutable": "powershell",
+      "runtimeArgs": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "tests/e2e/start-api.ps1"],
+      "port": 5191,
+      "autoPort": false
+    },
+    {
       "name": "web",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "web", "start"],

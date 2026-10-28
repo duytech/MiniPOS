@@ -84,8 +84,9 @@
           class="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm transition-opacity"
           [class.opacity-60]="busy()"
         >
-          <table class="min-w-full divide-y divide-slate-200 text-sm">
-            <thead class="bg-slate-50 text-left text-xs font-medium tracking-wide text-slate-500 uppercase">
+          <!-- Below sm each part is a card with one labelled row per amount (data-label), so every amount fits at 375 px. -->
+          <table class="min-w-full divide-y divide-slate-200 text-sm max-sm:block">
+            <thead class="bg-slate-50 text-left text-xs font-medium tracking-wide text-slate-500 uppercase max-sm:hidden">
               <tr>
                 <th scope="col" class="px-2 py-3 sm:px-4">Part</th>
                 <th scope="col" class="px-2 py-3 text-right sm:px-4">Subtotal</th>
@@ -96,31 +97,31 @@
                 <th scope="col" class="px-2 py-3 text-right sm:px-4">Total</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 tabular-nums">
+            <tbody class="divide-y divide-slate-100 tabular-nums max-sm:block">
               @for (part of split.parts; track $index) {
-                <tr data-testid="split-part-row">
-                  <td class="px-2 py-3 sm:px-4">
+                <tr data-testid="split-part-row" class="max-sm:block max-sm:py-2">
+                  <td class="px-2 py-3 sm:px-4 max-sm:block max-sm:py-1">
                     <div class="font-medium text-slate-900">Part {{ $index + 1 }}</div>
                     <div class="text-xs wrap-anywhere text-slate-500" data-testid="split-part-lines">
                       {{ namesOf(part.lineIds) }}
                     </div>
                   </td>
-                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4" data-testid="split-part-subtotal">
+                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4 max-sm:flex max-sm:justify-between max-sm:py-1 max-sm:before:font-normal max-sm:before:text-slate-500 max-sm:before:content-[attr(data-label)]" data-testid="split-part-subtotal" data-label="Subtotal">
                     {{ part.subtotal | currency: 'USD' }}
                   </td>
-                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4" data-testid="split-part-discount">
+                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4 max-sm:flex max-sm:justify-between max-sm:py-1 max-sm:before:font-normal max-sm:before:text-slate-500 max-sm:before:content-[attr(data-label)]" data-testid="split-part-discount" data-label="Discount">
                     {{ part.discount | currency: 'USD' }}
                   </td>
-                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4" data-testid="split-part-surcharge">
+                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4 max-sm:flex max-sm:justify-between max-sm:py-1 max-sm:before:font-normal max-sm:before:text-slate-500 max-sm:before:content-[attr(data-label)]" data-testid="split-part-surcharge" data-label="Surcharge">
                     {{ part.surcharge | currency: 'USD' }}
                   </td>
-                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4" data-testid="split-part-tax">
+                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4 max-sm:flex max-sm:justify-between max-sm:py-1 max-sm:before:font-normal max-sm:before:text-slate-500 max-sm:before:content-[attr(data-label)]" data-testid="split-part-tax" data-label="Tax">
                     {{ part.tax | currency: 'USD' }}
                   </td>
-                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4" data-testid="split-part-tip">
+                  <td class="px-2 py-3 text-right text-slate-600 sm:px-4 max-sm:flex max-sm:justify-between max-sm:py-1 max-sm:before:font-normal max-sm:before:text-slate-500 max-sm:before:content-[attr(data-label)]" data-testid="split-part-tip" data-label="Tip">
                     {{ part.tip | currency: 'USD' }}
                   </td>
-                  <td class="px-2 py-3 text-right font-semibold text-slate-900 sm:px-4" data-testid="split-part-total">
+                  <td class="px-2 py-3 text-right font-semibold text-slate-900 sm:px-4 max-sm:flex max-sm:justify-between max-sm:py-1 max-sm:before:font-normal max-sm:before:text-slate-500 max-sm:before:content-[attr(data-label)]" data-testid="split-part-total" data-label="Total">
                     {{ part.total | currency: 'USD' }}
                   </td>
                 </tr>

@@ -386,7 +386,7 @@ public class Order
     public IReadOnlyList<SplitPart>? GetSavedSplit() => HasSavedSplit
         ? Split(_savedSplitParts
             .OrderBy(p => p.Position)
-            .Select(p => (IReadOnlyCollection<Guid>)p.Lines.Select(l => l.LineId).ToList())
+            .Select(p => (IReadOnlyCollection<Guid>)p.Lines.OrderBy(l => l.Position).Select(l => l.LineId).ToList())
             .ToList())
         : null;
 

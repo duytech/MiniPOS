@@ -14,8 +14,9 @@ internal sealed class SavedSplitPartConfiguration : IEntityTypeConfiguration<Sav
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Id).HasColumnName("id").ValueGeneratedNever();
         builder.Property<Guid>(OrderIdProperty).HasColumnName("order_id");
+        // No unique (order_id, position) index: the order's xmin already rejects a second writer, and the index made
+        // racing saves fail on it first (409 with the wrong detail, or a deadlock).
         builder.Property(p => p.Position).HasColumnName("position");
-        builder.HasIndex(OrderIdProperty, nameof(SavedSplitPart.Position)).IsUnique();
 
         builder.HasMany(p => p.Lines).WithOne()
             .HasForeignKey(SavedSplitLineConfiguration.PartIdProperty)

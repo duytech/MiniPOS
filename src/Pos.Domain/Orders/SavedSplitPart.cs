@@ -23,6 +23,6 @@ public class SavedSplitPart
     {
         Id = Guid.NewGuid();
         Position = position;
-        _lines.AddRange(lineIds.Select(lineId => new SavedSplitLine(lineId)));
+        _lines.AddRange(lineIds.Select((lineId, linePosition) => new SavedSplitLine(lineId, linePosition)));
     }
 }

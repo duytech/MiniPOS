@@ -13,6 +13,7 @@ internal sealed class SavedSplitLineConfiguration : IEntityTypeConfiguration<Sav
         builder.ToTable("order_split_part_lines");
         builder.Property<Guid>(PartIdProperty).HasColumnName("part_id");
         builder.Property(l => l.LineId).HasColumnName("line_id");
+        builder.Property(l => l.Position).HasColumnName("position");
         builder.HasKey(PartIdProperty, nameof(SavedSplitLine.LineId));
 
         builder.HasOne<OrderLine>().WithMany().HasForeignKey(l => l.LineId).OnDelete(DeleteBehavior.Cascade);

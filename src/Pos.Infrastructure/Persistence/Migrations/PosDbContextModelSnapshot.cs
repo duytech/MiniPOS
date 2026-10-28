@@ -171,6 +171,10 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("line_id");
 
+                    b.Property<int>("Position")
+                        .HasColumnType("integer")
+                        .HasColumnName("position");
+
                     b.HasKey("PartId", "LineId");
 
                     b.HasIndex("LineId");
@@ -194,8 +198,7 @@ namespace Pos.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OrderId", "Position")
-                        .IsUnique();
+                    b.HasIndex("OrderId");
 
                     b.ToTable("order_split_parts", (string)null);
                 });
