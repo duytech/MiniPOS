@@ -15,7 +15,8 @@ work and the templates (`references/templates.md` in each skill's folder under `
 - Build what the plan says, nothing more. A file, rule, limit or default that is not in the plan or the business rules
   you were given: stop and return the question instead of choosing. Do not reopen a rule the user already decided.
 - If the code proves the plan wrong (a file does not exist, a step cannot compile), stop and report what you found and
-  what you would change. Small mechanical fixes (a missing `using`, a helper the plan forgot) are fine: list them.
+  what you would change. The same when a step of the plan causes a bug (e.g. a planned index makes parallel requests
+  deadlock or break the contract): propose the change to the plan, do not work around it and keep the step. Small mechanical fixes (a missing `using`, a helper the plan forgot) are fine: list them.
 - Never `git commit`, `git push`, or switch branches. The user reviews the diff and commits.
 
 ## Work

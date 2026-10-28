@@ -943,10 +943,12 @@ code lệch. Reviewer đối chiếu route, JSON, 204/404/409/422 giữa fronten
   Lần đầu dùng `bash -c` thì gọi nhầm bash của WSL; lần hai `powershell -Command` làm hỏng chuỗi kết nối. Script riêng
   thì chạy được.
 
+- Sau review, cùng PR: `planner.md` (Parallel plan) thêm "mỗi mảng trong contract phải nói thứ tự và dữ liệu lưu giữ
+  được thứ tự đó" và "mọi 409 của một route dùng một `detail`; không đặt constraint làm request đua lỗi trước
+  concurrency token". `implementer.md`: khi một bước của plan gây lỗi, dừng và đề xuất sửa plan, không vá quanh nó.
+  Chưa chạy lại agent để kiểm hai dòng này.
+
 **Giả định / câu hỏi còn mở:**
-- Planner chưa có rule "contract phải nói thứ tự của mọi mảng" và "mọi 409 dùng cùng một `detail`": hai chỗ lệch ở trên.
-  Nên thêm vào mục Parallel plan.
-- `implementer.md`: khi plan gây lỗi (unique index → deadlock), dừng và đề xuất sửa plan, đừng vá quanh nó. Chưa sửa.
 - 9 giả định UI của frontend agent (chưa hỏi user): Save luôn bật (để API trả 422); bảng part ẩn khi nháp chưa đủ;
   mỗi part hiện tên các món; 404 khi PUT → câu chung; GET split lỗi 500 khi order đã đóng → hiện section với câu chung;
   order Open < 2 line vẫn gọi GET split.

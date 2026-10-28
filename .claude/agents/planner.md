@@ -49,7 +49,9 @@ none seeing the others' code. Add two sections to the plan:
 - **Contract**: the only thing the three agents share. For each route: method and path, request JSON, response JSON
   with a filled-in example (money as numbers with 2 decimals, e.g. `15.40`; exact property names and casing), every
   status code and when it happens, and the ProblemDetails `detail` text the UI shows. Name the existing DTO the
-  response extends, if any.
+  response extends, if any. For every array, say its order (as sent, by a named field, or none) and check that the
+  stored data can keep it. Every 409 of a route has one `detail`, whatever the DB error behind it (concurrency
+  token, unique or FK violation); do not plan a constraint that makes a racing request fail before the token check.
 - **Tasks**: `backend`, `frontend`, `tests`, each with its list of files (new or changed). A file is in exactly one
   list, shared files included (`DependencyInjection.cs`, the migration and model snapshot, `app.routes.ts`, a test
   helper like `ApiClient`). The backend's own tests and the `tests` task's files have different names. The frontend
