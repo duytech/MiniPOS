@@ -1,6 +1,7 @@
 # Harness engineering và loop engineering khác nhau thế nào?
 
-Ghi chú ngày 2026-10-28. Xem thêm [harness-engineering.md](harness-engineering.md) và [journal.md](journal.md).
+Ghi chú ngày 2026-10-28. Xem thêm [harness-engineering.md](harness-engineering.md),
+[loop-engineering.md](loop-engineering.md) (năm thành phần của một vòng lặp) và [journal.md](journal.md).
 
 ## Tóm tắt
 
@@ -33,8 +34,8 @@ thứ không phải loop.
   xanh khi phần đầu bị âm.
 - **Output phải dùng được.** Bản đầu của hook dùng `dotnet test -v q`, chỉ in tên test fail, không có Expected/Actual,
   nên agent phải chạy lại test mới biết sai bao nhiêu.
-- **Nhiễu tốn vòng lặp.** 3/5 lần hook đỏ ở Tuần 2 Ngày 6 là do trạng thái dở dang giữa hai edit. Cách sửa nằm ở
-  harness: thêm rule "thay đổi chỉ compile khi đi cùng nhau thì làm trong một edit".
+- **Nhiễu tốn vòng lặp.** 3/5 lần hook đỏ ở Tuần 2 Ngày 6 là do trạng thái dở dang giữa hai edit. Cách sửa là đổi
+  nhịp kiểm: chuyển hook từ `PostToolUse` (sau mỗi edit) sang `Stop` (một lần mỗi lượt).
 
 ## Chúng bổ sung cho nhau ra sao
 
