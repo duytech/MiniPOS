@@ -94,31 +94,28 @@ public class MoneyTypeTests
         Assert.True(list.Count == 0, $"{fix}:{Environment.NewLine}{string.Join(Environment.NewLine, list)}");
     }
 
-    private static IEnumerable<string> RawDecimalMembers(Type type)
-    {
-        foreach (var field in type.GetFields(Declared).Where(f => IsVisible(f.IsPublic, f.IsFamily, f.IsFamilyOrAssembly)))
-        {
-            if (ContainsDecimal(field.FieldType)) yield return field.Name;
-        }
+    private static IEnumerable<string> RawDecimalMembers(Type type) =>
+        RawDecimalFields(type).Concat(RawDecimalProperties(type)).Concat(RawDecimalMethods(type));
 
-        foreach (var property in type.GetProperties(Declared))
-        {
-            var getter = property.GetMethod ?? property.SetMethod!;
-            if (IsVisible(getter.IsPublic, getter.IsFamily, getter.IsFamilyOrAssembly) && ContainsDecimal(property.PropertyType))
-                yield return property.Name;
-        }
+    private static IEnumerable<string> RawDecimalFields(Type type) =>
+        from field in type.GetFields(Declared)
+        where IsVisible(field.IsPublic, field.IsFamily, field.IsFamilyOrAssembly) && ContainsDecimal(field.FieldType)
+        select field.Name;
 
-        foreach (var method in type.GetMethods(Declared).Cast<MethodBase>().Concat(type.GetConstructors(Declared)))
-        {
-            if (method.IsSpecialName && method is not ConstructorInfo) continue;
-            if (!IsVisible(method.IsPublic, method.IsFamily, method.IsFamilyOrAssembly)) continue;
+    private static IEnumerable<string> RawDecimalProperties(Type type) =>
+        from property in type.GetProperties(Declared)
+        let accessor = property.GetMethod ?? property.SetMethod!
+        where IsVisible(accessor.IsPublic, accessor.IsFamily, accessor.IsFamilyOrAssembly)
+            && ContainsDecimal(property.PropertyType)
+        select property.Name;
 
-            var returnType = (method as MethodInfo)?.ReturnType;
-            if ((returnType is not null && ContainsDecimal(returnType))
+    private static IEnumerable<string> RawDecimalMethods(Type type) =>
+        from method in type.GetMethods(Declared).Cast<MethodBase>().Concat(type.GetConstructors(Declared))
+        where !(method.IsSpecialName && method is not ConstructorInfo)
+            && IsVisible(method.IsPublic, method.IsFamily, method.IsFamilyOrAssembly)
+            && ((method as MethodInfo)?.ReturnType is { } returnType && ContainsDecimal(returnType)
                 || method.GetParameters().Any(p => ContainsDecimal(p.ParameterType)))
-                yield return method.Name;
-        }
-    }
+        select method.Name;
 
     private static bool IsVisible(Type type) =>
         (type.IsPublic || type.IsNestedPublic) && !type.IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute));

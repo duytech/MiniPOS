@@ -8,7 +8,9 @@ surrounding code.**
 - DB: `docker compose up -d` (Postgres on **localhost:5433**; 5432 is taken by another install on this machine)
 - Build: `dotnet build Pos.slnx` · Test: `dotnet test Pos.slnx` (integration tests need the DB running). Warnings are
   errors and Roslyn analyzers (`latest-recommended`) run on build (`Directory.Build.props`, `.editorconfig`): fix the
-  code; a rule is only turned off in `.editorconfig` with a one-line reason
+  code; a rule is only turned off in `.editorconfig` with a one-line reason. From Sonar (`SonarAnalyzer.CSharp`) only
+  S3776 Cognitive Complexity runs (max 15 per method): split the method, don't raise the limit. `sonar.globalconfig`
+  keeps every other Sonar rule off
 - Architecture rules only (no DB, ~1 s): `dotnet test tests/Pos.ArchitectureTests`; a failure lists each offending member
 - Run API: `dotnet run --project src/Pos.Api --launch-profile http` → http://localhost:5191 (migrates on startup in Development)
 - Web (in `web/`): `npm start` → http://localhost:4200 (proxies `/api` to 5191) · `npm run build` · `npm run lint`
