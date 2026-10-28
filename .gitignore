@@ -491,3 +491,6 @@ web/.angular/
 
 # Claude Code sub-agent worktrees
 .claude/worktrees/
+
+# Playwright MCP screenshots and traces (verify-ui skill)
+.playwright-mcp/

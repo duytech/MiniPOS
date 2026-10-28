@@ -762,3 +762,49 @@ chưa làm.
 - Bash chỉ bị chặn bằng chữ trong prompt, chưa có hook nào chặn lệnh git ghi. Ngày 6 (`tester`) sẽ làm hook chặn
   path; có thể dùng cùng cách cho reviewer.
 - Chưa sửa 2 note của lượt 1 (test 409 có thể flaky, test 400 chưa kiểm ProblemDetails).
+
+### Ngày 5: Playwright MCP + skill `verify-ui` (2026-10-28)
+**Đã làm:** `.mcp.json` thêm server `playwright` (`@playwright/mcp@0.0.83 --isolated --output-dir .playwright-mcp`),
+`.playwright-mcp/` vào `.gitignore`. Skill `.claude/skills/verify-ui/SKILL.md`: dựng app (Docker, API, web), rồi mỗi
+trang đổi chạy một vòng navigate → snapshot (đối chiếu tiền với API) → screenshot → console → network → mỗi action
+một lần → khổ 375 × 812. `add-angular-feature` bước 5 trỏ sang skill này.
+
+Chạy thử trên dữ liệu có sẵn trong DB dev (không tạo dữ liệu mới): `/orders` (14 order) và `/orders/{id}` của order
+#10 (Open, 1 line Pho × 2). Không bấm +/−/Remove trên order #10 để khỏi đổi dữ liệu có sẵn.
+
+**Bắt được gì:**
+| Trang | Kết quả |
+|---|---|
+| `/orders` | Snapshot: 14 dòng, mọi total dạng `$x.xx` và khớp `GET /api/orders` (vd. #12 `$0.64`, #13 `$0.00`). Title `Orders · Mini POS`. Search + Status đều có nhãn. Console 0 lỗi/warning. Filter `Paid` rồi gõ `pho`: đúng 1 request mỗi lần (`status=Paid`, `search=pho&status=Paid`), có debounce, ra 1 dòng #12 |
+| `/orders/{id}` | Subtotal 15.40, discount 2.31, surcharge 0.39, tax 1.20, tip 2.36, total 17.04: khớp `GET /api/orders/{id}` từng cent. Nút có tên đọc được (`Decrease quantity of Pho`, `Remove Pho`). Console sạch, 1 request 200 |
+| Cả hai, 375 px | Trang không có scroll ngang (`scrollWidth` 375 = `clientWidth`), nhưng bảng cuộn ngang trong khung `overflow-x-auto`: list rộng 722 px trong khung 342 px, **cột Status và Total bị đẩy ra ngoài màn hình**; ở trang chi tiết **nút Remove nằm ngoài màn hình** |
+
+Lỗi ở 375 px không sửa trong lần này: chọn cột nào ẩn hay đổi bảng thành thẻ trên điện thoại là quyết định UX, task
+không nói. Để lại câu hỏi bên dưới.
+
+**Lỗi trong skill (tên tool khớp hết, lệch ở tham số và cách tool trả kết quả):**
+| Chỗ lệch | Sửa trong `SKILL.md` |
+|---|---|
+| `browser_click` / `browser_type` nhận `target`, skill viết "with the `ref`" | ghi rõ `target` = ref trong snapshot (`e12`) |
+| `browser_console_messages` bắt buộc `level`, mặc định `info` | `level: "warning"` (lỗi + warning) |
+| `browser_network_requests` bắt buộc `static` | `static: false`, `filter: "/api/"` |
+| `browser_take_screenshot` bắt buộc `scale`; `filename` tương đối tính từ repo root, không từ `--output-dir` | `scale: "css"`, `fullPage: true`, truyền `.playwright-mcp/<page>.png` |
+| Kết quả screenshot chỉ là đường dẫn, agent không "nhìn" ảnh | phải mở PNG bằng `Read` |
+| Kết quả `browser_navigate` / click / type chỉ link tới file `.yml`, không có cây | gọi `browser_snapshot` riêng sau mỗi bước |
+| `browser_snapshot` có `target` trả về cây con và làm mất các ref khác (`Ref e15 not found`) | snapshot đầy đủ (hoặc `browser_find`) trước khi bấm phần tử khác |
+| "No horizontal scroll" không bắt được bảng cuộn trong khung riêng | thêm `browser_evaluate` so `scrollWidth` của bảng với khung, kiểm cột tiền + nút hành động |
+| `docker compose up -d` lỗi khi Docker Desktop chưa chạy | ghi: mở Docker Desktop, chờ `docker info` |
+| Chờ dữ liệu bằng sleep | dùng `browser_wait_for` với chữ mong đợi |
+
+**Ảnh chụp** (thư mục `.playwright-mcp/`, git bỏ qua nên không có trong PR):
+`day5-orders.png`, `day5-order-detail.png`, `day5-orders-mobile.png`, `day5-order-detail-mobile.png`. Snapshot
+`.yml` và log console cùng thư mục.
+
+**Giả định / câu hỏi còn mở:**
+- Trên điện thoại: list nên ẩn cột nào (Created? Items?) để Total luôn thấy được, hay đổi thành thẻ? Trang chi tiết:
+  đưa Remove xuống dưới tên món?
+- Discount hiện `$2.31`, không có dấu trừ, trong khi nó được trừ khỏi subtotal. Có nên hiện `−$2.31`? (chỉ là hiển
+  thị, không tính toán ở frontend).
+- Tên món dài ở list bị cắt bằng `…`, không có `title` để xem tên đủ (screen reader vẫn đọc đủ).
+- Các action làm đổi order (+/−/Remove) chưa chạy qua skill vì không muốn đổi dữ liệu có sẵn. Lần sau nên tạo một
+  order riêng qua API để thử.
