@@ -14,6 +14,9 @@ dotnet_diagnostic.IDE0005.severity = warning
 csharp_style_namespace_declarations = file_scoped:warning
 dotnet_diagnostic.IDE0161.severity = warning
 
+# Code metrics: off by default and in every AnalysisLevel. CA1505 fails the build on a maintainability index under 10.
+dotnet_diagnostic.CA1505.severity = warning
+
 # EF Core migrations are generated; analyzers do not apply.
 [**/Migrations/*.cs]
 generated_code = true
