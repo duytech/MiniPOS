@@ -40,3 +40,18 @@ Return markdown with these sections, short and specific:
 
 Do not restate CLAUDE.md. Do not invent limits, defaults, entities or seed data. If the task is bigger than one plan
 (backend and frontend that can ship apart), say so and propose the split.
+
+## Parallel plan (task with both API and web)
+
+The backend, the frontend and the tests are then built at the same time by three agents, each in its own worktree,
+none seeing the others' code. Add two sections to the plan:
+
+- **Contract**: the only thing the three agents share. For each route: method and path, request JSON, response JSON
+  with a filled-in example (money as numbers with 2 decimals, e.g. `15.40`; exact property names and casing), every
+  status code and when it happens, and the ProblemDetails `detail` text the UI shows. Name the existing DTO the
+  response extends, if any.
+- **Tasks**: `backend`, `frontend`, `tests`, each with its list of files (new or changed). A file is in exactly one
+  list, shared files included (`DependencyInjection.cs`, the migration and model snapshot, `app.routes.ts`, a test
+  helper like `ApiClient`). The backend's own tests and the `tests` task's files have different names. The frontend
+  and tests tasks work from the contract only, never from the new backend code. If the work cannot be split without
+  two tasks touching one file, say which file and propose the order to build them in instead.
