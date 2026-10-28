@@ -51,10 +51,10 @@ Kết quả: một tính năng chạy trọn chuỗi plan → implement → test
 - [x] Ngày 3: Tạo sub-agent `planner` (chỉ đọc, xuất kế hoạch) và `implementer` (được sửa code).
 - [x] Ngày 4: Tạo sub-agent `reviewer` (chỉ đọc), đối chiếu diff với `CLAUDE.md` và business rule về tiền.
 - [x] Ngày 5: Cài Playwright MCP. Viết skill bắt agent mở trang, chụp màn hình và đọc accessibility snapshot sau mỗi lần sửa UI.
-- [ ] Ngày 6: Tạo sub-agent `tester` và thử visual loop với dữ liệu xấu.
-  - [ ] `tester` viết test từ plan, contract và business rule, không viết từ code. Có Playwright MCP; chỉ được sửa file trong `tests/` (Playwright E2E đặt ở `tests/e2e/`).
-  - [ ] Chặn ba lớp: hook `PreToolUse` cho `Edit|Write` từ chối path ngoài `tests/`; chạy trong worktree và loại cả lượt nếu `git diff --name-only` có file ngoài `tests/`; prompt cấm sửa code chính và cấm nới assertion để test pass.
-  - [ ] Giao `tester` dữ liệu xấu: tên món rất dài, 200 món, mạng chậm (throttle). Ghi lại lỗi `tester` phát hiện và lần nào nó cố sửa ngoài `tests/`.
+- [x] Ngày 6: Tạo sub-agent `tester` và thử visual loop với dữ liệu xấu.
+  - [x] `tester` viết test từ plan, contract và business rule, không viết từ code. Có Playwright MCP; chỉ được sửa file trong `tests/` (Playwright E2E đặt ở `tests/e2e/`).
+  - [x] Chặn ba lớp: hook `PreToolUse` cho `Edit|Write` từ chối path ngoài `tests/`; chạy trong worktree và loại cả lượt nếu `git diff --name-only` có file ngoài `tests/`; prompt cấm sửa code chính và cấm nới assertion để test pass.
+  - [x] Giao `tester` dữ liệu xấu: tên món rất dài, 200 món, mạng chậm (throttle). Ghi lại lỗi `tester` phát hiện và lần nào nó cố sửa ngoài `tests/`.
 - [ ] Ngày 7: Chạy trọn tính năng Split bill qua cả chuỗi agent, backend và frontend **song song**.
   - [ ] Sửa `planner`: khi task có cả API và web, xuất **contract** (route, request/response JSON, mã lỗi) và **danh sách file của từng task**; hai danh sách không được trùng file.
   - [ ] Duyệt contract, rồi chạy hai `implementer` song song, mỗi agent một worktree (`isolation: worktree`): một làm backend (lưu split, endpoint), một làm frontend (trang chia hóa đơn, gọi API theo contract).

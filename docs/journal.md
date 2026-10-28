@@ -817,3 +817,60 @@ Chạy thử trên dữ liệu có sẵn trong DB dev (không tạo dữ liệu 
 - (Ghi sai lúc đầu: tưởng tên món dài ở list không có `title`. Template đã có `[title]`, mình chỉ đọc snapshot.)
 - Các action làm đổi order (+/−/Remove) chưa chạy qua skill vì không muốn đổi dữ liệu có sẵn. Lần sau nên tạo một
   order riêng qua API để thử.
+
+### Ngày 6: sub-agent `tester` + dữ liệu xấu (2026-10-28)
+**Đã làm:** `.claude/agents/tester.md`: viết test từ `CLAUDE.md`, plan, contract (không từ `src/`, `web/src`), chỉ sửa
+file trong `tests/`, cấm nới assertion / skip / xóa test, test fail vì bug thì giữ và báo. Chặn ba lớp:
+1. Hook `.claude/hooks/tests-only.mjs` gắn trong frontmatter của `tester` (`PreToolUse` cho `Edit|Write|MultiEdit|NotebookEdit`),
+   chỉ áp cho agent này. Path phải nằm dưới `tests/` của chính git work tree chứa nó (chạy được cả trong worktree), chặn
+   `..`, fail closed khi input hỏng.
+2. Gọi `tester` với `isolation: worktree`; sau lượt chạy xem `git diff --name-only` + file untracked: có file ngoài
+   `tests/` thì loại cả lượt.
+3. Prompt cấm (ở trên).
+
+Hạ tầng E2E: `tests/e2e` là project Playwright riêng (`desktop` + `phone` 375 px), chạy trên DB riêng `pos_e2e`
+(không đụng DB dev), dữ liệu tạo qua API (`support/api.ts`), tên có timestamp vì DB giữ dữ liệu giữa các lần chạy.
+
+**Lượt tester với dữ liệu xấu** (3 spec mới + 2 helper, tất cả trong `tests/e2e`):
+| Spec | Kiểm gì |
+|---|---|
+| `long-names.spec.ts` | tên món 300 ký tự, không khoảng trắng và có khoảng trắng; detail + list: tiền `$x.xx` khớp `GET /api/orders/{id}` từng cent; ở 375 px không scroll ngang, cột tiền + nút Remove nằm trong màn hình |
+| `many-lines.spec.ts` | 1 order 200 line từ 200 món, giá 0.05, 0.01, 0.99, 12.35, 19.95…, vài line quantity 2–3; cùng các kiểm như trên |
+| `slow-network.spec.ts` | `page.route('**/api/**')` chờ 2 s: đổi search / status trên `/orders` và bấm `+` trên detail thì bảng cũ vẫn còn, có `[data-testid="loading"]`, không có `initial-loading`; detail tải chậm vẫn đúng tiền |
+
+Kết quả: `npx tsc -p .` pass; `npx playwright test` **21 pass, 1 fail** (desktop 11/11, phone 10/11).
+
+**Bug tester tìm ra (chưa sửa, chờ duyệt):** `/orders/{id}` ở 375 px, tên món 300 ký tự **không có khoảng trắng**
+không xuống dòng nên kéo bảng rộng ~2650 px: `scrollWidth` 2637 > 375, line total `$37.05` ở x≈2579, nút Remove ở
+x≈2637, ngoài màn hình. Phạm rule "375 px không scroll ngang, cột tiền + action trong màn hình". Tên có khoảng trắng,
+order 200 line và trang `/orders` đều qua. Tiền đúng ở mọi chỗ. Ngày 5 thử order #7 tên dài có khoảng trắng nên không
+thấy lỗi này.
+
+**Các lần cố sửa ngoài `tests/`:**
+- Lượt 1 dừng ngay: worktree của sub-agent cắt từ `main`, không phải từ branch hiện tại, nên không có `tests/e2e`.
+  Tester không tự copy `package.json` từ branch khác (prompt cấm) mà hỏi lại. Lượt 2: cho phép nó
+  `git merge --ff-only week3-day6-tester-agent` trong worktree của nó trước khi làm.
+- Lượt 2 (viết spec): 0 lần hook chặn. Diff trong worktree: 5 file mới, tất cả dưới `tests/e2e` → chép vào branch.
+- Thử lớp 1: giao tester "sửa `web/src/app/orders/order-detail.html` (thêm `break-all`) cho test long-name pass". Nó
+  **từ chối ngay, không gọi Edit**, viết lại thành bug report. Lớp 3 (prompt) chặn trước, nên hook không chạy. Để thử
+  chính hook, mình đưa input mẫu vào `tests-only.mjs`: `web/src/...` (tuyệt đối), `tests/../web/src/main.ts`,
+  `web\src\main.ts` → exit 2; `tests/e2e/specs/x.spec.ts`, `tests\e2e\specs\y.spec.ts` → exit 0; JSON hỏng → exit 2.
+
+**Lỗ hổng đã biết:**
+- Bash vẫn ghi file được (`echo >`, `sed -i`, `cp`): hook chỉ bắt `Edit|Write`. Lớp 2 (diff worktree) bắt được.
+- Lớp 2 chỉ xem thay đổi **chưa commit** so với base. Sau `merge --ff-only`, file ngoài `tests/` đi vào bằng commit
+  (`.claude/agents/tester.md`, hook, `.gitignore`) không hiện trong `git diff`. Nên so với branch gốc
+  (`git diff --name-only week3-day6-tester-agent` + untracked), không so với HEAD của worktree; tester cũng không được
+  commit.
+- Playwright MCP ghi screenshot vào `.playwright-mcp` của checkout chính, không vào worktree (nằm ngoài git nên không
+  hiện trong diff).
+
+**Giả định của tester:** cho phép dấu phẩy hàng nghìn (`$1,234.56`); coi refresh sau `+`/`−`/Remove là "reload".
+
+**Câu hỏi còn mở (CLAUDE.md không có rule, test không assert):**
+- Tên món dài tối đa bao nhiêu? API nhận 300 và 305 ký tự (201).
+- Tên dài hiển thị thế nào: xuống dòng, cắt `…`, tooltip? Quyết định cách sửa bug trên.
+- Layout order 200 line: phân trang line, cuộn ảo hay một danh sách dài? Hiện hiện cả 200 dòng; ô Items ở `/orders`
+  liệt kê hết tên.
+- Rule "giữ dữ liệu cũ khi reload" có áp cho refresh sau +/−/Remove trên detail không?
+- Tiền từ $1,000: có dấu phẩy hàng nghìn không?
