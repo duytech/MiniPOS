@@ -881,3 +881,79 @@ tên xuống 5 dòng, mọi cột hiện. `npm run lint`, `npm run build`, 38 te
   liệt kê hết tên.
 - Rule "giữ dữ liệu cũ khi reload" có áp cho refresh sau +/−/Remove trên detail không?
 - Tiền từ $1,000: có dấu phẩy hàng nghìn không?
+
+### Ngày 7: Split bill qua cả chuỗi agent, backend + frontend song song (2026-10-28)
+**Đã làm:** `planner.md` thêm mục "Parallel plan": khi task có cả API và web, plan phải có **Contract** (route, JSON
+mẫu có số, mọi status code, `detail` UI hiển thị) và **Tasks** `backend` / `frontend` / `tests`, mỗi file nằm đúng một
+danh sách. Rồi chạy cả chuỗi cho tính năng lưu split theo món: `GET|PUT|DELETE /api/orders/{id}/split`,
+`POST .../split/preview`, section "Split bill" trong trang chi tiết order. Plan: `plans/tuan-3-ngay-7-split-bill.md`.
+
+| Cổng | Kết quả |
+|---|---|
+| Planner, lần 1 | 10 tool call, **9 câu hỏi** (lưu gì, status, mấy split, order đổi thì sao, trả từng phần, tối thiểu mấy phần, dạng API, trang ở đâu / preview, message lỗi). Không viết plan nào quanh giả định |
+| User trả lời | Chỉ lưu gán line → part, tiền luôn tính lại; lưu/xóa chỉ khi Open, đọc được khi đã đóng; một split + DELETE; đổi order thì tự xóa split; trả cả order như cũ; tối thiểu 2 phần; `PUT .../split` + `GET .../split` riêng (404 khi chưa có); không nhãn part; section trong trang chi tiết, có preview; lỗi như trang chi tiết |
+| Planner, lần 2 | **8 câu nữa** (no-op có xóa split không, DELETE trả gì, preview ở status nào, khi nào gọi preview, builder bắt đầu ra sao, xác nhận, khi không split được, sau khi đổi line). Tự quyết 6 điểm nhỏ và liệt kê rõ để mình duyệt |
+| Planner, lần 3 | Plan đầy đủ: 14 rule có nguồn, contract, 3 danh sách file không trùng, ca test có số (60.00 + 40.00 → tax 5.33 / 3.55; 6.00 + 4.00 với 15% / card / 18% → 6.65 / 4.42). 4 lựa chọn mới (R11–R14) đánh dấu "confirm on approval" |
+| User duyệt | Cả R11–R14 |
+| 3 agent song song | Một message, 3 `Agent` call, `isolation: worktree`, mỗi agent `git merge --ff-only` branch plan trước khi làm. Frontend ~8 phút, tester ~9 phút, backend ~15 phút |
+| Integrator (mình) | Merge 3 nhánh: **0 conflict git**. Verifier đầy đủ: 5 contract test đỏ, 1 E2E đỏ. Sửa 3 chỗ lệch (dưới) |
+| Reviewer | 1 should-fix, 4 note, `changes requested` → sửa 2 chỗ, chạy lại hết |
+
+**Kết quả cuối:** build 0 warning; .NET 144 / 70 / 8 / 270 test xanh (thêm 29 Domain, 9 validator, 50 integration của
+backend + 80 contract test của tester); web 75 Vitest (thêm 37); Playwright 42/42 (thêm 20 case split, desktop + phone).
+Concurrency: PUT song song chạy 12 + 5 lần, luôn có 409 thật.
+
+**Kiểm phạm vi file của từng agent** (`git diff --name-only <branch plan>` + untracked trong worktree):
+| Agent | File ngoài danh sách |
+|---|---|
+| frontend | 0 |
+| tester | 0 (chỉ `tests/`, hook không chặn lần nào) |
+| backend | 1: `UnitOfWork.cs`, có báo trong report. Deadlock Postgres (40P01, Npgsql bọc trong `InvalidOperationException`) lọt thành **500** khi PUT song song; agent map sang 409. Giữ lại |
+
+**Conflict và chỗ lệch khi integrate:**
+| Chỗ lệch | Ai bắt | Nguyên nhân | Sửa |
+|---|---|---|---|
+| Thứ tự `lineIds` trong một part: GET trả theo thứ tự DB, không theo PUT | contract test của tester (so JSON nguyên văn), đỏ **ngẫu nhiên** 3/20 case | Contract chỉ nói thứ tự part, không nói thứ tự line. Backend agent có báo trước rủi ro này | Hỏi user. Mình đề xuất "theo thứ tự line của order", rồi phát hiện order line **không có thứ tự ổn định** (không cột position). Hỏi lại: giữ thứ tự PUT gửi, thêm cột `position` cho `order_split_part_lines` |
+| 409 khi PUT song song có `detail` "The change conflicts with existing data." thay vì text trong contract | contract test (concurrency) | Unique index `(order_id, position)` do plan yêu cầu bị đụng trước `xmin` của order. Cũng chính index này gây deadlock | Hỏi user: bỏ unique index (xmin đã chặn người ghi thứ hai). Tạo lại migration (branch chưa merge) |
+| 375 px: cột Tip, Total của bảng part nằm ngoài màn hình | E2E phone của tester | Frontend agent đoán "bảng cuộn trong khung là được" (ghi rõ là giả định #9) | Dưới `sm` mỗi part thành thẻ, mỗi khoản một dòng có nhãn (`before:content-[attr(data-label)]`), DOM giữ nguyên nên test id không đổi |
+| Test không bắt được nếu bỏ thứ tự line | reviewer | Mọi test round-trip đều sort / so set | Thêm test PUT `[D, B, A]` rồi GET đúng thứ tự; đột biến bỏ `OrderBy` → đỏ |
+| Reload sau 409 của split chạy song song với ghi line (`switchMap` cạnh `concatMap`): GET cũ đến sau có thể đưa số lượng cũ lên màn hình, click + kế tiếp gửi số lượng sai | reviewer | Frontend agent thêm stream reload riêng | Reload xếp hàng chung `concatMap` với các thao tác ghi |
+
+Không có: file trùng giữa các task, DTO khác tên, sai định dạng tiền (`60.00`, `$1,393.23` ở mọi chỗ), route hay status
+code lệch. Reviewer đối chiếu route, JSON, 204/404/409/422 giữa frontend và backend: khớp.
+
+**Chuyện đáng kể:**
+- **Contract là thứ duy nhất ba agent chung, và mọi chỗ lệch đều nằm ở chỗ contract im lặng:** thứ tự line trong part,
+  `detail` của một loại 409 mà contract không nghĩ tới (unique violation), layout phone. Chỗ nào contract ghi rõ (tên
+  property, status, text 422) thì ba agent khớp nhau từ lần đầu dù không thấy code của nhau.
+- **Tester viết từ contract bắt được 2/3 lỗi integrate**, cả hai là lỗi mà test của chính backend agent không thấy (nó so
+  `lineIds` theo set và chỉ kiểm status 409, không kiểm `detail`). Đúng lý do tách tester khỏi implementer.
+- **Plan đúng chữ vẫn gây lỗi:** unique index là ý của planner, backend làm đúng plan, và chính nó gây deadlock (500)
+  lẫn 409 sai text. Backend sửa triệu chứng (deadlock → 409) thay vì đề xuất bỏ index ("I didn't, because the plan
+  specifies it"). Rule "build what the plan says" làm agent không dám sửa plan khi plan sai.
+- **Integrator cũng tự đặt rule:** câu hỏi "theo thứ tự line của order" mình đưa ra mà chưa kiểm code; order line không
+  có thứ tự. Phải hỏi lại. Lặp lại bài học Tuần 1 Ngày 5.
+- Agent definition sửa giữa session: planner đọc lại `planner.md` từ repo theo prompt nên dùng đúng bản mới. Không rõ bản
+  nạp lúc khởi động có tự cập nhật không; dặn trong prompt là chắc nhất.
+- Worktree vẫn cắt từ `main`: `git merge --ff-only` ở đầu prompt chạy tốt cho cả ba.
+
+**Harness sửa:**
+- `planner.md`: mục Parallel plan (commit đầu của Ngày 7).
+- `.claude/launch.json` thêm `api-e2e` + `tests/e2e/start-api.ps1`: API trên `pos_e2e` để chạy E2E từ preview tool.
+  Lần đầu dùng `bash -c` thì gọi nhầm bash của WSL; lần hai `powershell -Command` làm hỏng chuỗi kết nối. Script riêng
+  thì chạy được.
+
+**Giả định / câu hỏi còn mở:**
+- Planner chưa có rule "contract phải nói thứ tự của mọi mảng" và "mọi 409 dùng cùng một `detail`": hai chỗ lệch ở trên.
+  Nên thêm vào mục Parallel plan.
+- `implementer.md`: khi plan gây lỗi (unique index → deadlock), dừng và đề xuất sửa plan, đừng vá quanh nó. Chưa sửa.
+- 9 giả định UI của frontend agent (chưa hỏi user): Save luôn bật (để API trả 422); bảng part ẩn khi nháp chưa đủ;
+  mỗi part hiện tên các món; 404 khi PUT → câu chung; GET split lỗi 500 khi order đã đóng → hiện section với câu chung;
+  order Open < 2 line vẫn gọi GET split.
+- Tester hỏi: PUT không có `Content-Type` trả 415 (ASP.NET) chứ không phải 400; một line lặp **trong cùng** một part
+  trả "Line … is in more than one part." (text không đúng lắm).
+- Reviewer note: PUT đua với xóa line có thể ra 409 bằng lỗi FK (23503, `detail` khác contract), chưa có test. Deadlock
+  vẫn có thể xảy ra (map sang 409), không có test cố ý tạo.
+- DB local nào đã chạy migration `20261028131529_OrderSplit` (bản đầu của backend agent) sẽ lỗi khi chạy bản mới
+  `20261028132949`. `pos_e2e` chỉ chạy bản mới; DB dev `pos` không bị backend agent migrate (test dùng DB riêng).
+- Container `agent-a61d5d8a0718bb040-db-1` (tester tạo trong worktree, đã dừng) còn đó.
