@@ -1,0 +1,2 @@
+# Code metric thresholds that differ from the analyzer defaults (read through AdditionalFiles in Directory.Build.props).
+CA1505: 20
