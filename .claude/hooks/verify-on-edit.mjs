@@ -1,13 +1,14 @@
 // Stop hook: when Claude is about to end its turn, run the checks for each side of the repo with uncommitted changes.
 //   .cs / .csproj / .props          -> dotnet build Pos.slnx, then the tests that need no database
 //   web/**/*.ts, web/**/*.html      -> eslint on the changed files, then the Angular compiler (types + templates)
+// The UTF-8 check is a separate hook (check-utf8.mjs) on the same events.
 // A failure exits with code 2 and prints the errors on stderr, which keeps Claude working to fix them.
 // With --before-commit it is a PreToolUse hook (Bash, PowerShell) instead: it runs the same checks only when the
 // command runs `git commit`, and exit 2 blocks the commit. Otherwise a commit made during the turn leaves the Stop
 // hook nothing uncommitted to check.
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
 import path from 'node:path';
+import { changedFiles, readHookInput, runsGitCommit } from './git-changes.mjs';
 
 const MAX_ERROR_LINES = 40;
 const FAST_TEST_PROJECTS = [
@@ -16,59 +17,20 @@ const FAST_TEST_PROJECTS = [
   'tests/Pos.ArchitectureTests',
 ];
 
-const input = JSON.parse(readFileSync(0, 'utf8').replace(/^﻿/, '') || '{}');
+const input = readHookInput();
 const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
 const beforeCommit = process.argv.includes('--before-commit');
 
-/**
- * Whether a shell command runs `git commit`. Heredoc and here-string bodies and quoted strings are dropped first, so a
- * commit message or an echo that mentions "git commit" does not count.
- */
-function runsGitCommit(command) {
-  const masked = command
-    .replace(/<<-?\s*['"]?(\w+)['"]?[^\n]*\n[\s\S]*?\n\s*\1\b/g, '')
-    .replace(/@(['"])\r?\n[\s\S]*?\r?\n\1@/g, '""')
-    .replace(/"[^"]*"|'[^']*'/g, '""');
-  return masked.split(/&&|\|\||[;|\n]/).some((segment) => {
-    const words = segment.trim().split(/\s+/);
-    const at = words.findIndex((w) => /^git(\.exe)?$/i.test(w));
-    if (at < 0) return false;
-    let i = at + 1;
-    while (words[i]?.startsWith('-')) i += words[i] === '-C' || words[i] === '-c' ? 2 : 1;
-    return words[i] === 'commit';
-  });
-}
-
 if (beforeCommit && !runsGitCommit(input.tool_input?.command ?? '')) process.exit(0);
 
-/** Modified, added and untracked files (deleted ones need no lint), relative to the repo root with forward slashes. */
-const status = spawnSync('git status --porcelain --untracked-files=all', { cwd: root, shell: true, encoding: 'utf8' });
-const changed = (status.stdout ?? '')
-  .split(/\r?\n/)
-  .filter((line) => line.length > 3 && !line.startsWith(' D') && !line.startsWith('D '))
-  .map((line) => line.slice(3).replace(/^.* -> /, '').replace(/^"|"$/g, ''));
+const changed = changedFiles(root);
 const ext = (file) => path.extname(file).toLowerCase();
 const dotnetChanged = changed.some((file) => ['.cs', '.csproj', '.props'].includes(ext(file)));
 const webFiles = changed.filter((file) => file.startsWith('web/src/') && ['.ts', '.html'].includes(ext(file)));
-// Source files must be UTF-8. A tool that writes the system code page (Windows PowerShell's Set-Content) turns "·"
-// into a single byte that compilers, linters and tests accept, but browsers show as "�".
-const TEXT_EXTENSIONS = ['.cs', '.csproj', '.props', '.ts', '.html', '.css', '.json', '.md', '.mjs'];
-const notUtf8 = changed.filter((file) => {
-  if (!TEXT_EXTENSIONS.includes(ext(file))) return false;
-  try {
-    new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(path.join(root, file)));
-    return false;
-  } catch {
-    return true;
-  }
-});
 
-if (!dotnetChanged && webFiles.length === 0 && notUtf8.length === 0) process.exit(0);
+if (!dotnetChanged && webFiles.length === 0) process.exit(0);
 
 const failures = [];
-if (notUtf8.length) {
-  failures.push('✗ not UTF-8 (rewrite these files as UTF-8):', ...notUtf8.map((file) => `  ${file}`));
-}
 
 /** Keeps the distinct lines that match (compilers repeat the same error per target). */
 const matching = (pattern) => (lines) => [...new Set(lines.filter((line) => pattern.test(line)).map((l) => l.trim()))];
