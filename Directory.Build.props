@@ -16,4 +16,9 @@
     <GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)sonar.globalconfig" />
   </ItemGroup>
 
+  <!-- Code metric thresholds (CA1501/CA1502/CA1505/CA1506); only CA1505 differs from the default. -->
+  <ItemGroup>
+    <AdditionalFiles Include="$(MSBuildThisFileDirectory)CodeMetricsConfig.txt" />
+  </ItemGroup>
+
 </Project>

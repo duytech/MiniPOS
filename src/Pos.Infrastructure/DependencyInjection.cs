@@ -26,4 +26,10 @@ public static class DependencyInjection
         services.AddScoped<IMenuItemRepository, MenuItemRepository>();
         return services;
     }
+
+    public static async Task MigrateDatabaseAsync(this IServiceProvider services)
+    {
+        using var scope = services.CreateScope();
+        await scope.ServiceProvider.GetRequiredService<PosDbContext>().Database.MigrateAsync();
+    }
 }
