@@ -80,7 +80,36 @@ Nguyên tắc: **hai agent không bao giờ sửa cùng một file.** Phần dù
 
 ### Áp dụng vào lộ trình
 
-Lộ trình chưa có bài nào chạy song song. Tuần 3 Ngày 7 (Split bill qua cả chuỗi) hợp để thử: phần backend (lưu split, endpoint) và phần frontend (trang chia hóa đơn) có thể chạy song song sau khi chốt contract. Muốn làm vậy cần:
+Tuần 3 Ngày 7 (Split bill qua cả chuỗi) là bài chạy song song (đã thêm vào lộ trình ở PR #22): phần backend (lưu split, endpoint) và phần frontend (trang chia hóa đơn) chạy song song sau khi chốt contract. Muốn làm vậy cần:
 - Sửa `planner` để xuất contract và danh sách file của từng task.
 - Thêm bước integrator (agent hoặc người).
 - Ghi lại trong journal những conflict gặp phải và cách xử lý.
+
+## 3. Mục đích thật sự của việc tạo ra multi-agent là gì?
+
+Mục đích không phải "nhiều agent thì thông minh hơn". Mục đích là **tách context, quyền và trách nhiệm**, để mỗi phần việc kiểm soát được và kiểm chứng được.
+
+### Năm lý do thật
+
+1. **Context sạch, tập trung.** Một agent làm lâu thì context đầy file đã đọc, log build/test và các lần thử sai. Chất lượng giảm, agent dễ quên rule. Sub-agent bắt đầu với context mới, chỉ nhận brief cần thiết, và trả về kết luận thay vì mọi thứ nó đã đọc.
+2. **Giới hạn quyền.** `planner` chỉ có `Read, Glob, Grep`, nên nó không thể "tiện tay sửa luôn". Nhờ vậy cổng duyệt plan là cổng thật: chưa có dòng code nào trước khi người duyệt. Quyền hẹp thì sai sót cũng hẹp.
+3. **Kiểm chứng độc lập.** Agent vừa viết code có xu hướng tin code của mình đúng, vì nó giữ cùng các giả định lúc viết. `reviewer` có context riêng, đọc diff và đối chiếu với `CLAUDE.md` như một người ngoài, nên bắt được lỗi mà người viết bỏ qua. Đây cũng là lý do con người cần code review.
+4. **Chuyên môn hóa bằng prompt.** Mỗi agent có một system prompt ngắn, đúng việc: `planner` phải hỏi business question trước, `implementer` phải chạy verifier. Một prompt lớn ôm mọi vai thì rule nào cũng bị loãng.
+5. **Chạy song song.** Ví dụ là bài Tuần 3 Ngày 7: chốt contract, sau đó backend và frontend chạy cùng lúc trong hai worktree. Lợi ích là thời gian, và chỉ có khi các task thật sự độc lập: không sửa chung file, không cần kết quả của nhau.
+
+### Cái giá phải trả
+
+- **Token và thời gian**: mỗi agent đọc lại context từ đầu (xem mục 1).
+- **Phối hợp**: brief thiếu thì agent đoán. Các agent có thể trả về không nhất quán (DTO khác tên, contract lệch), nên phải có bước integrator.
+- **Debug khó hơn**: lỗi có thể nằm ở chỗ bàn giao giữa hai agent, không nằm trong agent nào.
+
+### Khi nào nên dùng
+
+- Task nhỏ, một file: một agent là đủ. Multi-agent chỉ làm tăng chi phí.
+- Dùng multi-agent khi cần ít nhất một trong ba điều: **cổng duyệt với quyền khác nhau**, **góc nhìn kiểm chứng độc lập**, hoặc **việc song song thật sự độc lập**.
+
+### Câu trả lời phỏng vấn
+
+Câu "How would you split one feature across several agents?" trong lộ trình:
+
+> I split agents by responsibility and permission, not by headcount: a read-only planner so I approve before any code exists, an implementer bound by verifiers, a reviewer with fresh context to catch what the author can't see, and parallel agents only after the contract is fixed.
