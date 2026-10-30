@@ -979,6 +979,8 @@ phải ghi password cố định trong YAML, trái rule "không commit credentia
 | PR #38, lần đầu | Xanh cả 3 job ngay lần đầu: `dotnet` 56 s (8 / 70 / 144 / 270 test, đúng số local), `web` 34 s, `e2e` 2m29s (42 passed) |
 | PR #39, thử gate | Đổi expected `"17.42"` thành `"17.43"` trong một integration test. Hook local cho commit qua (hook chỉ chạy test không cần DB). CI: `dotnet` đỏ, `Expected: "17.43" Actual: "17.42"`, 269/270. Đóng PR, xóa branch |
 | Branch protection | `gh api -X PUT .../branches/main/protection` trả **403** "Resource not accessible by personal access token": token của `gh` không có quyền Administration. Phải bật tay trong Settings |
+| Ruleset `protect-main` (bật tay) | Settings không còn mục "Branches": giờ là **Rules → Rulesets**. Lần lưu đầu để `enforcement: disabled` nên `main` vẫn `protected: false`; đổi sang Active. Đọc lại bằng `gh api .../rulesets` (đọc thì token đủ quyền): `deletion`, `non_fast_forward`, `required_status_checks` `dotnet` / `web` / `e2e` (GitHub Actions), strict, bypass trống |
+| PR #40 | Nâng action lên bản chạy Node 24 (`checkout@v7`, `setup-node@v7`, `setup-dotnet@v6`, `upload-artifact@v7`): hết warning "Node.js 20 is deprecated". Còn notice `ubuntu-latest` sắp lên Ubuntu 26, để nguyên |
 
 **Chuyện đáng kể:**
 - PR thử cho thấy CI không lặp lại hook: hook local (Stop / trước `git commit`) chỉ chạy build + test không cần DB để
@@ -987,6 +989,6 @@ phải ghi password cố định trong YAML, trái rule "không commit credentia
   gate khi check là required.
 
 **Giả định / câu hỏi còn mở:**
-- Branch protection (khi bật): required checks `dotnet`, `web`, `e2e`, strict (branch phải cập nhật với `main`),
-  `enforce_admins` tắt, không bắt buộc review người (repo một người).
+- Ruleset: không bắt buộc review người (repo một người), bypass list trống nên admin cũng không merge được khi đỏ.
+- Ruleset lưu xong vẫn có thể ở Disabled: phải đọc lại `enforcement` chứ không tin màn hình Settings.
 - Node 24, .NET `10.0.x`, Postgres 17 theo local và `docker-compose.yml`.
