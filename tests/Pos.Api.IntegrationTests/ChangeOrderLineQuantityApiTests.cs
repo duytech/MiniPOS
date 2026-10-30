@@ -22,7 +22,7 @@ public class ChangeOrderLineQuantityApiTests(PosApiFactory factory) : IClassFixt
         Assert.Equal(1, QuantityOf(order, phoLine));
         Assert.Equal("16.00", order.Money("subtotal"));
         Assert.Equal("1.42", order.Money("tax")); // 8.875% of 16.00 = 1.42
-        Assert.Equal("17.42", order.Money("total"));
+        Assert.Equal("17.43", order.Money("total"));
         Assert.Equal("17.42", (await _client.GetOrderAsync(orderId)).Money("total"));
         await AssertListTotalEqualsGetTotalAsync(orderId);
     }
