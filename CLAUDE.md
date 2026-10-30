@@ -27,6 +27,8 @@ surrounding code.**
   blocks such commands.
 - Never commit or push to `main`: branch, push the branch, open a PR. A `PreToolUse` hook
   (`.claude/hooks/block-main-branch.mjs`) blocks `git commit` on main and any `git push` that updates main.
+- CI (`.github/workflows/ci.yml`) runs the same checks plus integration and Playwright E2E on every PR; its jobs
+  `dotnet`, `web`, `e2e` are required checks of `main`. A red check is fixed in the branch, never bypassed.
 
 ## Architecture
 - One use case = one folder in Application with `XxxCommand`/`XxxQuery` (record), `XxxHandler`

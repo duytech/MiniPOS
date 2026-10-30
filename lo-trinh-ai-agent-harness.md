@@ -66,7 +66,7 @@ Kết quả: một tính năng chạy trọn chuỗi plan → implement → test
 
 Kết quả: repo công khai có CI, AI review trên PR và README giải thích toàn bộ harness, sẵn sàng gửi kèm CV.
 
-- [ ] Ngày 1: Thiết lập GitHub Actions: build + test + arch test + lint làm quality gate bắt buộc trước khi merge.
+- [x] Ngày 1: Thiết lập GitHub Actions: build + test + arch test + lint làm quality gate bắt buộc trước khi merge.
 - [ ] Ngày 2: Thêm AI review tự động trên PR (Claude Code GitHub Action hoặc Copilot review).
 - [ ] Ngày 3: Mở 3–4 PR có lỗi cố ý (lệch 1 cent, lộ dữ liệu, thiếu xử lý null). Ghi lại bot bắt được gì, bỏ sót gì.
 - [ ] Ngày 4: Chỉnh prompt review: tập trung vào business rule và bảo mật, bỏ qua style mà linter đã lo. Chạy lại các PR lỗi.
