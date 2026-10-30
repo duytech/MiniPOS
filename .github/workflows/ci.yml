@@ -1,0 +1,114 @@
+# Quality gate for every PR into main: the same checks as the local hooks, plus integration and E2E tests.
+# The three job names (dotnet, web, e2e) are the required status checks of main.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  NG_CLI_ANALYTICS: false
+
+jobs:
+  dotnet:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Build (warnings are errors, analyzers on)
+        run: dotnet build Pos.slnx -c Release
+      - name: Architecture tests
+        run: dotnet test tests/Pos.ArchitectureTests -c Release --no-build
+      - uses: ./.github/actions/postgres
+      - name: Tests (unit + integration + concurrency)
+        run: dotnet test Pos.slnx -c Release --no-build
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Build
+        run: npm run build
+      - name: Unit tests (Vitest)
+        run: npx ng test --watch=false
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: |
+            web/package-lock.json
+            tests/e2e/package-lock.json
+      - uses: ./.github/actions/postgres
+        with:
+          database: pos_e2e
+      - run: npm ci --prefix web
+      - run: npm ci --prefix tests/e2e
+      - name: Install Chromium
+        working-directory: tests/e2e
+        run: npx playwright install --with-deps chromium
+      - name: Start API (Development profile migrates pos_e2e on startup)
+        run: |
+          dotnet build src/Pos.Api
+          nohup dotnet run --project src/Pos.Api --launch-profile http --no-build > api.log 2>&1 &
+      - name: Start web
+        run: nohup npm start --prefix web > web.log 2>&1 &
+      - name: Wait for API and web
+        run: |
+          for url in http://localhost:5191/api/orders http://localhost:4200; do
+            for _ in $(seq 1 180); do
+              if curl -s -o /dev/null "$url"; then break; fi
+              sleep 1
+            done
+            curl -s -o /dev/null "$url" || { echo "$url did not start"; exit 1; }
+          done
+      - name: Type-check specs
+        working-directory: tests/e2e
+        run: npx tsc -p .
+      - name: Playwright (desktop + phone)
+        working-directory: tests/e2e
+        run: npx playwright test
+      - name: Server logs
+        if: failure()
+        run: tail -n 100 api.log web.log
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            tests/e2e/playwright-report
+            tests/e2e/test-results
+          retention-days: 7

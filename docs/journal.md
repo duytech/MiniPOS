@@ -959,3 +959,34 @@ code lệch. Reviewer đối chiếu route, JSON, 204/404/409/422 giữa fronten
 - DB local nào đã chạy migration `20261028131529_OrderSplit` (bản đầu của backend agent) sẽ lỗi khi chạy bản mới
   `20261028132949`. `pos_e2e` chỉ chạy bản mới; DB dev `pos` không bị backend agent migrate (test dùng DB riêng).
 - Container `agent-a61d5d8a0718bb040-db-1` (tester tạo trong worktree, đã dừng) còn đó.
+
+## Tuần 4
+
+### Ngày 1: GitHub Actions làm quality gate (2026-10-30)
+**Đã làm:** `.github/workflows/ci.yml`, chạy trên mọi PR và push lên `main`, 3 job trên `ubuntu-latest`:
+- `dotnet`: build Release (warnings = errors, analyzers), arch test, rồi toàn bộ test với Postgres (unit, integration,
+  concurrency).
+- `web`: `npm ci`, lint, build, Vitest.
+- `e2e`: API trên `pos_e2e` (profile `http` = Development, tự migrate) + `ng serve`, rồi Playwright desktop + phone. Lỗi
+  thì in log server và upload report.
+
+Postgres nằm trong composite action `.github/actions/postgres`: `docker run postgres:17` với password ngẫu nhiên mỗi
+lần chạy (`openssl rand`, `::add-mask::`), ghi `ConnectionStrings__Pos` vào `$GITHUB_ENV`. Không dùng `services:` vì
+phải ghi password cố định trong YAML, trái rule "không commit credential, kể cả test".
+
+| Lần chạy | Kết quả |
+|---|---|
+| PR #38, lần đầu | Xanh cả 3 job ngay lần đầu: `dotnet` 56 s (8 / 70 / 144 / 270 test, đúng số local), `web` 34 s, `e2e` 2m29s (42 passed) |
+| PR #39, thử gate | Đổi expected `"17.42"` thành `"17.43"` trong một integration test. Hook local cho commit qua (hook chỉ chạy test không cần DB). CI: `dotnet` đỏ, `Expected: "17.43" Actual: "17.42"`, 269/270. Đóng PR, xóa branch |
+| Branch protection | `gh api -X PUT .../branches/main/protection` trả **403** "Resource not accessible by personal access token": token của `gh` không có quyền Administration. Phải bật tay trong Settings |
+
+**Chuyện đáng kể:**
+- PR thử cho thấy CI không lặp lại hook: hook local (Stop / trước `git commit`) chỉ chạy build + test không cần DB để
+  nhanh, nên lỗi 1 cent trong integration test lọt qua máy. CI là chỗ đầu tiên chạy integration và E2E bắt buộc.
+- Không có branch protection thì PR đỏ vẫn merge được (`mergeStateStatus: UNSTABLE`, không phải `BLOCKED`). CI chỉ là
+  gate khi check là required.
+
+**Giả định / câu hỏi còn mở:**
+- Branch protection (khi bật): required checks `dotnet`, `web`, `e2e`, strict (branch phải cập nhật với `main`),
+  `enforce_admins` tắt, không bắt buộc review người (repo một người).
+- Node 24, .NET `10.0.x`, Postgres 17 theo local và `docker-compose.yml`.
