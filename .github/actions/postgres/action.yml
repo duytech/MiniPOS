@@ -1,0 +1,29 @@
+name: Postgres
+description: >
+  Starts Postgres 17 in Docker with a random password generated for this run (no credential is committed) and exports
+  ConnectionStrings__Pos for the later steps of the job.
+inputs:
+  database:
+    description: Database named in the connection string; created if it is not the default one.
+    default: pos
+runs:
+  using: composite
+  steps:
+    - name: Start Postgres
+      shell: bash
+      env:
+        DATABASE: ${{ inputs.database }}
+      run: |
+        password="$(openssl rand -hex 24)"
+        echo "::add-mask::$password"
+        docker run -d --name db -e POSTGRES_USER=pos -e POSTGRES_DB=pos -e POSTGRES_PASSWORD="$password" \
+          -p 5432:5432 postgres:17 > /dev/null
+        for _ in $(seq 1 30); do
+          if docker exec db pg_isready -U pos -d pos > /dev/null 2>&1; then break; fi
+          sleep 1
+        done
+        docker exec db pg_isready -U pos -d pos
+        if [ "$DATABASE" != "pos" ]; then
+          docker exec db createdb -U pos "$DATABASE"
+        fi
+        echo "ConnectionStrings__Pos=Host=localhost;Port=5432;Database=$DATABASE;Username=pos;Password=$password" >> "$GITHUB_ENV"
