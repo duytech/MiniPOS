@@ -4,6 +4,9 @@
 discounts, surcharge/dual pricing, split bill. **Some existing code predates these rules: follow this file, not the
 surrounding code.**
 
+Existing features (API routes, business rules already decided, web pages): `docs/feature-list.md`. Read it before
+adding a feature; update it when you add or change one.
+
 ## Commands
 - DB: `docker compose up -d` (Postgres on **localhost:5433**; 5432 is taken by another install on this machine)
 - Build: `dotnet build Pos.slnx` · Test: `dotnet test Pos.slnx` (integration tests need the DB running). Warnings are
