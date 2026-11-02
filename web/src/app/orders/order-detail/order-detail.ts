@@ -68,6 +68,11 @@ export class OrderDetail {
 
   protected readonly order = computed(() => this.state().order);
   protected readonly isOpen = computed(() => this.order()?.status === 'Open');
+  /** What the customer pays before choosing a tip, shown on the card terminal prompt. */
+  protected readonly totalBeforeTip = computed(() => {
+    const order = this.order();
+    return order ? order.total - order.tip : 0;
+  });
 
   protected removeLine(line: OrderLine): void {
     this.writes.next({ kind: 'remove', lineId: line.id });

@@ -153,6 +153,10 @@
         <dt>Tip</dt>
         <dd class="tabular-nums" data-testid="tip">{{ order.tip | currency: 'USD' }}</dd>
       </div>
+      <div class="flex justify-between text-slate-600">
+        <dt>Before tip</dt>
+        <dd class="tabular-nums" data-testid="total-before-tip">{{ totalBeforeTip() | currency: 'USD' }}</dd>
+      </div>
       <div class="flex justify-between border-t border-slate-200 pt-1 font-semibold text-slate-900">
         <dt>Total</dt>
         <dd class="tabular-nums" data-testid="total">{{ order.total | currency: 'USD' }}</dd>
