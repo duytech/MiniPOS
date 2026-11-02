@@ -1056,6 +1056,24 @@ sửa luôn test cho khớp, đúng kiểu PR "sửa test cho xanh". Cấu hình
 - Finding bảo mật (#64) gắn nhãn "Detected with Advanced Tier": gói open source đang được dùng tính năng gói Advanced.
 - Bài này dễ cho bot: mỗi PR nhỏ (1–2 file), một lỗi, diff rõ. PR thật lớn hơn, lỗi lẫn trong nhiều thay đổi đúng.
 
+**So với agent `reviewer` của repo** (`.claude/agents/reviewer.md`): chạy 4 `reviewer` song song, mỗi PR một agent,
+cùng đầu vào như CodeRabbit (diff + tiêu đề và mô tả PR trung tính), không gợi ý có lỗi.
+| PR | CodeRabbit | `reviewer` | Test thiếu `reviewer` chỉ ra |
+|---|---|---|---|
+| #63 | Major, ca thuế âm | 2 blocker; ca thuế âm khác (4 × $0.06, share 0.005 đúng midpoint → phần đầu −0.01; mình tính lại: đúng); nói rõ test bị sửa theo code | Không có ca midpoint |
+| #64 | **Major, Security, CWE-209** | Chỉ **should-fix**. Finding đầu là "500 không còn được log" (dựa trên mặc định của .NET 10; agent tự ghi chưa chạy thử, mình chưa kiểm) | Không có test cho 500 |
+| #65 | Major | Blocker | **Không có test 404 cho `GET /api/menu-items/{id}`**: đúng lỗ hổng làm CI xanh; đề xuất unit + integration test |
+| #66 | Major | Blocker; thêm: không có domain test, Vitest, `feature-list.json`; hỏi "before tip" có gồm surcharge không | Domain test, Vitest |
+
+- **Cả hai bắt 4/4.** `reviewer` mạnh hơn ở **test và rule của repo**: checklist của nó có "Money tests", "enough code
+  tests", `feature-list`, nên PR nào cũng hỏi test ở đâu. CodeRabbit gần như không nêu test thiếu (chỉ #63 gợi ý thêm
+  ca midpoint).
+- `reviewer` **yếu hơn ở bảo mật**: checklist không có mục bảo mật, chỉ "Config" (mật khẩu trong file), nên đánh lỗi
+  lộ stack trace thấp hơn CodeRabbit. Việc cho Ngày 4: thêm mục bảo mật (lộ thông tin trong response).
+- `reviewer` dài và chậm hơn: 2–6 finding mỗi PR, 30–55 s; CodeRabbit 1 finding mỗi PR.
+- `reviewer` không "mù" bằng: nó đọc được `.coderabbit.yaml` trên `main`, file ghi sẵn "split cố ý làm tròn xuống", và
+  trích file đó ở #63.
+
 **Giả định / câu hỏi còn mở:**
 - Ngày 4 (chỉnh prompt) có ít chỗ để cải thiện vì bot đã 4/4 và 0 nhiễu. Có thể làm bài khó hơn: PR lớn trộn lỗi với
   thay đổi đúng, lỗi concurrency (bỏ `xmin`), lỗi không có rule viết sẵn.
