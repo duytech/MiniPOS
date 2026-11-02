@@ -2,6 +2,14 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-02: CodeRabbit reviews every PR (#58)
+- **What:** the CodeRabbit GitHub App is installed on this repo only, and `.coderabbit.yaml` points it at
+  `CLAUDE.md` (read by default), `docs/business-rules.md` and `docs/architecture.md`, with per-path instructions for
+  money, concurrency, API errors and tests. Migrations, the lock file and the journal are skipped.
+- **Why:** roadmap Week 4 Day 2. CodeRabbit is free for public repos and its prompt lives in the repo, so Day 4 can
+  tune it and compare runs. Claude Code Action and PR-Agent need a paid API key.
+- **Not a gate:** its review is advice; the required checks stay `dotnet`, `web`, `e2e`.
+
 ## 2026-11-02: The verifier starts the services a step needs (#54)
 - **What:** when a step `requires` db or e2e and it is down, `scripts/verify-features.mjs` starts it
   (`scripts/services.mjs`): Docker Desktop if the daemon is down, `docker compose up -d db`, the `pos_e2e` database if
