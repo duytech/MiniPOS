@@ -61,7 +61,7 @@ ngữ cảnh, đếm chỗ lệch, sửa skill, chạy lại.
    trang chi tiết) và so sánh như Ngày 1.
 
 6. **Đóng ngày:** `docs/journal.md` mục "Tuần 3 Ngày 2" (Đã làm / bảng chỗ lệch / so sánh hai lần chạy / câu hỏi mở),
-   tick Ngày 2 trong `lo-trinh-ai-agent-harness.md`, commit, push, mở PR (không Co-Authored-By).
+   tick Ngày 2 trong `roadmap.md`, commit, push, mở PR (không Co-Authored-By).
 
 ## Verify cuối
 
