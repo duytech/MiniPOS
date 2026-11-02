@@ -359,12 +359,12 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
         ];
         Assert.Equal(ConcurrentRequests, groupings.Length);
 
-        var results = await ConcurrentlyAsync(groupings.Select(g => (Func<Task<HttpResponseMessage>>)(() =>
+        var results = await RaceAsync(orderId, groupings.Select(g => (Func<Task<HttpResponseMessage>>)(() =>
             PutSplitAsync(orderId, g))));
 
         var unexpected = results.Where(r => r.Status is not (HttpStatusCode.OK or HttpStatusCode.Conflict)).ToList();
         Assert.True(unexpected.Count == 0, $"Expected only 200 or 409, got: {Describe(unexpected)}");
-        Assert.Contains(results, r => r.Status == HttpStatusCode.Conflict); // the requests really raced
+        Assert.Single(results, r => r.Status == HttpStatusCode.OK); // all loaded the same order version (OrderRace)
         foreach (var conflict in results.Where(r => r.Status == HttpStatusCode.Conflict))
         {
             Assert.Equal("application/problem+json", conflict.MediaType);
@@ -669,15 +669,25 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
             .Select(async send =>
             {
                 await start.Task;
-                using var response = await send();
-                var text = await response.Content.ReadAsStringAsync();
-                var body = text.Length == 0 ? default : await response.ReadJsonAsync();
-                return new Result(response.StatusCode, response.Content.Headers.ContentType?.MediaType, body);
+                return await ReadResultAsync(send);
             })
             .ToList();
 
         start.SetResult();
         return await Task.WhenAll(running);
+    }
+
+    /// <summary>Like <see cref="ConcurrentlyAsync"/>, but every request loads the order before any commits.</summary>
+    private Task<Result[]> RaceAsync(Guid orderId, IEnumerable<Func<Task<HttpResponseMessage>>> requests) =>
+        OrderRace.RunAsync(factory.ConnectionString, orderId,
+            requests.Select(send => (Func<Task<Result>>)(() => ReadResultAsync(send))));
+
+    private static async Task<Result> ReadResultAsync(Func<Task<HttpResponseMessage>> send)
+    {
+        using var response = await send();
+        var text = await response.Content.ReadAsStringAsync();
+        var body = text.Length == 0 ? default : await response.ReadJsonAsync();
+        return new Result(response.StatusCode, response.Content.Headers.ContentType?.MediaType, body);
     }
 
     private static string Describe(IEnumerable<Result> results) =>
