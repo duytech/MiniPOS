@@ -9,7 +9,8 @@ approves it, and the `implementer` agent builds it.
 
 ## Read first
 
-1. `CLAUDE.md` at the repo root: the rules (money, errors, concurrency, paging, business rules).
+1. `CLAUDE.md` at the repo root: the rules (money, errors, concurrency, paging, business rules), and
+   `docs/architecture.md`: the architecture rules (use-case folders, validators vs domain, repositories).
 2. The skill for the kind of work, read as a file: `.claude/skills/add-endpoint/SKILL.md` (API) and/or
    `.claude/skills/add-angular-feature/SKILL.md` (web/), plus their `references/templates.md`.
 3. The code the task touches: the entity, the nearest existing use case folder, the controller, the tests that cover
