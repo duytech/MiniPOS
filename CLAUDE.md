@@ -8,7 +8,9 @@ Existing features (API routes, web pages) with how each is verified: `docs/featu
 decided: `docs/business-rules.md`. Read both before adding a feature; add or update the feature's entry when you add or
 change one, with `verification` steps that run its tests.
 - `state`, `testedAt` and `evidence` are set only by `node scripts/verify-features.mjs [id ...]` (it runs the steps;
-  a hook blocks hand edits). A new entry starts `not_started`, with `testedAt` and `evidence` `null`.
+  a hook blocks hand edits). A new entry starts `not_started`, with `testedAt` and `evidence` `null`. It starts the
+  services a step `requires` when they are down (Docker Desktop, Postgres, the API on `pos_e2e`, the web app) and stops
+  at the end only what it started; `--no-start` skips those steps instead (`blocked`).
 - Work on one feature at a time: at most one feature is `active` (a failed verification) while you work.
 - A feature is done when the verifier sets it to `passing`.
 

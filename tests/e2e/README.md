@@ -16,6 +16,10 @@ Playwright reuses the Chromium that the Playwright MCP server installed; if it i
 
 ## Run
 
+Shortest way: `node scripts/verify-features.mjs F22 F23 F24` from the repo root. It starts what is missing
+(Docker Desktop, Postgres, the `pos_e2e` database, the API on it, the web app), runs the specs of those features and
+stops what it started. Done by hand:
+
 1. Start the API on `pos_e2e`: the same connection string as the dev one (user-secrets of `src/Pos.Api`), with
    `Database=pos_e2e`, in the `ConnectionStrings__Pos` environment variable. The API migrates the empty database on
    startup. In Git Bash:

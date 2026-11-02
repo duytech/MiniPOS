@@ -130,9 +130,9 @@
       ],
       "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
       "state": "passing",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "testedAt": "2026-11-02T12:16:53Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "fd6e5f3",
         "passed": [
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrderPricingPersistenceTests.\""
         ],
@@ -602,19 +602,15 @@
         }
       ],
       "rules": null,
-      "state": "blocked",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "state": "passing",
+      "testedAt": "2026-11-02T12:13:04Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "fd6e5f3",
         "passed": [
-          "npx ng test --watch=false --include src/app/orders/orders-list/orders-list.spec.ts --include src/app/orders/orders-api.spec.ts"
+          "npx ng test --watch=false --include src/app/orders/orders-list/orders-list.spec.ts --include src/app/orders/orders-api.spec.ts",
+          "npx playwright test specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts"
         ],
-        "skipped": [
-          {
-            "run": "npx playwright test specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts",
-            "reason": "not running: web app (http://localhost:4200), API (http://localhost:5191); see tests/e2e/README.md"
-          }
-        ]
+        "skipped": []
       }
     },
     {
@@ -635,19 +631,15 @@
         }
       ],
       "rules": null,
-      "state": "blocked",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "state": "passing",
+      "testedAt": "2026-11-02T12:13:04Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "fd6e5f3",
         "passed": [
-          "npx ng test --watch=false --include src/app/orders/order-detail/order-detail.spec.ts"
+          "npx ng test --watch=false --include src/app/orders/order-detail/order-detail.spec.ts",
+          "npx playwright test specs/smoke.spec.ts specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts"
         ],
-        "skipped": [
-          {
-            "run": "npx playwright test specs/smoke.spec.ts specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts",
-            "reason": "not running: web app (http://localhost:4200), API (http://localhost:5191); see tests/e2e/README.md"
-          }
-        ]
+        "skipped": []
       }
     },
     {
@@ -668,19 +660,15 @@
         }
       ],
       "rules": "business-rules.md#split-bill",
-      "state": "blocked",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "state": "passing",
+      "testedAt": "2026-11-02T12:13:04Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "fd6e5f3",
         "passed": [
-          "npx ng test --watch=false --include src/app/orders/order-split/order-split.spec.ts"
+          "npx ng test --watch=false --include src/app/orders/order-split/order-split.spec.ts",
+          "npx playwright test specs/split-bill.spec.ts"
         ],
-        "skipped": [
-          {
-            "run": "npx playwright test specs/split-bill.spec.ts",
-            "reason": "not running: web app (http://localhost:4200), API (http://localhost:5191); see tests/e2e/README.md"
-          }
-        ]
+        "skipped": []
       }
     }
   ]
