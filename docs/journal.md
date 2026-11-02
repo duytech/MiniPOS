@@ -1030,3 +1030,34 @@ Review lại commit sửa: không có finding mới.
 - Review bằng tiếng Anh (`en-US`), profile `chill`. Ngày 4 xem có cần `assertive` không.
 - Gói open source không ghi giới hạn số review mỗi giờ.
 - Bot có quyền đọc code và ghi comment trên repo công khai; không có secret nào cần cấp.
+
+### Ngày 3: PR có lỗi cố ý, CodeRabbit bắt được gì (2026-11-02)
+**Cách làm (issue #62):** 4 PR, mỗi PR một lỗi, tiêu đề và mô tả **trung tính** như PR thật (không ghi "lỗi cố ý" để
+bot không được gợi ý). Mỗi lỗi phải qua hook trước commit (build + test không cần DB), nên lỗi nào làm đỏ unit test thì
+sửa luôn test cho khớp, đúng kiểu PR "sửa test cho xanh". Cấu hình CodeRabbit giữ nguyên như Ngày 2. Không merge PR nào.
+
+| PR | Lỗi | Trình bày như | CI | CodeRabbit |
+|---|---|---|---|---|
+| #63 | Split theo món làm tròn `AwayFromZero` thay vì xuống (`ToZero`); sửa số mong đợi trong domain test | "Làm tròn split giống mọi bước tiền khác" | **Đỏ**: contract test `All_leftover_cents_go_to_the_largest_part` (`0.31/0.29/0.29` → `0.29/0.30/0.30`) | **Bắt**, Major. Nêu đúng rule split, chỉ ra test bị sửa theo code, và tự tìm thêm ca **thuế âm**: 4 món $0.05, thuế 0.02, mỗi phần 0.01 → phần đầu −0.01 (mình tính lại: đúng) |
+| #64 | 500 trả `exception.ToString()` trong `detail` ở mọi môi trường | "Trả chi tiết lỗi để dễ chẩn đoán" | Xanh | **Bắt**, Major, Security: CWE-209, "Reachability: External" |
+| #65 | `GetMenuItemHandler` bỏ `?? throw NotFoundException`, dùng `menuItem!` → id lạ ra 500 thay vì 404 | "Dọn handler" | **Xanh** | **Bắt**, Major: `!` không thêm kiểm tra lúc chạy, `NullReferenceException` thay cho 404 ProblemDetails |
+| #66 | Frontend tự tính "Before tip" = `total - tip` | Tính năng nhỏ cho thu ngân | Xanh | **Bắt**, Major: dẫn rule "chỉ `Order.CalculateTotals` tính tổng, frontend chỉ hiển thị"; đề xuất thêm field vào API |
+
+**Kết quả:** bot 4/4, mỗi PR đúng một finding, không có finding nhiễu. CI 1/4.
+
+**Chuyện đáng kể:**
+- **CI chỉ bắt 1/4.** #64 và #66 không có loại test nào bắt được (bảo mật của body lỗi, rule "frontend không tính
+  tiền"). #65 lẽ ra phải đỏ: hóa ra **không có integration test nào cho `GET /api/menu-items/{id}` với id lạ**. Feature
+  F02 vẫn `passing` vì nó chỉ kiểm đường đúng. Lỗ hổng test thật, tìm ra nhờ bài này.
+- #63 là ca CI và bot cùng bắt, nhưng **domain test (cái hook chạy) đã bị sửa cho xanh**: chỉ contract test ở CI còn
+  giữ số đúng. Đúng lý do tách tester viết test từ contract (Tuần 3 Ngày 7).
+- Bot đọc được rule nghiệp vụ trong `docs/business-rules.md` và `CLAUDE.md` (#63, #66): nhờ sửa `applyTo` ở Ngày 2.
+  Không có sửa đó, hai lỗi này có thể không bị bắt (chưa kiểm).
+- Finding bảo mật (#64) gắn nhãn "Detected with Advanced Tier": gói open source đang được dùng tính năng gói Advanced.
+- Bài này dễ cho bot: mỗi PR nhỏ (1–2 file), một lỗi, diff rõ. PR thật lớn hơn, lỗi lẫn trong nhiều thay đổi đúng.
+
+**Giả định / câu hỏi còn mở:**
+- Ngày 4 (chỉnh prompt) có ít chỗ để cải thiện vì bot đã 4/4 và 0 nhiễu. Có thể làm bài khó hơn: PR lớn trộn lỗi với
+  thay đổi đúng, lỗi concurrency (bỏ `xmin`), lỗi không có rule viết sẵn.
+- Thêm test còn thiếu: `GET /api/menu-items/{id}` id lạ → 404; 500 không lộ chi tiết exception.
+- Bốn PR #63–#66 đóng, không merge. Token `gh` không sửa/comment được issue (#62), nên danh sách PR nằm ở đây.
