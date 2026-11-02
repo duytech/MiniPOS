@@ -81,6 +81,8 @@ adding or changing code in `src/`.
 
 ## Verification
 Run what the change touches, in this order; CI runs all of it on every PR.
+- Start of a session: `bash init.sh` (tools, local config, harness files, build, no-DB tests, web lint/build/Vitest);
+  `bash init.sh --full` also runs every .NET test against Postgres. Fix what it reports before you start.
 - .NET (`src/`, `tests/Pos.*`): `docker compose up -d`, `dotnet build Pos.slnx`, then `dotnet test Pos.slnx` (unit,
   architecture, integration and concurrency tests; integration needs the DB). Only the no-DB projects:
   `dotnet test tests/Pos.Domain.Tests`, `tests/Pos.Application.Tests`, `tests/Pos.ArchitectureTests`.
