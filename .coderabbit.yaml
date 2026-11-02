@@ -20,11 +20,12 @@ reviews:
       instructions: |
         Money rules (CLAUDE.md "Money", docs/business-rules.md "Pricing") matter most here:
         - Amounts are `Money`; flag `double`, `float` or raw `decimal` in public signatures.
-        - Totals are calculated only in `Order.CalculateTotals`, in the order discount, surcharge, tax, tip; each step is
-          rounded to cents with `MidpointRounding.AwayFromZero` before the next step uses it. Flag rounding elsewhere,
-          a missing or different `MidpointRounding`, or a changed base of a step (tax base includes the surcharge, tip
-          base does not).
-        - Split allocations round down and give the leftover cents to the part the business rules name.
+        - Totals are calculated only in `Order.CalculateTotals`, in the order discount, surcharge, tax, tip; each pricing
+          step is rounded to cents with `MidpointRounding.AwayFromZero` before the next step uses it. Flag a total
+          calculated outside it, a pricing step with a missing or different `MidpointRounding`, or a changed base of a
+          step (tax base includes the surcharge, tip base does not).
+        - Split allocations (even split and split by item) are the exception: they round down to the cent on purpose
+          and give the leftover cents to the part the business rules name. Flag rounding them any other way.
         - A business rule, limit or constant not in docs/business-rules.md must be pointed out as a question.
     - path: "src/Pos.Application/**"
       instructions: |
@@ -55,6 +56,9 @@ reviews:
 knowledge_base:
   code_guidelines:
     enabled: true
+    # A guideline file covers only its own folder unless applyTo maps it to the code it governs.
     filePatterns:
-      - "docs/business-rules.md"
-      - "docs/architecture.md"
+      - files: "docs/business-rules.md"
+        applyTo: "src/**,tests/**,web/**"
+      - files: "docs/architecture.md"
+        applyTo: "src/**,tests/**"
