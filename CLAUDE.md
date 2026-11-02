@@ -90,12 +90,11 @@ Run what the change touches, in this order; CI runs all of it on every PR.
 - The hooks run only build, analyzers, eslint, `ngc` and the no-DB tests: integration, Vitest and E2E are yours to run.
 
 ## Definition of done
-- The checks in Verification pass for every side the change touches (`dotnet build` with 0 warnings).
-- New behavior has tests: money rules → exact-cent unit tests; order changes → concurrency test.
-- Summary lists any assumptions or open business questions instead of silently deciding them.
+- A feature is complete when it has enough code tests, not "code is written".
+- Go through `docs/clean-state-checklist.md` before opening a PR and at the end of each session
 
-## Git commit
-- Git commits as checkpoints. Commit after completing each atomic unit of work. Commit messages should explain what was done and why, Must start with a task id like: 13245 | Do something
-
-## Decision log
-- File docs/DECISIONS.md. Record important design decisions and reasons. No need for detailed design documents — just "what decision, why, when"
+## Development workflow
+- Every change needs a task id (a GitHub issue number).
+- Git commits as checkpoints. Commit after completing each atomic unit of work. Commit messages should explain what was done and why, Must start with a task id like: 13245 | Do something.
+- Branch name must start with a task id.
+- File docs/DECISIONS.md. Record important design decisions and reasons. No need for detailed design documents — just "what decision, why, when".
