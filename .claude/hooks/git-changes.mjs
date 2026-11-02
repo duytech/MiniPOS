@@ -1,4 +1,4 @@
-// Helpers shared by the hooks that check uncommitted changes (verify-on-edit.mjs, check-utf8.mjs).
+// Helpers shared by the hooks: reading the hook input, and the uncommitted changes (verify-on-edit.mjs, check-utf8.mjs).
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
