@@ -4,74 +4,34 @@
 //
 //   node scripts/verify-features.mjs            every feature
 //   node scripts/verify-features.mjs F05 F06    only these features
+//   --no-start                                  do not start missing services (see below)
 //
-// A step whose `requires` is not available (db: Postgres port; e2e: web app and API) is skipped. Result per feature:
+// A step's `requires` (db: Postgres; e2e: API on pos_e2e and web app) is started when it is not running, and what the
+// script started is stopped at the end (scripts/services.mjs). With --no-start, or when it cannot start, the step is
+// skipped. Result per feature:
 // a step failed → active; every step that ran passed but some were skipped → blocked; all passed → passing.
 // testedAt is the start of the run when at least one step ran, and stays as it was when none did.
 // Exits 1 when a `prepare` command or any feature fails.
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
-import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ensure, stopStarted } from './services.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const listPath = path.join(root, 'docs', 'feature-list.json');
 const OUTPUT_LINES = 20;
-const CHECK_TIMEOUT_MS = 3000;
 // What dotnet test, Vitest and Playwright print when nothing matched.
 const NO_TESTS = /No test matches the given testcase filter|No test files found|No tests found/i;
+const args = process.argv.slice(2);
+const allowStart = !args.includes('--no-start');
 
-/** Whether a TCP port accepts a connection. */
-function portOpen(host, port) {
-  return new Promise((resolve) => {
-    const socket = net.connect({ host, port, timeout: CHECK_TIMEOUT_MS });
-    const done = (open) => {
-      socket.destroy();
-      resolve(open);
-    };
-    socket.once('connect', () => done(true));
-    socket.once('timeout', () => done(false));
-    socket.once('error', () => done(false));
-  });
-}
-
-/** Whether a URL answers at all (any HTTP status counts: only reachability matters). */
-async function answers(url) {
-  try {
-    await fetch(url, { signal: AbortSignal.timeout(CHECK_TIMEOUT_MS) });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-// Each requirement returns undefined when available, else the reason. Addresses come from the environment, with the
-// defaults of CLAUDE.md.
-const REQUIREMENTS = {
-  db: async () => {
-    const host = process.env.POS_DB_HOST ?? 'localhost';
-    const port = Number(process.env.POS_DB_PORT ?? 5433);
-    return (await portOpen(host, port)) ? undefined : `Postgres is not reachable on ${host}:${port}`;
-  },
-  e2e: async () => {
-    const web = process.env.E2E_BASE_URL ?? 'http://localhost:4200';
-    const api = process.env.E2E_API_URL ?? 'http://localhost:5191';
-    const down = [];
-    if (!(await answers(web))) down.push(`web app (${web})`);
-    if (!(await answers(api))) down.push(`API (${api})`);
-    return down.length ? `not running: ${down.join(', ')}; see tests/e2e/README.md` : undefined;
-  },
-};
-
-const checked = new Map();
-/** Reasons the given requirements are not available; each requirement is checked once per run. */
+/** Reasons the given requirements are not available after starting what is missing (unless --no-start). */
 async function missing(requires) {
   const reasons = [];
   for (const name of requires) {
-    if (!REQUIREMENTS[name]) throw new Error(`Unknown requirement "${name}" in ${listPath}`);
-    if (!checked.has(name)) checked.set(name, await REQUIREMENTS[name]());
-    if (checked.get(name)) reasons.push(checked.get(name));
+    const reason = await ensure(name, allowStart);
+    if (reason) reasons.push(reason);
   }
   return reasons;
 }
@@ -148,15 +108,23 @@ function select(list, ids) {
 }
 
 const list = JSON.parse(readFileSync(listPath, 'utf8'));
-const features = select(list, process.argv.slice(2));
+const features = select(list, args.filter((arg) => !arg.startsWith('--')));
 const startedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
 const commit = spawnSync('git', ['rev-parse', '--short', 'HEAD'], { cwd: root, encoding: 'utf8' }).stdout.trim();
 
 prepare(list, features);
-for (const feature of features) {
-  await verify(feature, startedAt, commit);
-  // Written after each feature, so an interrupted run keeps the results it already has.
-  writeFileSync(listPath, `${JSON.stringify(list, null, 2)}\n`, 'utf8');
+process.once('SIGINT', () => {
+  stopStarted();
+  process.exit(130);
+});
+try {
+  for (const feature of features) {
+    await verify(feature, startedAt, commit);
+    // Written after each feature, so an interrupted run keeps the results it already has.
+    writeFileSync(listPath, `${JSON.stringify(list, null, 2)}\n`, 'utf8');
+  }
+} finally {
+  stopStarted();
 }
 
 const counts = Object.groupBy(features, (feature) => feature.state);
