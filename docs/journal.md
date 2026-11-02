@@ -1060,4 +1060,4 @@ sửa luôn test cho khớp, đúng kiểu PR "sửa test cho xanh". Cấu hình
 - Ngày 4 (chỉnh prompt) có ít chỗ để cải thiện vì bot đã 4/4 và 0 nhiễu. Có thể làm bài khó hơn: PR lớn trộn lỗi với
   thay đổi đúng, lỗi concurrency (bỏ `xmin`), lỗi không có rule viết sẵn.
 - Thêm test còn thiếu: `GET /api/menu-items/{id}` id lạ → 404; 500 không lộ chi tiết exception.
-- Bốn PR #63–#66 đóng, không merge. Token `gh` không sửa/comment được issue (#62), nên danh sách PR nằm ở đây.
+- Bốn PR #63–#66 để mở (không merge) cho Ngày 4 chạy lại review, rồi đóng. Token `gh` không sửa/comment được issue (#62), nên danh sách PR nằm ở đây.
