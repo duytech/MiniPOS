@@ -79,9 +79,18 @@ adding or changing code in `src/`.
 - Never commit passwords or connection strings with credentials, including test defaults. Use user-secrets / environment
   variables; commit only `*.example` files. Read the test DB connection from configuration.
 
+## Verification
+Run what the change touches, in this order; CI runs all of it on every PR.
+- .NET (`src/`, `tests/Pos.*`): `docker compose up -d`, `dotnet build Pos.slnx`, then `dotnet test Pos.slnx` (unit,
+  architecture, integration and concurrency tests; integration needs the DB). Only the no-DB projects:
+  `dotnet test tests/Pos.Domain.Tests`, `tests/Pos.Application.Tests`, `tests/Pos.ArchitectureTests`.
+- Web (`web/`, in that folder): `npm run lint`, `npm run build`, `npx ng test --watch=false`.
+- E2E (a change the user sees in the browser): setup and run in `tests/e2e/README.md`: API on the `pos_e2e` database
+  (`tests/e2e/start-api.ps1`), `npm start` in `web/`, then in `tests/e2e` `npx tsc -p .` and `npx playwright test`.
+- The hooks run only build, analyzers, eslint, `ngc` and the no-DB tests: integration, Vitest and E2E are yours to run.
+
 ## Definition of done
-- `dotnet build` with 0 warnings, `dotnet test` green, `npm run build`, `npm run lint` and `npx ng test --watch=false` pass
-  if `web/` changed.
+- The checks in Verification pass for every side the change touches (`dotnet build` with 0 warnings).
 - New behavior has tests: money rules → exact-cent unit tests; order changes → concurrency test.
 - Summary lists any assumptions or open business questions instead of silently deciding them.
 
