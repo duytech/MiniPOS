@@ -32,9 +32,9 @@ public class OrderSplitTests
 
         var parts = order.Split([Part(l[0]), Part(l[1]), Part(l[2])]);
 
-        // 0.89 / 3 = 0.2966 → 0.29 each, leftover 0.02.
-        Assert.Equal([Money.Usd(0.31m), Money.Usd(0.29m), Money.Usd(0.29m)], parts.Select(p => p.Tax));
-        Assert.Equal([Money.Usd(3.64m), Money.Usd(3.62m), Money.Usd(3.62m)], parts.Select(p => p.Total));
+        // 0.89 / 3 = 0.2966 → 0.30 each, leftover -0.01.
+        Assert.Equal([Money.Usd(0.29m), Money.Usd(0.30m), Money.Usd(0.30m)], parts.Select(p => p.Tax));
+        Assert.Equal([Money.Usd(3.62m), Money.Usd(3.63m), Money.Usd(3.63m)], parts.Select(p => p.Total));
     }
 
     [Fact]

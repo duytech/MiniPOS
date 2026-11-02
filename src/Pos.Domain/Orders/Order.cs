@@ -431,8 +431,8 @@ public class Order
         new(decimal.Round(amount.Amount * rate.Value / 100m, 2, MidpointRounding.AwayFromZero), amount.Currency);
 
     /// <summary>
-    /// Shares <paramref name="amount"/> by each part's share of the subtotal, rounded down to the cent (amounts are never
-    /// negative, so ToZero is rounding down); the leftover cents go to the part with the largest subtotal.
+    /// Shares <paramref name="amount"/> by each part's share of the subtotal, rounded to the cent like every other money step;
+    /// the leftover cents go to the part with the largest subtotal.
     /// </summary>
     private static Money[] Allocate(Money amount, List<Money> partSubtotals, Money subtotal)
     {
@@ -440,7 +440,7 @@ public class Order
             .Select(partSubtotal => subtotal.Amount == 0m
                 ? Money.Zero(amount.Currency)
                 : new Money(
-                    decimal.Round(amount.Amount * partSubtotal.Amount / subtotal.Amount, 2, MidpointRounding.ToZero),
+                    decimal.Round(amount.Amount * partSubtotal.Amount / subtotal.Amount, 2, MidpointRounding.AwayFromZero),
                     amount.Currency))
             .ToArray();
 
