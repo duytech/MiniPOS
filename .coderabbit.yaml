@@ -1,0 +1,64 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit AI review on every PR (#58). CLAUDE.md is read by default; the rule docs are added below.
+language: en-US
+
+reviews:
+  profile: chill
+  high_level_summary: true
+  auto_review:
+    enabled: true
+    drafts: false
+
+  # Generated or not reviewable: EF Core migrations and snapshot, lock file, the Vietnamese learning journal.
+  path_filters:
+    - "!src/Pos.Infrastructure/Persistence/Migrations/**"
+    - "!web/package-lock.json"
+    - "!docs/journal.md"
+
+  path_instructions:
+    - path: "src/Pos.Domain/**"
+      instructions: |
+        Money rules (CLAUDE.md "Money", docs/business-rules.md "Pricing") matter most here:
+        - Amounts are `Money`; flag `double`, `float` or raw `decimal` in public signatures.
+        - Totals are calculated only in `Order.CalculateTotals`, in the order discount, surcharge, tax, tip; each pricing
+          step is rounded to cents with `MidpointRounding.AwayFromZero` before the next step uses it. Flag a total
+          calculated outside it, a pricing step with a missing or different `MidpointRounding`, or a changed base of a
+          step (tax base includes the surcharge, tip base does not).
+        - Split allocations (even split and split by item) are the exception: they round down to the cent on purpose
+          and give the leftover cents to the part the business rules name. Flag rounding them any other way.
+        - A business rule, limit or constant not in docs/business-rules.md must be pointed out as a question.
+    - path: "src/Pos.Application/**"
+      instructions: |
+        Each use case is its own folder with a Command/Query, Handler and FluentValidation validator
+        (docs/architecture.md). No services, no MediatR. Input checks belong in validators, invariants in Domain.
+        No totals calculated here: handlers map Domain results to DTOs.
+    - path: "src/Pos.Infrastructure/**"
+      instructions: |
+        Order uses Postgres `xmin` as the concurrency token. An expected DB error (unique, FK, deadlock, concurrency)
+        must map to 409, never a 500. No totals in SQL or LINQ projections. Repositories return Domain entities, not
+        Application DTOs. No connection strings or passwords in code or config files.
+    - path: "src/Pos.Api/**"
+      instructions: |
+        Errors are ProblemDetails: 400 validation, 404 not found, 409 conflict, 422 domain rule broken. Money in JSON
+        always has exactly 2 decimals. List endpoints are paged (`page`, `pageSize`, `totalCount`) and never cap
+        results silently.
+    - path: "tests/**"
+      instructions: |
+        Money tests assert exact cents and include a midpoint (x.xx5) case. Tests must not re-calculate a total
+        themselves. Every endpoint that changes an order needs a parallel-request test that checks the stored result
+        (only 200/409, stored state matches the 200s). No credentials in test code.
+    - path: "web/src/**"
+      instructions: |
+        The frontend only displays money with the `currency` pipe and 'USD'; flag any adding, multiplying or rounding
+        of amounts. When reloading, keep the previous data with a small loading indicator. No hosts or ports in
+        components or messages.
+
+knowledge_base:
+  code_guidelines:
+    enabled: true
+    # A guideline file covers only its own folder unless applyTo maps it to the code it governs.
+    filePatterns:
+      - files: "docs/business-rules.md"
+        applyTo: "src/**,tests/**,web/**"
+      - files: "docs/architecture.md"
+        applyTo: "src/**,tests/**"
