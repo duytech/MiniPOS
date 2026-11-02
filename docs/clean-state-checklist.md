@@ -5,6 +5,7 @@ touch that side of the repo (`src/`, `web/`). The commands are in the Verificati
 
 ## Build
 
+- [ ] `bash init.sh --full` ends with "All checks passed"
 - [ ] `dotnet build Pos.slnx` passes with 0 warnings (analyzers and S3776 included)
 - [ ] `npm run lint` passes in `web/`
 - [ ] `npm run build` passes in `web/`
