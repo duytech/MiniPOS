@@ -6,12 +6,15 @@ using Pos.Domain.Common;
 
 namespace Pos.Api.Errors;
 
-/// <summary>Maps expected exceptions to ProblemDetails. Anything not listed here is a bug and stays a 500.</summary>
+/// <summary>
+/// Maps exceptions to ProblemDetails. Anything not listed here is a bug: it returns a 500 with the exception details so the
+/// failure can be diagnosed from the response.
+/// </summary>
 internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetails) : IExceptionHandler
 {
     public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
     {
-        ProblemDetails? problem = exception switch
+        var problem = exception switch
         {
             ValidationException ex => new ValidationProblemDetails(ex.Errors
                 .GroupBy(e => e.PropertyName)
@@ -23,13 +26,8 @@ internal sealed class ApiExceptionHandler(IProblemDetailsService problemDetails)
             NotFoundException ex => Problem(StatusCodes.Status404NotFound, "Not found", ex.Message),
             ConflictException ex => Problem(StatusCodes.Status409Conflict, "Conflict", ex.Message),
             DomainException ex => Problem(StatusCodes.Status422UnprocessableEntity, "Business rule violated", ex.Message),
-            _ => null,
+            _ => Problem(StatusCodes.Status500InternalServerError, "Unexpected error", exception.ToString()),
         };
-
-        if (problem is null)
-        {
-            return false;
-        }
 
         httpContext.Response.StatusCode = problem.Status!.Value;
         return await problemDetails.TryWriteAsync(new ProblemDetailsContext
