@@ -6,8 +6,7 @@ public sealed class GetMenuItemHandler(IMenuItemRepository menuItems) : IQueryHa
 {
     public async Task<MenuItemDto> HandleAsync(GetMenuItemQuery query, CancellationToken cancellationToken)
     {
-        var menuItem = await menuItems.GetByIdAsync(query.Id, cancellationToken)
-            ?? throw new NotFoundException("Menu item", query.Id);
-        return MenuItemDto.From(menuItem);
+        var menuItem = await menuItems.GetByIdAsync(query.Id, cancellationToken);
+        return MenuItemDto.From(menuItem!);
     }
 }
