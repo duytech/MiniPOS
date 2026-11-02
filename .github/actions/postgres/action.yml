@@ -18,11 +18,13 @@ runs:
         echo "::add-mask::$password"
         docker run -d --name db -e POSTGRES_USER=pos -e POSTGRES_DB=pos -e POSTGRES_PASSWORD="$password" \
           -p 5432:5432 postgres:17 > /dev/null
+        # Check over TCP (-h localhost): the image first runs a temporary init server on the unix socket only, and it
+        # shuts down right after answering, so a socket check can pass just before the real server starts.
         for _ in $(seq 1 30); do
-          if docker exec db pg_isready -U pos -d pos > /dev/null 2>&1; then break; fi
+          if docker exec db pg_isready -h localhost -U pos -d pos > /dev/null 2>&1; then break; fi
           sleep 1
         done
-        docker exec db pg_isready -U pos -d pos
+        docker exec db pg_isready -h localhost -U pos -d pos
         if [ "$DATABASE" != "pos" ]; then
           docker exec db createdb -U pos "$DATABASE"
         fi
