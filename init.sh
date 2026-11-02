@@ -51,7 +51,8 @@ fi
 echo ""
 
 echo "[3/7] Verifying harness files..."
-for file in CLAUDE.md docs/feature-list.md docs/architecture.md docs/clean-state-checklist.md \
+for file in CLAUDE.md docs/feature-list.json docs/business-rules.md docs/architecture.md docs/clean-state-checklist.md \
+  scripts/verify-features.mjs .claude/hooks/protect-feature-state.mjs \
   .claude/settings.json .claude/hooks/verify-on-edit.mjs .claude/hooks/check-utf8.mjs \
   .claude/hooks/block-main-branch.mjs .claude/hooks/block-claude-coauthor.mjs \
   .github/workflows/ci.yml tests/e2e/README.md; do

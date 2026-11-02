@@ -59,5 +59,6 @@ touch that side of the repo (`src/`, `web/`). The commands are in the Verificati
 - [ ] Text files are UTF-8
 - [ ] Branch name and every commit message start with the task id; no `Co-Authored-By: Claude`
 - [ ] Nothing committed or pushed to `main`
-- [ ] `docs/feature-list.md` updated if a feature was added or changed
+- [ ] `docs/feature-list.json` has an entry for each feature added or changed, and `node scripts/verify-features.mjs <id>`
+  ran for it (state `passing`); `docs/business-rules.md` updated if a rule was added or changed
 - [ ] `docs/DECISIONS.md` updated if an important design decision was made

@@ -1,0 +1,687 @@
+{
+  "states": [
+    "not_started",
+    "active",
+    "blocked",
+    "passing"
+  ],
+  "prepare": [
+    {
+      "run": "dotnet build Pos.slnx",
+      "for": "dotnet test"
+    }
+  ],
+  "features": [
+    {
+      "id": "F01",
+      "area": "api",
+      "behavior": "POST /api/menu-items: create a menu item (name, price). Returns 201.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": null,
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F02",
+      "area": "api",
+      "behavior": "GET /api/menu-items/{id}: get one menu item.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": null,
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F03",
+      "area": "api",
+      "behavior": "POST /api/orders: create an empty open order. The database assigns the sequential number.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrderConcurrencyTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#order-status",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrderConcurrencyTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F04",
+      "area": "api",
+      "behavior": "GET /api/orders: paged list (page, pageSize, totalCount), search by item name or order number (#12), filter by status.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ListOrdersHandlerTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersListApiTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": null,
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ListOrdersHandlerTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersListApiTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F05",
+      "area": "api",
+      "behavior": "GET /api/orders/{id}: one order with lines and totals.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrderPricingPersistenceTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrderPricingPersistenceTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F06",
+      "area": "api",
+      "behavior": "POST /api/orders/{id}/items: add a menu item (quantity, optional notes).",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.AddOrderItemHandlerTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentAddItemTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrderConcurrencyTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#lines",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\"",
+          "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.AddOrderItemHandlerTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentAddItemTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrderConcurrencyTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F07",
+      "area": "api",
+      "behavior": "PUT /api/orders/{id}/lines/{lineId}/quantity: set a line's quantity (at least 1).",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.|FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.ChangeOrderLineQuantityApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#lines",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.|FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.ChangeOrderLineQuantityApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F08",
+      "area": "api",
+      "behavior": "DELETE /api/orders/{id}/lines/{lineId}: remove a line.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.|FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.RemoveOrderLineApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#lines",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.|FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.RemoveOrderLineApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F09",
+      "area": "api",
+      "behavior": "PUT /api/orders/{id}/discount: apply a discount: exactly one of rate (percent of subtotal) or amount (fixed).",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
+          "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F10",
+      "area": "api",
+      "behavior": "DELETE /api/orders/{id}/discount: remove the discount.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F11",
+      "area": "api",
+      "behavior": "PUT /api/orders/{id}/tip: set the tip rate (percent).",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
+          "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F12",
+      "area": "api",
+      "behavior": "DELETE /api/orders/{id}/tip: remove the tip.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F13",
+      "area": "api",
+      "behavior": "PUT /api/orders/{id}/payment-method: set the payment method: Cash (default) or Card.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSurchargeTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSurchargeTests.\"",
+          "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F14",
+      "area": "api",
+      "behavior": "POST /api/orders/{id}/pay: close the order as paid, for the whole order, with the stored payment method.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.CloseOrderApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#order-status",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.CloseOrderApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F15",
+      "area": "api",
+      "behavior": "POST /api/orders/{id}/cancel: close the order as cancelled.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.CloseOrderApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#order-status",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.CloseOrderApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F16",
+      "area": "api",
+      "behavior": "GET /api/orders/{id}/split-even?parts=N: even split between N people (nothing is stored).",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitEvenTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitEvenApiTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#split-bill",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitEvenTests.\"",
+          "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitEvenApiTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F17",
+      "area": "api",
+      "behavior": "POST /api/orders/{id}/split/preview: price a split by item without saving it.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#split-bill",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F18",
+      "area": "api",
+      "behavior": "PUT /api/orders/{id}/split: save a split by item, replacing any saved one.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentSplitTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#split-bill",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentSplitTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F19",
+      "area": "api",
+      "behavior": "GET /api/orders/{id}/split: the saved split, priced with the current order; 404 when there is none.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#split-bill",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F20",
+      "area": "api",
+      "behavior": "DELETE /api/orders/{id}/split: remove the saved split.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentSplitTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#split-bill",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentSplitTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F21",
+      "area": "domain",
+      "behavior": "Order pricing (Order.CalculateTotals): line total, subtotal, then discount, surcharge, tax and tip, each rounded to cents away from zero before the next step.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSurchargeTests.|FullyQualifiedName~Pos.Domain.Tests.MoneyTests.|FullyQualifiedName~Pos.Domain.Tests.PercentageTests.\""
+        }
+      ],
+      "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
+      "state": "passing",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSurchargeTests.|FullyQualifiedName~Pos.Domain.Tests.MoneyTests.|FullyQualifiedName~Pos.Domain.Tests.PercentageTests.\""
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F22",
+      "area": "web",
+      "behavior": "/orders: table with order number (link to detail), created time, item names, status and total; search, status filter, previous/next paging with \"Showing x-y of n\"; while reloading the previous rows stay visible with an \"Updating...\" indicator.",
+      "verification": [
+        {
+          "run": "npx ng test --watch=false --include src/app/orders/orders-list/orders-list.spec.ts --include src/app/orders/orders-api.spec.ts",
+          "cwd": "web"
+        },
+        {
+          "run": "npx playwright test specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts",
+          "cwd": "tests/e2e",
+          "requires": [
+            "e2e"
+          ]
+        }
+      ],
+      "rules": null,
+      "state": "blocked",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "npx ng test --watch=false --include src/app/orders/orders-list/orders-list.spec.ts --include src/app/orders/orders-api.spec.ts"
+        ],
+        "skipped": [
+          {
+            "run": "npx playwright test specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts",
+            "reason": "not running: web app (http://localhost:4200), API (http://localhost:5191); see tests/e2e/README.md"
+          }
+        ]
+      }
+    },
+    {
+      "id": "F23",
+      "area": "web",
+      "behavior": "/orders/:id: order number, status badge, lines (name, notes, unit price, quantity, line total); an open order can decrease/increase a quantity and remove a line; totals: subtotal, discount, surcharge, tax, tip, total.",
+      "verification": [
+        {
+          "run": "npx ng test --watch=false --include src/app/orders/order-detail/order-detail.spec.ts",
+          "cwd": "web"
+        },
+        {
+          "run": "npx playwright test specs/smoke.spec.ts specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts",
+          "cwd": "tests/e2e",
+          "requires": [
+            "e2e"
+          ]
+        }
+      ],
+      "rules": null,
+      "state": "blocked",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "npx ng test --watch=false --include src/app/orders/order-detail/order-detail.spec.ts"
+        ],
+        "skipped": [
+          {
+            "run": "npx playwright test specs/smoke.spec.ts specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts",
+            "reason": "not running: web app (http://localhost:4200), API (http://localhost:5191); see tests/e2e/README.md"
+          }
+        ]
+      }
+    },
+    {
+      "id": "F24",
+      "area": "web",
+      "behavior": "/orders/:id split bill section: choose the number of parts, assign each line to a part, live preview of each part's amounts, save or remove the split; paid or cancelled orders show a saved split read-only; needs at least 2 lines.",
+      "verification": [
+        {
+          "run": "npx ng test --watch=false --include src/app/orders/order-split/order-split.spec.ts",
+          "cwd": "web"
+        },
+        {
+          "run": "npx playwright test specs/split-bill.spec.ts",
+          "cwd": "tests/e2e",
+          "requires": [
+            "e2e"
+          ]
+        }
+      ],
+      "rules": "business-rules.md#split-bill",
+      "state": "blocked",
+      "testedAt": "2026-11-02T09:55:41Z",
+      "evidence": {
+        "commit": "429481b",
+        "passed": [
+          "npx ng test --watch=false --include src/app/orders/order-split/order-split.spec.ts"
+        ],
+        "skipped": [
+          {
+            "run": "npx playwright test specs/split-bill.spec.ts",
+            "reason": "not running: web app (http://localhost:4200), API (http://localhost:5191); see tests/e2e/README.md"
+          }
+        ]
+      }
+    }
+  ]
+}

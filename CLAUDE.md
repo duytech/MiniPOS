@@ -4,8 +4,13 @@
 discounts, surcharge/dual pricing, split bill. **Some existing code predates these rules: follow this file, not the
 surrounding code.**
 
-Existing features (API routes, business rules already decided, web pages): `docs/feature-list.md`. Read it before
-adding a feature; update it when you add or change one.
+Existing features (API routes, web pages) with how each is verified: `docs/feature-list.json`. Business rules already
+decided: `docs/business-rules.md`. Read both before adding a feature; add or update the feature's entry when you add or
+change one, with `verification` steps that run its tests.
+- `state`, `testedAt` and `evidence` are set only by `node scripts/verify-features.mjs [id ...]` (it runs the steps;
+  a hook blocks hand edits). A new entry starts `not_started`, with `testedAt` and `evidence` `null`.
+- Work on one feature at a time: at most one feature is `active` (a failed verification) while you work.
+- A feature is done when the verifier sets it to `passing`.
 
 Architecture rules (use-case folders, validators vs domain, repositories): `docs/architecture.md`. Read it before
 adding or changing code in `src/`.
