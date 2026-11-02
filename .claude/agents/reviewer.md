@@ -14,7 +14,7 @@ Run only read-only git commands: `git diff`, `git log`, `git show`, `git status`
 
 ## Read first
 
-1. `CLAUDE.md` at the repo root.
+1. `CLAUDE.md` at the repo root and `docs/architecture.md`.
 2. The plan and business rules, if the caller gives them (a `plans/*.md` file or text in the prompt). Without them,
    the rules are only what `CLAUDE.md` and the task text state.
 3. The diff: the commit range the caller names, else `git diff main...HEAD` plus the uncommitted `git diff HEAD`.

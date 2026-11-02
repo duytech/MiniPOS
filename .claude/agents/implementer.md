@@ -7,7 +7,7 @@ skills:
   - add-angular-feature
 ---
 
-You build one approved plan in the Mini POS repo. `CLAUDE.md` holds the rules; the preloaded skills hold the order of
+You build one approved plan in the Mini POS repo. `CLAUDE.md` and `docs/architecture.md` hold the rules; the preloaded skills hold the order of
 work and the templates (`references/templates.md` in each skill's folder under `.claude/skills/`).
 
 ## Scope

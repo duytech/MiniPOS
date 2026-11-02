@@ -7,6 +7,9 @@ surrounding code.**
 Existing features (API routes, business rules already decided, web pages): `docs/feature-list.md`. Read it before
 adding a feature; update it when you add or change one.
 
+Architecture rules (use-case folders, validators vs domain, repositories): `docs/architecture.md`. Read it before
+adding or changing code in `src/`.
+
 ## Commands
 - DB: `docker compose up -d` (Postgres on **localhost:5433**; 5432 is taken by another install on this machine)
 - Build: `dotnet build Pos.slnx` · Test: `dotnet test Pos.slnx` (integration tests need the DB running). Warnings are
@@ -32,16 +35,6 @@ adding a feature; update it when you add or change one.
   (`.claude/hooks/block-main-branch.mjs`) blocks `git commit` on main and any `git push` that updates main.
 - CI (`.github/workflows/ci.yml`) runs the same checks plus integration and Playwright E2E on every PR; its jobs
   `dotnet`, `web`, `e2e` are required checks of `main`. A red check is fixed in the branch, never bypassed.
-
-## Architecture
-- One use case = one folder in Application with `XxxCommand`/`XxxQuery` (record), `XxxHandler`
-  (`ICommandHandler<TCommand, TResult>` / `IQueryHandler<TQuery, TResult>`), and `XxxValidator` (FluentValidation).
-  No service classes, no MediatR.
-- Validators check request shape (required, ranges, formats). Domain entities enforce invariants (status transitions,
-  totals). Don't duplicate one in the other.
-- Repositories return domain entities. Read models for lists live in Application (query + projection); Infrastructure
-  never returns Application DTOs from a repository.
-- Delete template leftovers (e.g. `WeatherForecast`) when you touch that project.
 
 ## Money (the rules that matter most)
 - All amounts are `Money` (Domain value object: `decimal Amount` + `Currency`, USD only for now). Never `double`/`float`,
@@ -91,3 +84,9 @@ adding a feature; update it when you add or change one.
   if `web/` changed.
 - New behavior has tests: money rules → exact-cent unit tests; order changes → concurrency test.
 - Summary lists any assumptions or open business questions instead of silently deciding them.
+
+## Git commit
+- Git commits as checkpoints. Commit after completing each atomic unit of work. Commit messages should explain what was done and why, Must start with a task id like: 13245 | Do something
+
+## Decision log
+- File docs/DECISIONS.md. Record important design decisions and reasons. No need for detailed design documents — just "what decision, why, when"
