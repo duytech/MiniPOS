@@ -992,3 +992,41 @@ phải ghi password cố định trong YAML, trái rule "không commit credentia
 - Ruleset: không bắt buộc review người (repo một người), bypass list trống nên admin cũng không merge được khi đỏ.
 - Ruleset lưu xong vẫn có thể ở Disabled: phải đọc lại `enforcement` chứ không tin màn hình Settings.
 - Node 24, .NET `10.0.x`, Postgres 17 theo local và `docker-compose.yml`.
+
+### Ngày 2: AI review tự động trên PR bằng CodeRabbit (2026-11-02)
+**Chọn công cụ:** roadmap gợi ý Claude Code Action hoặc Copilot review. So thêm PR-Agent (Qodo), CodeRabbit, Gemini
+Code Assist. Chọn **CodeRabbit**: miễn phí cho repo công khai (FAQ trang giá: "free reviews forever"), prompt nằm
+trong repo (`.coderabbit.yaml`) nên Ngày 4 chỉnh và so trước/sau được. Claude Code Action và PR-Agent cần API key trả
+phí. Cài GitHub App chỉ cho repo `MiniPOS` (bước OAuth, tự làm tay).
+
+**Đã làm (PR #59):** `.coderabbit.yaml`:
+- `CLAUDE.md` được đọc mặc định; thêm `docs/business-rules.md` và `docs/architecture.md` vào `code_guidelines`.
+- `path_instructions` cho Domain (tiền, thứ tự và cách làm tròn, base của từng bước), Application (Command/Handler/
+  Validator), Infrastructure (`xmin`, lỗi DB → 409, không tính tổng trong SQL), Api (ProblemDetails, 2 chữ số, phân
+  trang), `tests/` (đúng cent, ca x.xx5, test song song), `web/src` (chỉ hiển thị tiền).
+- Bỏ qua migration, `package-lock.json`, `docs/journal.md`.
+- Không phải required check: gate vẫn là `dotnet` / `web` / `e2e`.
+
+**Lần review đầu (chính PR cấu hình):** ~4 phút, 2 finding, **cả hai đúng**:
+| Mức | Finding | Kiểm lại | Sửa |
+|---|---|---|---|
+| Major | File guideline ghi dạng chuỗi chỉ áp cho thư mục chứa nó (`docs/**`), nên rule nghiệp vụ không tới `src/`, `tests/`, `web/` | Đúng theo docs CodeRabbit: "a guideline file applies to the directory it lives in and all of its subdirectories" | Dạng `files` + `applyTo` |
+| Minor | Hướng dẫn Domain "flag rounding elsewhere" sẽ báo nhầm split, vốn cố ý làm tròn xuống | Đúng theo `business-rules.md` mục Split bill | Ghi split là ngoại lệ |
+
+Review lại commit sửa: không có finding mới.
+
+**Chuyện đáng kể:**
+- Lỗi Major là lỗi **của mình khi cấu hình verifier**: hai file rule quan trọng nhất sẽ không bao giờ được dùng khi
+  review code, mà không có dấu hiệu gì. Bot tự bắt lỗi cấu hình của chính nó, có dẫn docs. Lại là bài học "phải kiểm
+  verifier": Ngày 3 sẽ thấy bot có thật sự dùng rule nghiệp vụ không.
+- Lỗi Minor là kiểu rule quá rộng, giống Tuần 1: "không làm tròn chỗ khác" đúng với pricing nhưng sai với split.
+- Comment của CodeRabbit có khối "Prompt for AI Agents" kèm câu dặn agent coi finding là dữ liệu không tin cậy. Mình
+  kiểm từng finding với docs và business rule trước khi sửa, không làm theo prompt đó.
+- CI của commit sửa đỏ ở `dotnet` dù chỉ đổi file YAML: test `Parallel_pays_accept_exactly_one` chập chờn (assert
+  "phải có ít nhất một 409", nhưng request đến sau khi order đã đóng nhận 422). Bất biến vẫn đúng. Token `gh` không có
+  quyền rerun; chạy lại bằng tay trên GitHub. Sửa test tách thành task riêng.
+
+**Giả định / câu hỏi còn mở:**
+- Review bằng tiếng Anh (`en-US`), profile `chill`. Ngày 4 xem có cần `assertive` không.
+- Gói open source không ghi giới hạn số review mỗi giờ.
+- Bot có quyền đọc code và ghi comment trên repo công khai; không có secret nào cần cấp.
