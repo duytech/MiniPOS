@@ -51,6 +51,20 @@ public class OrderSplitEvenTests
     }
 
     [Fact]
+    public void A_share_on_the_half_cent_rounds_down_and_no_part_goes_negative()
+    {
+        var order = OrderWithLines(NycTax, 0.24m); // tax 8.875% of 0.24 = 0.0213 → 0.02
+
+        var parts = order.SplitEvenly(4);
+
+        // 0.02 / 4 = 0.005 → 0.00 each, leftover 0.02 to the first part. Rounding half up would give 0.01 each and
+        // leave the first part −0.01.
+        Assert.Equal(Usd(0.02m, 0.00m, 0.00m, 0.00m), parts.Select(p => p.Tax));
+        Assert.Equal(Usd(0.08m, 0.06m, 0.06m, 0.06m), parts.Select(p => p.Total));
+        AssertNoNegativeAmounts(parts);
+    }
+
+    [Fact]
     public void One_part_is_the_whole_order()
     {
         var order = OrderWithLines(NycTax, 3.33m, 3.33m, 3.33m);
@@ -118,7 +132,13 @@ public class OrderSplitEvenTests
             AssertLeftover(parts[0].Tax, p.Tax, partCount);
             AssertLeftover(parts[0].Tip, p.Tip, partCount);
         });
+        AssertNoNegativeAmounts(parts);
     }
+
+    private static void AssertNoNegativeAmounts(IEnumerable<SplitPart> parts) =>
+        Assert.All(parts, p => Assert.All(
+            [p.Subtotal, p.Discount, p.Surcharge, p.Tax, p.Tip, p.Total],
+            amount => Assert.True(amount.Amount >= 0m, $"Negative part amount {amount.Amount}.")));
 
     private static void AssertLeftover(Money first, Money other, int partCount) =>
         Assert.InRange((first - other).Amount, 0m, (partCount - 1) * 0.01m);

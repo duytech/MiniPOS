@@ -50,6 +50,33 @@ public class OrderSplitTests
     }
 
     [Fact]
+    public void A_share_on_the_half_cent_rounds_down_and_no_part_goes_negative()
+    {
+        var (order, l) = OrderWithLines(NycTax, 0.06m, 0.06m, 0.06m, 0.06m); // tax 8.875% of 0.24 = 0.0213 → 0.02
+
+        var parts = order.Split([Part(l[0]), Part(l[1]), Part(l[2]), Part(l[3])]);
+
+        // 0.02 / 4 = 0.005 → 0.00 each, leftover 0.02 to the first part (tie). Rounding half up would give 0.01 each
+        // and a leftover of −0.01: taxes [−0.01, 0.01, 0.01, 0.01].
+        Assert.Equal([Money.Usd(0.02m), Money.Usd(0.00m), Money.Usd(0.00m), Money.Usd(0.00m)], parts.Select(p => p.Tax));
+        Assert.Equal([Money.Usd(0.08m), Money.Usd(0.06m), Money.Usd(0.06m), Money.Usd(0.06m)], parts.Select(p => p.Total));
+        AssertNoNegativeAmounts(parts);
+    }
+
+    [Fact]
+    public void A_half_cent_share_of_a_rounded_up_tax_also_rounds_down()
+    {
+        var (order, l) = OrderWithLines(NycTax, 0.05m, 0.05m, 0.05m, 0.05m); // tax 8.875% of 0.20 = 0.01775 → 0.02
+
+        var parts = order.Split([Part(l[0]), Part(l[1]), Part(l[2]), Part(l[3])]);
+
+        // 0.02 / 4 = 0.005 → 0.00 each, leftover 0.02 to the first part; half up would leave the first part −0.01.
+        Assert.Equal([Money.Usd(0.02m), Money.Usd(0.00m), Money.Usd(0.00m), Money.Usd(0.00m)], parts.Select(p => p.Tax));
+        Assert.Equal([Money.Usd(0.07m), Money.Usd(0.05m), Money.Usd(0.05m), Money.Usd(0.05m)], parts.Select(p => p.Total));
+        AssertNoNegativeAmounts(parts);
+    }
+
+    [Fact]
     public void Discount_surcharge_tax_and_tip_are_each_shared_separately()
     {
         var (order, l) = OrderWithLines(NycTax, 3.33m, 3.33m, 3.33m);
@@ -118,7 +145,13 @@ public class OrderSplitTests
         Assert.Equal(totals.Tax, Sum(p => p.Tax));
         Assert.Equal(totals.Tip, Sum(p => p.Tip));
         Assert.Equal(totals.Total, Sum(p => p.Total));
+        AssertNoNegativeAmounts(parts);
     }
+
+    private static void AssertNoNegativeAmounts(IEnumerable<SplitPart> parts) =>
+        Assert.All(parts, p => Assert.All(
+            [p.Subtotal, p.Discount, p.Surcharge, p.Tax, p.Tip, p.Total],
+            amount => Assert.True(amount.Amount >= 0m, $"Negative part amount {amount.Amount}.")));
 
     [Fact]
     public void One_part_is_rejected()
