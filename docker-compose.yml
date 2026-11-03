@@ -14,5 +14,30 @@ services:
       interval: 5s
       retries: 10
 
+  # The whole app on Docker Desktop: docker compose --profile app up -d -> http://localhost:8080
+  # Without --profile app only db starts (the dev flow). Images come from GHCR (pull) or from source (--build).
+  api:
+    profiles: ["app"]
+    image: ghcr.io/duytech/minipos-api:${POS_TAG:-latest}
+    build:
+      context: .
+      dockerfile: src/Pos.Api/Dockerfile
+    environment:
+      ConnectionStrings__Pos: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable
+      Database__MigrateOnStartup: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    profiles: ["app"]
+    image: ghcr.io/duytech/minipos-web:${POS_TAG:-latest}
+    build:
+      context: web
+    ports:
+      - "8080:8080"
+    depends_on:
+      - api
+
 volumes:
   pgdata:
