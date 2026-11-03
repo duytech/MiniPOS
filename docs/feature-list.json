@@ -45,7 +45,10 @@
       "behavior": "GET /api/menu-items/{id}: get one menu item.",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\"",
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.GetMenuItemHandlerTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.MenuItemsApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\"",
           "requires": [
             "db"
           ]
