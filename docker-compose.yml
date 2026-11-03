@@ -14,5 +14,40 @@ services:
       interval: 5s
       retries: 10
 
+  # The whole app on Docker Desktop: docker compose --profile app up -d -> http://localhost:8080
+  # Without --profile app only db starts (the dev flow). Images come from GHCR (pull) or from source (--build).
+  api:
+    profiles: ["app"]
+    image: ghcr.io/duytech/minipos-api:${POS_TAG:-latest}
+    build:
+      context: .
+      dockerfile: src/Pos.Api/Dockerfile
+    environment:
+      ConnectionStrings__Pos: Host=db;Port=5432;Database=${POSTGRES_DB};Username=${POSTGRES_USER};Password=${POSTGRES_PASSWORD};Gss Encryption Mode=Disable
+      Database__MigrateOnStartup: "true"
+    depends_on:
+      db:
+        condition: service_healthy
+    # Kestrel opens 8080 only after the startup migration (Program.cs), so an open port means ready. The aspnet image
+    # has no curl or wget; bash's /dev/tcp is enough.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 5s
+      retries: 20
+      # Failed checks during a long first migration do not count; check every 2s meanwhile so web starts promptly.
+      start_period: 120s
+      start_interval: 2s
+
+  web:
+    profiles: ["app"]
+    image: ghcr.io/duytech/minipos-web:${POS_TAG:-latest}
+    build:
+      context: web
+    ports:
+      - "8080:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+
 volumes:
   pgdata:

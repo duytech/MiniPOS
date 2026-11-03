@@ -2,6 +2,17 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-03: The app ships as two images on GHCR; Docker Desktop runs them with a compose profile (#77)
+- **What:** `src/Pos.Api/Dockerfile` and `web/Dockerfile` (nginx serves the Angular build and proxies `/api` to the
+  API). `api` and `web` are in the `app` profile of `docker-compose.yml`. `.github/workflows/cd.yml` builds both on
+  every PR and, after CI passes on `main` (`workflow_run`), pushes them to GHCR as `latest` and `sha-<short>`.
+- **Why:** roadmap Week 4, CD exercise. GHCR is free with `GITHUB_TOKEN` and needs no runner on this machine; only a
+  commit whose quality gate passed gets an image.
+- **Profile, not a second compose file:** plain `docker compose up -d` (CLAUDE.md, `init.sh`,
+  `scripts/services.mjs`) still starts only `db`.
+- **Migrations:** `Database:MigrateOnStartup` (default false) makes a non-Development host migrate on startup. The
+  container sets it and runs as Production, so OpenAPI and developer error pages stay off.
+
 ## 2026-11-03: A spec, not a lint rule, catches money arithmetic in the frontend (#70)
 - **What:** a page that shows money has a Vitest spec that collects every `$x.xx` on screen and checks each one is a
   value the API sent, with amounts picked so that no sum or difference of two is another. First one:

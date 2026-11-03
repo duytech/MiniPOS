@@ -1,0 +1,14 @@
+# Keep the build context small and free of secrets and local build output.
+**/bin/
+**/obj/
+**/node_modules/
+**/.angular/
+web/dist/
+tests/
+.git/
+.github/
+.claude/
+.vs/
+.playwright-mcp/
+.env
+**/*.user

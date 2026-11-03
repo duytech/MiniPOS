@@ -1138,3 +1138,46 @@ cùng đầu vào như CodeRabbit (diff + tiêu đề và mô tả PR trung tín
   issue #70.
 - Bài khó hơn chưa làm: PR lớn trộn lỗi với thay đổi đúng, bỏ `xmin`, lỗi không có rule viết sẵn.
 - #63–#66 đã đóng, không merge (theo #62).
+
+### Ngày 5: CD, chạy cả app trên Docker Desktop, image từ GHCR (2026-11-03)
+**Đã làm (issue #77):** bài mới chèn vào Tuần 4, trước ngày viết README.
+- `src/Pos.Api/Dockerfile`: multi-stage build từ gốc repo, để image build cùng analyzers và warnings-as-errors như
+  CI. Chạy bằng user `app` (non-root), port 8080.
+- `web/Dockerfile` + `web/nginx.conf`: Angular production build, phục vụ bằng `nginx-unprivileged`. nginx proxy
+  `/api/` sang `api:8080` và trả `index.html` cho route của Angular. Code Angular vẫn gọi `/api` tương đối, không
+  có host nào trong code.
+- `docker-compose.yml`: `api` và `web` nằm trong profile `app`. `docker compose up -d` vẫn chỉ chạy `db`, nên luồng
+  dev, `init.sh` và verifier không đổi. `docker compose --profile app up -d` chạy cả app ở http://localhost:8080.
+- `Program.cs`: cờ `Database:MigrateOnStartup`. Container chạy Production nhưng vẫn tự migrate DB; OpenAPI vẫn chỉ
+  bật ở Development.
+- `.github/workflows/cd.yml`: PR chỉ build hai image (không push). Khi CI xanh trên `main` (`workflow_run`), push lên
+  GHCR với tag `latest` và `sha-<7 ký tự>` của đúng commit CI đã test.
+
+**Kiểm tra trên Docker Desktop:** `/` và deep link `/orders/<id>` trả 200; `GET /api/orders` trả JSON tiền 2 số lẻ;
+log API có migrations. Tạo order + món 12.50 × 2 qua nginx: subtotal $25.00, tax $2.22 (8.875%), total $27.22, trang
+chi tiết hiện đúng.
+
+**Chuyện đáng kể:**
+- **Location header mất port.** `POST /api/orders` trả `Location: http://localhost/api/orders/...` (thiếu `:8080`).
+  `proxy_set_header Host $host` bỏ port; đổi sang `$http_host`. Test integration không bắt được, vì chạy API trực
+  tiếp; chỉ thấy khi chạy sau proxy.
+- **`libgssapi_krb5.so.2` not found.** Npgsql thử GSS encryption khi kết nối, image `aspnet` không có thư viện
+  Kerberos, nên log lỗi mỗi lần mở kết nối. Thêm `Gss Encryption Mode=Disable` vào connection string của container.
+- Hai lỗi 404 trong console ở trang chi tiết là `GET .../split` khi order chưa lưu split, giống bản dev.
+
+**CodeRabbit review PR #78:** 3 finding, cả 3 đúng, đã sửa.
+- Major: CI của commit cũ trên `main` xong muộn (hoặc chạy lại) sẽ đẩy `latest` đè lên image mới hơn. Sửa: luôn đẩy
+  `sha-…`, chỉ gắn `latest` khi commit đó vẫn là head của `main`.
+- Major: `proxy_pass http://api:8080` chỉ resolve tên `api` một lần khi nginx khởi động; tạo lại container `api` thì
+  IP đổi, `/api` trả 502 tới khi restart `web`. Sửa: `resolver 127.0.0.11` + upstream qua biến. Đã thử
+  `--force-recreate api`: `/api` vẫn 200.
+- Nitpick: cờ `Database:MigrateOnStartup` chưa có test. Thêm `StartupMigrationTests`: chạy app ở Production trên DB
+  chưa tồn tại; bật cờ thì mọi migration được áp, tắt cờ thì DB không được tạo.
+- Hai lỗi đầu không test nào ở local bắt được: một chỉ xảy ra khi hai lần CI chạy chồng nhau, một chỉ khi container
+  bị tạo lại. Reviewer có ích nhất ở loại lỗi vận hành này.
+
+**Giả định / câu hỏi còn mở:**
+- Container dùng chung volume `pgdata` (DB `pos`) với dev. Dữ liệu thử ở trên lẫn với dữ liệu dev.
+- Package GHCR mới có thể là private. Nếu `docker compose pull` báo `denied`, đổi package sang public hoặc
+  `docker login ghcr.io` bằng PAT có `read:packages`.
+- Chưa có E2E chạy trên stack Docker; E2E vẫn chạy trên `dotnet run` + `npm start`.
