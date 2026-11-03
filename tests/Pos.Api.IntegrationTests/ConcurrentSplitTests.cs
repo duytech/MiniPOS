@@ -27,7 +27,8 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
             [[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]], [[0], [1], [2], [3]],
         ];
 
-        var results = await ConcurrentlyAsync(groupings.Select(grouping => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+        var results = await OrderRace.RunAsync(factory.ConnectionString, orderId, groupings.Select(grouping =>
+            (Func<Task<(HttpStatusCode, string)>>)(async () =>
         {
             var parts = grouping.Select(part => part.Select(i => l[i])).ToArray();
             using var response = await _client.SaveSplitAsync(orderId, ApiClient.SplitBody(parts));
@@ -35,14 +36,15 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
         })));
 
         var accepted = AssertOnly(results, HttpStatusCode.OK, HttpStatusCode.Conflict);
-        Assert.Contains(results, r => r.Item1 == HttpStatusCode.Conflict); // the requests really raced
+        Assert.Single(accepted);
         Assert.Contains(await StoredSplitAsync(orderId), accepted);
     }
 
     /// <summary>
-    /// Every PUT names the first four lines only. A PUT that loads the order after an add committed misses the new line
-    /// (422); one that loses the race on the token is 409. Whatever wins, no add is lost and a stored split covers
-    /// exactly the stored lines.
+    /// Every PUT names the first four lines only. All requests load the order before any commits
+    /// (<see cref="OrderRace"/>), so a PUT whose split an add would make stale must lose on the token (409). Whatever
+    /// wins, no add is lost and a stored split covers exactly the stored lines. A PUT that loads the order after an add
+    /// committed (422, a line left out) is covered by the split contract tests.
     /// </summary>
     [Fact]
     public async Task Puts_racing_add_items_lose_no_line_and_never_store_a_stale_split()
@@ -69,10 +71,9 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
                 return (response.StatusCode, "put");
             },
         });
-        var results = await ConcurrentlyAsync(requests);
+        var results = await OrderRace.RunAsync(factory.ConnectionString, orderId, requests);
 
-        AssertOnly(results, HttpStatusCode.OK, HttpStatusCode.Conflict, HttpStatusCode.UnprocessableEntity);
-        Assert.Contains(results, r => r.Item1 == HttpStatusCode.Conflict);
+        Assert.Single(AssertOnly(results, HttpStatusCode.OK, HttpStatusCode.Conflict));
         var acceptedAdds = results.Count(r => r is (HttpStatusCode.OK, "add"));
         Assert.Equal(4 + acceptedAdds, await StoredAsync<int>(
             orderId, "(SELECT COUNT(*)::int FROM order_lines WHERE order_id = o.id)"));
@@ -88,8 +89,9 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
     }
 
     /// <summary>
-    /// The order starts with a saved split; DELETEs race PUTs of a different split. A DELETE that loads the order after
-    /// another DELETE committed finds no split (404). The stored split is the PUT's or none, matching who was accepted.
+    /// The order starts with a saved split; DELETEs race PUTs of a different split. All of them load the order before
+    /// any commits (<see cref="OrderRace"/>), so exactly one is accepted and the others are 409. The stored split is the
+    /// PUT's or none, matching who was accepted.
     /// </summary>
     [Fact]
     public async Task Parallel_deletes_and_puts_leave_a_consistent_split()
@@ -111,11 +113,9 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
                 return (response.StatusCode, "put");
             },
         });
-        var results = await ConcurrentlyAsync(requests);
+        var results = await OrderRace.RunAsync(factory.ConnectionString, orderId, requests);
 
-        AssertOnly(results, HttpStatusCode.OK, HttpStatusCode.NoContent, HttpStatusCode.NotFound, HttpStatusCode.Conflict);
-        Assert.Contains(results, r => r.Item1 == HttpStatusCode.Conflict);
-        Assert.All(results.Where(r => r.Item2 == "put"), r => Assert.NotEqual(HttpStatusCode.NotFound, r.Item1));
+        Assert.Single(AssertOnly(results, HttpStatusCode.OK, HttpStatusCode.NoContent, HttpStatusCode.Conflict));
         Assert.All(results.Where(r => r.Item2 == "delete"), r => Assert.NotEqual(HttpStatusCode.OK, r.Item1));
         var stored = await StoredSplitAsync(orderId);
         if (stored.Length == 0)
@@ -171,23 +171,6 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
         var accepted = results.Where(r => (int)r.Status is >= 200 and < 300).Select(r => r.Label).ToList();
         Assert.NotEmpty(accepted);
         return accepted;
-    }
-
-    /// <summary>Releases all requests at once so they hit the same order row together.</summary>
-    private static async Task<IReadOnlyList<(HttpStatusCode, string)>> ConcurrentlyAsync(
-        IEnumerable<Func<Task<(HttpStatusCode, string)>>> requests)
-    {
-        var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        var running = requests
-            .Select(async send =>
-            {
-                await start.Task;
-                return await send();
-            })
-            .ToList();
-
-        start.SetResult();
-        return await Task.WhenAll(running);
     }
 
     /// <summary>Reads straight from Postgres so the API's own view can't hide a lost update.</summary>

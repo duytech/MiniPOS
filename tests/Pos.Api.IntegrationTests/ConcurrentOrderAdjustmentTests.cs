@@ -263,24 +263,24 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
     }
 
     /// <summary>
-    /// Every pay would succeed alone; together exactly one wins. The others see the paid order (422) or lose the race on
-    /// the concurrency token (409).
+    /// Every pay would succeed alone; together exactly one wins. All of them load the open order before any commits
+    /// (<see cref="OrderRace"/>), so every other one loses the race on the concurrency token (409).
     /// </summary>
     [Fact]
     public async Task Parallel_pays_accept_exactly_one()
     {
         var (orderId, _) = await OrderWithOneItemAsync();
 
-        var results = await ConcurrentlyAsync(Enumerable.Range(0, ConcurrentRequests)
+        var results = await OrderRace.RunAsync(factory.ConnectionString, orderId,
+            Enumerable.Range(0, ConcurrentRequests)
             .Select(_ => (Func<Task<(HttpStatusCode, string)>>)(async () =>
             {
                 using var response = await _client.PayOrderAsync(orderId);
                 return (response.StatusCode, "pay");
             })));
 
-        var accepted = AssertOnlyOkConflictOrUnprocessable(results);
+        var accepted = AssertOnlyOkOrConflict(results);
         Assert.Single(accepted);
-        Assert.Contains(results, r => r.Item1 == HttpStatusCode.Conflict); // the requests really raced
         Assert.Equal("Paid", await StoredAsync<string>(orderId, "status"));
         Assert.True(await StoredAsync<bool>(orderId, "paid_at IS NOT NULL"));
         Assert.True(await StoredAsync<bool>(orderId, "cancelled_at IS NULL"));
