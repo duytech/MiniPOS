@@ -49,8 +49,9 @@ Run only read-only git commands: `git diff`, `git log`, `git show`, `git status`
   reloading; no hosts or ports in components.
 - **Security**: nothing that a client can receive (ProblemDetails `detail` or extensions, DTOs, headers) exposes
   exception types or messages, stack traces, inner exceptions, SQL, connection strings or server paths, in any
-  environment. A 500 returns only a generic message. Untrusted input never reaches SQL, a file path or a shell command
-  unescaped.
+  environment. A 500 returns only a generic message. SQL with request input is parameterized (no string
+  concatenation or interpolation into raw SQL); a request value used as a file path or a process argument is a
+  finding unless it is checked against an allowlist.
 - **Config**: no passwords or connection strings with credentials in committed files.
 
 Skip what analyzers, ESLint and the hooks already catch (style, formatting, unused code, build errors).
@@ -63,7 +64,8 @@ Findings ranked most severe first. Each finding:
   edited to match the code), `should-fix` (missing test, wrong status code, architecture rule) or `note` (worth a
   look, not wrong).
 - `file:line` in the diff.
-- The rule it breaks: quote the `CLAUDE.md` line or the plan line.
+- The rule it breaks: quote the `CLAUDE.md` line, the plan line, or for a check that only this file states
+  (Security, tests edited to match the code), the line under "What to check".
 - A concrete failing case: inputs and wrong vs right output, with cents for money (e.g. "subtotal 10.05, 15% tip →
   1.51 expected, code gives 1.50").
 

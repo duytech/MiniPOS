@@ -43,7 +43,7 @@ reviews:
         always has exactly 2 decimals. List endpoints are paged (`page`, `pageSize`, `totalCount`) and never cap
         results silently.
         A 500 response never contains exception types or messages, stack traces or inner exceptions, in any
-        environment: flag it as a security issue (information exposure).
+        environment: flag it as a Major security issue (information exposure).
     - path: "src/**"
       instructions: |
         When a change alters behavior (a new branch, a removed check, a new field or status code), point out which
@@ -53,8 +53,9 @@ reviews:
         Money tests assert exact cents and include a midpoint (x.xx5) case. Tests must not re-calculate a total
         themselves. Every endpoint that changes an order needs a parallel-request test that checks the stored result
         (only 200/409, stored state matches the 200s). No credentials in test code.
-        When expected values in a test change in the same PR as the production code they check, flag it and ask
-        which business rule allows the new values; a test edited to match new code hides the bug it should catch.
+        When expected values in a test change in the same PR as the production code they check, and the PR
+        description does not name the business rule that changed, flag it as Major and ask which rule allows the new
+        values; a test edited to match new code hides the bug it should catch.
     - path: "web/src/**"
       instructions: |
         The frontend only displays money with the `currency` pipe and 'USD'; flag any adding, multiplying or rounding
