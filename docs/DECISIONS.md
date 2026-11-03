@@ -2,6 +2,15 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-03: A 500 says nothing about the exception, stays logged, and both are tested (#70)
+- **What:** `UnexpectedErrorTests` replaces a service with one that throws and checks that the 500 body is a plain
+  ProblemDetails (no exception type, message, inner exception or stack frame) and that one `Error` log entry carries
+  the exception. `ApiExceptionHandler` keeps returning `false` for exceptions it does not map, so
+  `ExceptionHandlerMiddleware` writes the response and logs. New feature entry F25.
+- **Why:** Week 4 Day 3 bug PR #64 put `exception.ToString()` in every 500 and CI stayed green. In .NET 10 an
+  `IExceptionHandler` that returns `true` can suppress the middleware's error log, so a fix that handles 500s in our
+  handler could silently lose the log; the log test catches that.
+
 ## 2026-11-03: Both PR reviewers check security and tests; CodeRabbit stays `chill` (#71)
 - **What:** `.claude/agents/reviewer.md` got a Security check (nothing a client receives exposes exception details,
   stack traces, SQL or server paths; a 500 returns a generic message), a "test edited to match the code" check and a

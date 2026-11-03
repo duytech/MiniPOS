@@ -673,6 +673,23 @@
         ],
         "skipped": []
       }
+    },
+    {
+      "id": "F25",
+      "area": "api",
+      "behavior": "Unexpected error (a bug): 500 ProblemDetails with no exception type, message or stack frame in the body; the error is logged.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.UnexpectedErrorTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": null,
+      "state": "not_started",
+      "testedAt": null,
+      "evidence": null
     }
   ]
 }
