@@ -13,6 +13,9 @@ change one, with `verification` steps that run its tests.
   at the end only what it started; `--no-start` skips those steps instead (`blocked`).
 - Work on one feature at a time: at most one feature is `active` (a failed verification) while you work.
 - A feature is done when the verifier sets it to `passing`.
+- Do not invent business rules, limits, or scope that the task doesn't state (max quantities, max page size, merge
+  behavior, extra entities, seed data). If the task can't be done without one, stop and ask **before** building it;
+  listing it afterwards as an open question is not enough. A rule the user decides goes into `docs/business-rules.md`.
 
 Architecture rules (use-case folders, validators vs domain, repositories): `docs/architecture.md`. Read it before
 adding or changing code in `src/`.
@@ -35,13 +38,13 @@ adding or changing code in `src/`.
   build + the tests that need no DB; `web/src/**/*.ts|html` → eslint on those files + `ngc` (`tsc` for specs). The
   same checks run as a `PreToolUse` hook before any `git commit` and block it when they fail. A separate hook on the
   same two events (`.claude/hooks/check-utf8.mjs`) rejects changed text files that are not UTF-8. When they report
-  errors, fix them. It does not run integration tests or Vitest: run those before you finish.
+  errors, fix them.
 - No `Co-Authored-By: Claude` in commits, PRs or issues. A `PreToolUse` hook (`.claude/hooks/block-claude-coauthor.mjs`)
   blocks such commands.
 - Never commit or push to `main`: branch, push the branch, open a PR. A `PreToolUse` hook
   (`.claude/hooks/block-main-branch.mjs`) blocks `git commit` on main and any `git push` that updates main.
-- CI (`.github/workflows/ci.yml`) runs the same checks plus integration and Playwright E2E on every PR; its jobs
-  `dotnet`, `web`, `e2e` are required checks of `main`. A red check is fixed in the branch, never bypassed.
+- CI (`.github/workflows/ci.yml`): its jobs `dotnet`, `web`, `e2e` are required checks of `main`. A red check is
+  fixed in the branch, never bypassed.
 
 ## Money (the rules that matter most)
 - All amounts are `Money` (Domain value object: `decimal Amount` + `Currency`, USD only for now). Never `double`/`float`,
@@ -66,13 +69,6 @@ adding or changing code in `src/`.
   4xx; a 500 is always a bug.
 - Every endpoint that changes an order needs an integration test that fires parallel requests and checks the stored
   result (e.g. N parallel add-item requests: only 200/409 responses, stored quantity = number of 200s).
-
-## Business rules
-- Do not invent business rules, limits, or scope that the task doesn't state (max quantities, max page size, merge
-  behavior, extra entities, seed data). If the task can't be done without one, stop and ask **before** building it;
-  listing it afterwards as an open question is not enough.
-- Adding an item: identical line (same menu item, same snapshotted unit price, same notes/modifiers) → increase quantity;
-  anything different → new line.
 
 ## API
 - Errors are ProblemDetails: 400 validation, 404 not found, 409 conflict, 422 domain rule broken.
@@ -104,6 +100,9 @@ Run what the change touches, in this order; CI runs all of it on every PR.
 
 ## Development workflow
 - Every change needs a task id (a GitHub issue number).
+- A plan ends with a `## Steps` section: the numbered task list you will track while building it, same steps in the
+  same order (branch, each piece of work, verification, PR). Each step names the plan section it comes from. Once the
+  plan is approved, the task list is exactly that list.
 - Git commits as checkpoints. Commit after completing each atomic unit of work. Commit messages should explain what was done and why, Must start with a task id like: 13245 | Do something.
 - Branch name must start with a task id.
 - File docs/DECISIONS.md. Record important design decisions and reasons. No need for detailed design documents — just "what decision, why, when".
