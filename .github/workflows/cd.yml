@@ -54,9 +54,18 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Tags
         id: tags
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/minipos-${{ matrix.name }}"
-          echo "list=$image:latest,$image:sha-${SHA::7}" >> "$GITHUB_OUTPUT"
+          tags="$image:sha-${SHA::7}"
+          # latest only for the current head of main: a late or rerun CI of an older commit must not move it back.
+          if [ "$PUBLISH" != "true" ] || [ "$(gh api "repos/$GITHUB_REPOSITORY/commits/main" --jq .sha)" = "$SHA" ]; then
+            tags="$tags,$image:latest"
+          else
+            echo "::notice::$SHA is no longer the head of main; pushing only sha-${SHA::7}."
+          fi
+          echo "list=$tags" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v7
         with:
           context: ${{ matrix.context }}
