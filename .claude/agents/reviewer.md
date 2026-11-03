@@ -31,6 +31,11 @@ Run only read-only git commands: `git diff`, `git log`, `git show`, `git status`
   step. The base of each step is named and matches the task or plan. JSON money has exactly 2 decimals.
 - **Money tests**: every money rule has a unit test with exact cents and a midpoint case (x.xx5). A list total has a
   test that it equals `GET /api/orders/{id}`.
+- **Tests edited to match the code**: a test whose expected values change in the same diff as the production code
+  they check, when the task or plan does not change that rule, means the test was bent to pass. Name the old and new
+  values and the rule that set the old ones.
+- **Tests for changed behavior**: a changed code path (new branch, removed check, new field) with no test that would
+  fail without the change, at the level where it can break (unit, integration, Vitest).
 - **Concurrency**: Order keeps `xmin` as the concurrency token; a conflict maps to 409. Every endpoint that changes an
   order has a parallel integration test that checks stored state (only 200/409, or exactly one winner for a status
   change). An expected DB error that can reach a 500 is a finding.
@@ -42,6 +47,10 @@ Run only read-only git commands: `git diff`, `git log`, `git show`, `git status`
   even if it looks sensible. A rule from the plan that the diff does not implement is a finding too.
 - **Frontend**: no arithmetic or rounding on money; `currency` pipe with `'USD'`; previous data stays visible while
   reloading; no hosts or ports in components.
+- **Security**: nothing that a client can receive (ProblemDetails `detail` or extensions, DTOs, headers) exposes
+  exception types or messages, stack traces, inner exceptions, SQL, connection strings or server paths, in any
+  environment. A 500 returns only a generic message. Untrusted input never reaches SQL, a file path or a shell command
+  unescaped.
 - **Config**: no passwords or connection strings with credentials in committed files.
 
 Skip what analyzers, ESLint and the hooks already catch (style, formatting, unused code, build errors).
@@ -50,8 +59,9 @@ Skip what analyzers, ESLint and the hooks already catch (style, formatting, unus
 
 Findings ranked most severe first. Each finding:
 
-- **Severity**: `blocker` (wrong money, lost update, 500, broken rule), `should-fix` (missing test, wrong status code,
-  architecture rule) or `note` (worth a look, not wrong).
+- **Severity**: `blocker` (wrong money, lost update, 500, broken rule, security issue a request can reach, test
+  edited to match the code), `should-fix` (missing test, wrong status code, architecture rule) or `note` (worth a
+  look, not wrong).
 - `file:line` in the diff.
 - The rule it breaks: quote the `CLAUDE.md` line or the plan line.
 - A concrete failing case: inputs and wrong vs right output, with cents for money (e.g. "subtotal 10.05, 15% tip →

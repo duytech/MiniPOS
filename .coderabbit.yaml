@@ -42,16 +42,26 @@ reviews:
         Errors are ProblemDetails: 400 validation, 404 not found, 409 conflict, 422 domain rule broken. Money in JSON
         always has exactly 2 decimals. List endpoints are paged (`page`, `pageSize`, `totalCount`) and never cap
         results silently.
+        A 500 response never contains exception types or messages, stack traces or inner exceptions, in any
+        environment: flag it as a security issue (information exposure).
+    - path: "src/**"
+      instructions: |
+        When a change alters behavior (a new branch, a removed check, a new field or status code), point out which
+        test (unit, integration) would fail without it. If none exists, say which test is missing.
     - path: "tests/**"
       instructions: |
         Money tests assert exact cents and include a midpoint (x.xx5) case. Tests must not re-calculate a total
         themselves. Every endpoint that changes an order needs a parallel-request test that checks the stored result
         (only 200/409, stored state matches the 200s). No credentials in test code.
+        When expected values in a test change in the same PR as the production code they check, flag it and ask
+        which business rule allows the new values; a test edited to match new code hides the bug it should catch.
     - path: "web/src/**"
       instructions: |
         The frontend only displays money with the `currency` pipe and 'USD'; flag any adding, multiplying or rounding
         of amounts. When reloading, keep the previous data with a small loading indicator. No hosts or ports in
         components or messages.
+        When a change alters what a component shows or does, point out the Vitest spec that covers it, or say which
+        spec is missing.
 
 knowledge_base:
   code_guidelines:
