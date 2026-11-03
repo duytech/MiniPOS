@@ -1165,6 +1165,17 @@ chi tiết hiện đúng.
   Kerberos, nên log lỗi mỗi lần mở kết nối. Thêm `Gss Encryption Mode=Disable` vào connection string của container.
 - Hai lỗi 404 trong console ở trang chi tiết là `GET .../split` khi order chưa lưu split, giống bản dev.
 
+**CodeRabbit review PR #78:** 3 finding, cả 3 đúng, đã sửa.
+- Major: CI của commit cũ trên `main` xong muộn (hoặc chạy lại) sẽ đẩy `latest` đè lên image mới hơn. Sửa: luôn đẩy
+  `sha-…`, chỉ gắn `latest` khi commit đó vẫn là head của `main`.
+- Major: `proxy_pass http://api:8080` chỉ resolve tên `api` một lần khi nginx khởi động; tạo lại container `api` thì
+  IP đổi, `/api` trả 502 tới khi restart `web`. Sửa: `resolver 127.0.0.11` + upstream qua biến. Đã thử
+  `--force-recreate api`: `/api` vẫn 200.
+- Nitpick: cờ `Database:MigrateOnStartup` chưa có test. Thêm `StartupMigrationTests`: chạy app ở Production trên DB
+  chưa tồn tại; bật cờ thì mọi migration được áp, tắt cờ thì DB không được tạo.
+- Hai lỗi đầu không test nào ở local bắt được: một chỉ xảy ra khi hai lần CI chạy chồng nhau, một chỉ khi container
+  bị tạo lại. Reviewer có ích nhất ở loại lỗi vận hành này.
+
 **Giả định / câu hỏi còn mở:**
 - Container dùng chung volume `pgdata` (DB `pos`) với dev. Dữ liệu thử ở trên lẫn với dữ liệu dev.
 - Package GHCR mới có thể là private. Nếu `docker compose pull` báo `denied`, đổi package sang public hoặc
