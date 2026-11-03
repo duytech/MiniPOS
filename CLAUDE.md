@@ -13,6 +13,9 @@ change one, with `verification` steps that run its tests.
   at the end only what it started; `--no-start` skips those steps instead (`blocked`).
 - Work on one feature at a time: at most one feature is `active` (a failed verification) while you work.
 - A feature is done when the verifier sets it to `passing`.
+- Do not invent business rules, limits, or scope that the task doesn't state (max quantities, max page size, merge
+  behavior, extra entities, seed data). If the task can't be done without one, stop and ask **before** building it;
+  listing it afterwards as an open question is not enough. A rule the user decides goes into `docs/business-rules.md`.
 
 Architecture rules (use-case folders, validators vs domain, repositories): `docs/architecture.md`. Read it before
 adding or changing code in `src/`.
@@ -67,13 +70,6 @@ adding or changing code in `src/`.
 - Every endpoint that changes an order needs an integration test that fires parallel requests and checks the stored
   result (e.g. N parallel add-item requests: only 200/409 responses, stored quantity = number of 200s).
 
-## Business rules
-- Do not invent business rules, limits, or scope that the task doesn't state (max quantities, max page size, merge
-  behavior, extra entities, seed data). If the task can't be done without one, stop and ask **before** building it;
-  listing it afterwards as an open question is not enough.
-- Adding an item: identical line (same menu item, same snapshotted unit price, same notes/modifiers) → increase quantity;
-  anything different → new line.
-
 ## API
 - Errors are ProblemDetails: 400 validation, 404 not found, 409 conflict, 422 domain rule broken.
 - List endpoints are paged (`page`, `pageSize`, response includes `totalCount`). Never silently cap results.
@@ -104,6 +100,9 @@ Run what the change touches, in this order; CI runs all of it on every PR.
 
 ## Development workflow
 - Every change needs a task id (a GitHub issue number).
+- A plan ends with a `## Steps` section: the numbered task list you will track while building it, same steps in the
+  same order (branch, each piece of work, verification, PR). Each step names the plan section it comes from. Once the
+  plan is approved, the task list is exactly that list.
 - Git commits as checkpoints. Commit after completing each atomic unit of work. Commit messages should explain what was done and why, Must start with a task id like: 13245 | Do something.
 - Branch name must start with a task id.
 - File docs/DECISIONS.md. Record important design decisions and reasons. No need for detailed design documents — just "what decision, why, when".
