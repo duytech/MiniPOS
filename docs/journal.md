@@ -1185,3 +1185,24 @@ healthy, `/` và `/api/orders` trả 200. CodeRabbit review 4 vòng: 2 Major + 3
 - Package GHCR mới có thể là private. Nếu `docker compose pull` báo `denied`, đổi package sang public hoặc
   `docker login ghcr.io` bằng PAT có `read:packages`.
 - Chưa có E2E chạy trên stack Docker; E2E vẫn chạy trên `dotnet run` + `npm start`.
+
+### Ngày 6: README (2026-11-03)
+**Đã làm (issue #80):** `README.md` tiếng Anh ở gốc repo (trước đó chưa có): app làm gì, bảng tổng quan harness
+(path thật), sơ đồ Mermaid chuỗi planner → 2 implementer + tester song song → integrator → reviewer → PR → CI +
+CodeRabbit → CD, bảng phạm vi tool của 4 agent, danh sách verifier theo lớp (hook, .NET, web, E2E, feature verifier,
+visual loop, CI), bảng 17 dòng "rule review → check tự động", kết quả, cách chạy (Docker từ GHCR và dev), cấu trúc repo.
+
+**Kiểm chứng:** script `node` quét mọi link tương đối trong README: không link nào hỏng. Grep từng tên test trong bảng:
+có thật. Chạy `docker compose --profile app up -d`: `/` và `/api/orders` trả 200.
+
+**Chuyện đáng kể:**
+- Bản nháp có 3 chỗ sai, grep mới thấy: test `Repositories_return_domain_types_not_application_types` nằm ở
+  `MoneyTypeTests.cs` chứ không phải `LayerDependencyTests.cs`; `init.sh` chỉ cảnh báo thiếu `.env` / user-secrets chứ
+  không tự tạo; "Node 22+" là đoán. Viết tài liệu cũng cần verifier như viết code.
+- Kết quả chỉ chép số có trong journal (22 lỗi → 16 sửa hẳn; 6 đột biến chia đều; 4/4 PR lỗi cố ý, CI 1/4), không
+  thêm số mới.
+- Bảng rule → check ghi rõ nhóm rule **vẫn chỉ do review bắt**: tự đặt business rule, cấu trúc thư mục use case, bảo
+  mật response ngoài body 500, URL môi trường trong component.
+
+**Giả định / câu hỏi còn mở:**
+- Badge CI/CD trỏ tới `duytech/MiniPOS`; nếu repo còn private thì badge không hiện với người ngoài.
