@@ -56,11 +56,12 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "testedAt": "2026-11-03T07:58:40Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "a735c57",
         "passed": [
-          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\""
+          "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.GetMenuItemHandlerTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.MenuItemsApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\""
         ],
         "skipped": []
       }
@@ -448,9 +449,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "testedAt": "2026-11-03T07:58:40Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "a735c57",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitEvenTests.\"",
           "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",
@@ -476,9 +477,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "testedAt": "2026-11-03T07:58:40Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "a735c57",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.\""
@@ -503,9 +504,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "testedAt": "2026-11-03T07:58:40Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "a735c57",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentSplitTests.\""
@@ -530,9 +531,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "testedAt": "2026-11-03T07:58:40Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "a735c57",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.\""
@@ -635,9 +636,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-02T12:13:04Z",
+      "testedAt": "2026-11-03T07:58:40Z",
       "evidence": {
-        "commit": "fd6e5f3",
+        "commit": "a735c57",
         "passed": [
           "npx ng test --watch=false --include src/app/orders/order-detail/order-detail.spec.ts",
           "npx playwright test specs/smoke.spec.ts specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts"
@@ -687,9 +688,15 @@
         }
       ],
       "rules": null,
-      "state": "not_started",
-      "testedAt": null,
-      "evidence": null
+      "state": "passing",
+      "testedAt": "2026-11-03T07:58:40Z",
+      "evidence": {
+        "commit": "a735c57",
+        "passed": [
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.UnexpectedErrorTests.\""
+        ],
+        "skipped": []
+      }
     }
   ]
 }
