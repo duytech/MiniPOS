@@ -34,6 +34,9 @@ public sealed class PosApiFactory : WebApplicationFactory<Program>, IAsyncLifeti
         }.ConnectionString;
     }
 
+    /// <summary>The throw-away database of this factory, for tests that read or lock rows directly.</summary>
+    public string ConnectionString => _connectionString;
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");

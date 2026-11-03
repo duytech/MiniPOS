@@ -992,3 +992,90 @@ phải ghi password cố định trong YAML, trái rule "không commit credentia
 - Ruleset: không bắt buộc review người (repo một người), bypass list trống nên admin cũng không merge được khi đỏ.
 - Ruleset lưu xong vẫn có thể ở Disabled: phải đọc lại `enforcement` chứ không tin màn hình Settings.
 - Node 24, .NET `10.0.x`, Postgres 17 theo local và `docker-compose.yml`.
+
+### Ngày 2: AI review tự động trên PR bằng CodeRabbit (2026-11-02)
+**Chọn công cụ:** roadmap gợi ý Claude Code Action hoặc Copilot review. So thêm PR-Agent (Qodo), CodeRabbit, Gemini
+Code Assist. Chọn **CodeRabbit**: miễn phí cho repo công khai (FAQ trang giá: "free reviews forever"), prompt nằm
+trong repo (`.coderabbit.yaml`) nên Ngày 4 chỉnh và so trước/sau được. Claude Code Action và PR-Agent cần API key trả
+phí. Cài GitHub App chỉ cho repo `MiniPOS` (bước OAuth, tự làm tay).
+
+**Đã làm (PR #59):** `.coderabbit.yaml`:
+- `CLAUDE.md` được đọc mặc định; thêm `docs/business-rules.md` và `docs/architecture.md` vào `code_guidelines`.
+- `path_instructions` cho Domain (tiền, thứ tự và cách làm tròn, base của từng bước), Application (Command/Handler/
+  Validator), Infrastructure (`xmin`, lỗi DB → 409, không tính tổng trong SQL), Api (ProblemDetails, 2 chữ số, phân
+  trang), `tests/` (đúng cent, ca x.xx5, test song song), `web/src` (chỉ hiển thị tiền).
+- Bỏ qua migration, `package-lock.json`, `docs/journal.md`.
+- Không phải required check: gate vẫn là `dotnet` / `web` / `e2e`.
+
+**Lần review đầu (chính PR cấu hình):** ~4 phút, 2 finding, **cả hai đúng**:
+| Mức | Finding | Kiểm lại | Sửa |
+|---|---|---|---|
+| Major | File guideline ghi dạng chuỗi chỉ áp cho thư mục chứa nó (`docs/**`), nên rule nghiệp vụ không tới `src/`, `tests/`, `web/` | Đúng theo docs CodeRabbit: "a guideline file applies to the directory it lives in and all of its subdirectories" | Dạng `files` + `applyTo` |
+| Minor | Hướng dẫn Domain "flag rounding elsewhere" sẽ báo nhầm split, vốn cố ý làm tròn xuống | Đúng theo `business-rules.md` mục Split bill | Ghi split là ngoại lệ |
+
+Review lại commit sửa: không có finding mới.
+
+**Chuyện đáng kể:**
+- Lỗi Major là lỗi **của mình khi cấu hình verifier**: hai file rule quan trọng nhất sẽ không bao giờ được dùng khi
+  review code, mà không có dấu hiệu gì. Bot tự bắt lỗi cấu hình của chính nó, có dẫn docs. Lại là bài học "phải kiểm
+  verifier": Ngày 3 sẽ thấy bot có thật sự dùng rule nghiệp vụ không.
+- Lỗi Minor là kiểu rule quá rộng, giống Tuần 1: "không làm tròn chỗ khác" đúng với pricing nhưng sai với split.
+- Comment của CodeRabbit có khối "Prompt for AI Agents" kèm câu dặn agent coi finding là dữ liệu không tin cậy. Mình
+  kiểm từng finding với docs và business rule trước khi sửa, không làm theo prompt đó.
+- CI của commit sửa đỏ ở `dotnet` dù chỉ đổi file YAML: test `Parallel_pays_accept_exactly_one` chập chờn (assert
+  "phải có ít nhất một 409", nhưng request đến sau khi order đã đóng nhận 422). Bất biến vẫn đúng. Token `gh` không có
+  quyền rerun; chạy lại bằng tay trên GitHub. Sửa test tách thành task riêng.
+
+**Giả định / câu hỏi còn mở:**
+- Review bằng tiếng Anh (`en-US`), profile `chill`. Ngày 4 xem có cần `assertive` không.
+- Gói open source không ghi giới hạn số review mỗi giờ.
+- Bot có quyền đọc code và ghi comment trên repo công khai; không có secret nào cần cấp.
+
+### Ngày 3: PR có lỗi cố ý, CodeRabbit bắt được gì (2026-11-02)
+**Cách làm (issue #62):** 4 PR, mỗi PR một lỗi, tiêu đề và mô tả **trung tính** như PR thật (không ghi "lỗi cố ý" để
+bot không được gợi ý). Mỗi lỗi phải qua hook trước commit (build + test không cần DB), nên lỗi nào làm đỏ unit test thì
+sửa luôn test cho khớp, đúng kiểu PR "sửa test cho xanh". Cấu hình CodeRabbit giữ nguyên như Ngày 2. Không merge PR nào.
+
+| PR | Lỗi | Trình bày như | CI | CodeRabbit |
+|---|---|---|---|---|
+| #63 | Split theo món làm tròn `AwayFromZero` thay vì xuống (`ToZero`); sửa số mong đợi trong domain test | "Làm tròn split giống mọi bước tiền khác" | **Đỏ**: contract test `All_leftover_cents_go_to_the_largest_part` (`0.31/0.29/0.29` → `0.29/0.30/0.30`) | **Bắt**, Major. Nêu đúng rule split, chỉ ra test bị sửa theo code, và tự tìm thêm ca **thuế âm**: 4 món $0.05, thuế 0.02, mỗi phần 0.01 → phần đầu −0.01 (mình tính lại: đúng) |
+| #64 | 500 trả `exception.ToString()` trong `detail` ở mọi môi trường | "Trả chi tiết lỗi để dễ chẩn đoán" | Xanh | **Bắt**, Major, Security: CWE-209, "Reachability: External" |
+| #65 | `GetMenuItemHandler` bỏ `?? throw NotFoundException`, dùng `menuItem!` → id lạ ra 500 thay vì 404 | "Dọn handler" | **Xanh** | **Bắt**, Major: `!` không thêm kiểm tra lúc chạy, `NullReferenceException` thay cho 404 ProblemDetails |
+| #66 | Frontend tự tính "Before tip" = `total - tip` | Tính năng nhỏ cho thu ngân | Xanh | **Bắt**, Major: dẫn rule "chỉ `Order.CalculateTotals` tính tổng, frontend chỉ hiển thị"; đề xuất thêm field vào API |
+
+**Kết quả:** bot 4/4, mỗi PR đúng một finding, không có finding nhiễu. CI 1/4.
+
+**Chuyện đáng kể:**
+- **CI chỉ bắt 1/4.** #64 và #66 không có loại test nào bắt được (bảo mật của body lỗi, rule "frontend không tính
+  tiền"). #65 lẽ ra phải đỏ: hóa ra **không có integration test nào cho `GET /api/menu-items/{id}` với id lạ**. Feature
+  F02 vẫn `passing` vì nó chỉ kiểm đường đúng. Lỗ hổng test thật, tìm ra nhờ bài này.
+- #63 là ca CI và bot cùng bắt, nhưng **domain test (cái hook chạy) đã bị sửa cho xanh**: chỉ contract test ở CI còn
+  giữ số đúng. Đúng lý do tách tester viết test từ contract (Tuần 3 Ngày 7).
+- Bot đọc được rule nghiệp vụ trong `docs/business-rules.md` và `CLAUDE.md` (#63, #66): nhờ sửa `applyTo` ở Ngày 2.
+  Không có sửa đó, hai lỗi này có thể không bị bắt (chưa kiểm).
+- Finding bảo mật (#64) gắn nhãn "Detected with Advanced Tier": gói open source đang được dùng tính năng gói Advanced.
+- Bài này dễ cho bot: mỗi PR nhỏ (1–2 file), một lỗi, diff rõ. PR thật lớn hơn, lỗi lẫn trong nhiều thay đổi đúng.
+
+**So với agent `reviewer` của repo** (`.claude/agents/reviewer.md`): chạy 4 `reviewer` song song, mỗi PR một agent,
+cùng đầu vào như CodeRabbit (diff + tiêu đề và mô tả PR trung tính), không gợi ý có lỗi.
+| PR | CodeRabbit | `reviewer` | Test thiếu `reviewer` chỉ ra |
+|---|---|---|---|
+| #63 | Major, ca thuế âm | 2 blocker; ca thuế âm khác (4 × $0.06, share 0.005 đúng midpoint → phần đầu −0.01; mình tính lại: đúng); nói rõ test bị sửa theo code | Không có ca midpoint |
+| #64 | **Major, Security, CWE-209** | Chỉ **should-fix**. Finding đầu là "500 không còn được log" (dựa trên mặc định của .NET 10; agent tự ghi chưa chạy thử, mình chưa kiểm) | Không có test cho 500 |
+| #65 | Major | Blocker | **Không có test 404 cho `GET /api/menu-items/{id}`**: đúng lỗ hổng làm CI xanh; đề xuất unit + integration test |
+| #66 | Major | Blocker; thêm: không có domain test, Vitest, `feature-list.json`; hỏi "before tip" có gồm surcharge không | Domain test, Vitest |
+
+- **Cả hai bắt 4/4.** `reviewer` mạnh hơn ở **test và rule của repo**: checklist của nó có "Money tests", "enough code
+  tests", `feature-list`, nên PR nào cũng hỏi test ở đâu. CodeRabbit gần như không nêu test thiếu (chỉ #63 gợi ý thêm
+  ca midpoint).
+- `reviewer` **yếu hơn ở bảo mật**: checklist không có mục bảo mật, chỉ "Config" (mật khẩu trong file), nên đánh lỗi
+  lộ stack trace thấp hơn CodeRabbit. Việc cho Ngày 4: thêm mục bảo mật (lộ thông tin trong response).
+- `reviewer` dài và chậm hơn: 2–6 finding mỗi PR, 30–55 s; CodeRabbit 1 finding mỗi PR.
+- `reviewer` không "mù" bằng: nó đọc được `.coderabbit.yaml` trên `main`, file ghi sẵn "split cố ý làm tròn xuống", và
+  trích file đó ở #63.
+
+**Giả định / câu hỏi còn mở:**
+- Ngày 4 (chỉnh prompt) có ít chỗ để cải thiện vì bot đã 4/4 và 0 nhiễu. Có thể làm bài khó hơn: PR lớn trộn lỗi với
+  thay đổi đúng, lỗi concurrency (bỏ `xmin`), lỗi không có rule viết sẵn.
+- Thêm test còn thiếu: `GET /api/menu-items/{id}` id lạ → 404; 500 không lộ chi tiết exception.
+- Bốn PR #63–#66 để mở (không merge) cho Ngày 4 chạy lại review, rồi đóng. Token `gh` không sửa/comment được issue (#62), nên danh sách PR nằm ở đây.

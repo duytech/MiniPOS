@@ -2,6 +2,20 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-02: Race tests hold a row lock until every request is waiting (#67)
+- **What:** the concurrency tests that must prove a 409 (parallel pays, parallel or mixed split PUT/DELETE) send
+  their requests through `OrderRace` (`tests/Pos.Api.IntegrationTests/OrderRace.cs`). The test locks the order row
+  `FOR NO KEY UPDATE`, starts the requests, waits until all of them are blocked on that lock (`pg_blocking_pids`,
+  followed through waiters), then rolls back. Every request has loaded the same order version, so exactly one write
+  wins and the others fail the `xmin` check: the tests now assert one accepted request and only 409 for the rest.
+- **Why:** releasing the requests together was not enough. When the first pay committed before the others loaded the
+  order, they got 422 (order not open), no 409 appeared, and the "requests really raced" check failed CI on an
+  unrelated PR. Retrying the race would only make the flake rarer; accepting 422 as proof would not show the token is
+  checked.
+- **Trade-off:** in these tests no request loads the order after another committed, so the stale-load answers (422
+  for a split that leaves out a new line, 404 for a split already deleted) come from the non-concurrent contract tests.
+  The other race tests keep the plain barrier and still cover those mixed interleavings.
+
 ## 2026-11-02: CodeRabbit reviews every PR (#58)
 - **What:** the CodeRabbit GitHub App is installed on this repo only, and `.coderabbit.yaml` points it at
   `CLAUDE.md` (read by default), `docs/business-rules.md` and `docs/architecture.md`, with per-path instructions for
