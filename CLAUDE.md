@@ -38,13 +38,13 @@ adding or changing code in `src/`.
   build + the tests that need no DB; `web/src/**/*.ts|html` → eslint on those files + `ngc` (`tsc` for specs). The
   same checks run as a `PreToolUse` hook before any `git commit` and block it when they fail. A separate hook on the
   same two events (`.claude/hooks/check-utf8.mjs`) rejects changed text files that are not UTF-8. When they report
-  errors, fix them. It does not run integration tests or Vitest: run those before you finish.
+  errors, fix them.
 - No `Co-Authored-By: Claude` in commits, PRs or issues. A `PreToolUse` hook (`.claude/hooks/block-claude-coauthor.mjs`)
   blocks such commands.
 - Never commit or push to `main`: branch, push the branch, open a PR. A `PreToolUse` hook
   (`.claude/hooks/block-main-branch.mjs`) blocks `git commit` on main and any `git push` that updates main.
-- CI (`.github/workflows/ci.yml`) runs the same checks plus integration and Playwright E2E on every PR; its jobs
-  `dotnet`, `web`, `e2e` are required checks of `main`. A red check is fixed in the branch, never bypassed.
+- CI (`.github/workflows/ci.yml`): its jobs `dotnet`, `web`, `e2e` are required checks of `main`. A red check is
+  fixed in the branch, never bypassed.
 
 ## Money (the rules that matter most)
 - All amounts are `Money` (Domain value object: `decimal Amount` + `Currency`, USD only for now). Never `double`/`float`,
