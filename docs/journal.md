@@ -1176,6 +1176,10 @@ chi tiết hiện đúng.
 - Hai lỗi đầu không test nào ở local bắt được: một chỉ xảy ra khi hai lần CI chạy chồng nhau, một chỉ khi container
   bị tạo lại. Reviewer có ích nhất ở loại lỗi vận hành này.
 
+**Sau merge (PR #78):** CI trên `main` xanh, rồi CD (run 41631308725) build và push cả hai image. Xóa image local,
+`docker compose --profile app pull` tải `latest` từ GHCR; tag `sha-b4bd4b2` cũng có. Chạy `--profile app up -d`: `api`
+healthy, `/` và `/api/orders` trả 200. CodeRabbit review 4 vòng: 2 Major + 3 Minor, sửa hết; vòng 5 không còn finding.
+
 **Giả định / câu hỏi còn mở:**
 - Container dùng chung volume `pgdata` (DB `pos`) với dev. Dữ liệu thử ở trên lẫn với dữ liệu dev.
 - Package GHCR mới có thể là private. Nếu `docker compose pull` báo `denied`, đổi package sang public hoặc

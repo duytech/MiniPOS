@@ -70,7 +70,7 @@ Kết quả: repo công khai có CI, AI review trên PR và README giải thích
 - [x] Ngày 2: Thêm AI review tự động trên PR (Claude Code GitHub Action hoặc Copilot review). Chọn CodeRabbit.
 - [x] Ngày 3: Mở 3–4 PR có lỗi cố ý (lệch 1 cent, lộ dữ liệu, thiếu xử lý null). Ghi lại bot bắt được gì, bỏ sót gì.
 - [x] Ngày 4: Chỉnh prompt review: tập trung vào business rule và bảo mật, bỏ qua style mà linter đã lo. Chạy lại các PR lỗi.
-- [ ] Ngày 5: CD: Dockerfile cho API và web, build image và đẩy lên GHCR sau khi CI xanh trên `main`; chạy cả stack bằng Docker Desktop (`docker compose --profile app pull`, rồi `docker compose --profile app up -d`).
+- [x] Ngày 5: CD: Dockerfile cho API và web, build image và đẩy lên GHCR sau khi CI xanh trên `main`; chạy cả stack bằng Docker Desktop (`docker compose --profile app pull`, rồi `docker compose --profile app up -d`).
 - [ ] Ngày 6: Viết README: sơ đồ agent, danh sách verifier, bảng "rule review → check tự động", hướng dẫn chạy (cả bằng Docker).
 - [ ] Ngày 7: Thêm vào CV một mục dự án ngắn: harness đã xây, verifier, kết quả cụ thể (ví dụ số lỗi bị chặn trước khi merge).
 - [ ] Ngày 8: Luyện phỏng vấn (phần dưới).
