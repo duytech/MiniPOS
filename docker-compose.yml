@@ -28,6 +28,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # Kestrel opens 8080 only after the startup migration (Program.cs), so an open port means ready. The aspnet image
+    # has no curl or wget; bash's /dev/tcp is enough.
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8080"]
+      interval: 5s
+      retries: 20
 
   web:
     profiles: ["app"]
@@ -37,7 +43,8 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - api
+      api:
+        condition: service_healthy
 
 volumes:
   pgdata:
