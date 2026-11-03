@@ -1079,3 +1079,62 @@ cùng đầu vào như CodeRabbit (diff + tiêu đề và mô tả PR trung tín
   thay đổi đúng, lỗi concurrency (bỏ `xmin`), lỗi không có rule viết sẵn.
 - Thêm test còn thiếu: `GET /api/menu-items/{id}` id lạ → 404; 500 không lộ chi tiết exception.
 - Bốn PR #63–#66 để mở (không merge) cho Ngày 4 chạy lại review, rồi đóng. Token `gh` không sửa/comment được issue (#62), nên danh sách PR nằm ở đây.
+
+### Ngày 4: chỉnh prompt review, chạy lại trên 4 PR lỗi cố ý (2026-11-03)
+**Đã làm (issue #71, PR #72):** sửa đúng hai chỗ yếu của Ngày 3, mỗi reviewer một chỗ, rồi chạy lại cả hai trên
+#63–#66 với cùng đầu vào.
+- `.claude/agents/reviewer.md`: thêm mục **Security** (response không lộ exception, stack trace, SQL, path; 500 chỉ
+  trả thông điệp chung; SQL phải parameterized), mục **test bị sửa theo code** và **test cho hành vi đổi**. Lỗi bảo
+  mật tới được từ request và test bị sửa theo code là `blocker`.
+- `.coderabbit.yaml`: cùng ba ý đó trong `path_instructions` (`src/Pos.Api/**`, `src/**`, `tests/**`, `web/src/**`).
+  Giữ `profile: chill` để Ngày 3 và Ngày 4 chỉ khác nhau ở instructions.
+- CodeRabbit review chính PR #72: 3 vòng, 5 finding, **cả 5 đúng**. Đáng nhất: report format bắt trích dòng
+  `CLAUDE.md` hoặc plan, nhưng rule Security chỉ nằm trong `reviewer.md`, nên agent không có cách báo lỗi đó đúng
+  format. Sửa: cho trích dòng của chính checklist. Các finding còn lại: "unescaped" không phải control đúng cho từng
+  loại sink; nêu rõ mức Major trong instruction của CodeRabbit.
+
+**Cách chạy lại:**
+- CodeRabbit đọc `.coderabbit.yaml` từ **branch head của PR**, không phải `main` (docs: "The configuration present in
+  the feature branch under review will be automatically detected"). Merge `main` vào 4 branch lỗi (diff lỗi giữ
+  nguyên), rồi comment `@coderabbitai full review`. Phần "Review info" của bot xác nhận dùng file ở commit head mới.
+- `reviewer`: 4 agent song song, đầu vào như Ngày 3 (diff + tiêu đề, mô tả trung tính của tác giả). Thêm câu "không
+  đọc `docs/journal.md`, `plans/`" vì journal trên `main` giờ đã có lời giải của Ngày 3.
+
+| PR | CodeRabbit Ngày 3 | CodeRabbit Ngày 4 | `reviewer` Ngày 3 | `reviewer` Ngày 4 |
+|---|---|---|---|---|
+| #63 split | Major ở `Order.cs`, ca thuế âm | Major **ở file test**: "khôi phục số mong đợi của ca hòa" (0.31/0.29/0.29) + thêm ca midpoint | 2 blocker, nói test bị sửa theo code | **3 blocker**: sai rule, thuế âm (4 × 0.05 → −0.01, mình tính lại: đúng), **test bị sửa theo code thành blocker riêng**; + 2 should-fix (comment test sai, thiếu ca midpoint) |
+| #64 lộ exception | Major, Security, CWE-209 | Major, Security, CWE-209, **trích path instruction mới** + đề xuất integration test kiểm body 500 | **should-fix**, xếp sau "500 không còn được log" | **blocker, xếp đầu**; "500 không được log" vẫn có (blocker, chưa kiểm chạy thật); + should-fix thiếu test |
+| #65 404 → 500 | Major | Major, giống hệt; **không nêu test thiếu** | blocker + test thiếu | blocker + should-fix test thiếu (unit + integration), giống Ngày 3 |
+| #66 frontend tính tiền | Major | Major (giữ nguyên) + Trivial **"thêm Vitest cho dòng mới"** | blocker + test thiếu | blocker + 3 should-fix (base của "before tip" lệch tip base: 100.00, 3%, 8% → 16.69 thay vì 15.00, mình tính lại: đúng; test; `feature-list`) + 1 note |
+
+**Kết quả so với mục tiêu của plan:**
+- `reviewer` đánh #64 là `blocker`: **đạt**. Nhưng agent trích rule "Config & secrets" của `CLAUDE.md`, không trích
+  dòng Security mới: mức đổi đúng, lý do trích chưa đúng chỗ.
+- `reviewer` nêu #63 sửa test theo code: **đạt** (Ngày 3 cũng nêu, giờ thành blocker riêng).
+- CodeRabbit nêu test thiếu ở #65: **không đạt**. Bot nêu test thiếu ở #63 (midpoint), #64 (integration), #66
+  (Vitest), nhưng đúng PR mà test thiếu làm CI xanh thì không.
+- Cả hai vẫn 4/4. CodeRabbit 0 finding nhiễu. `reviewer` có 1 finding lệch đề: #66 "task id 62 dùng lại" (đúng sự
+  thật, nhưng là do cách dựng bài tập).
+
+**Chuyện đáng kể:**
+- **Thread cũ còn mở chặn bot đăng lại.** Lần full review đầu: #63, #65, #66 không có finding nào ở chỗ Ngày 3 đã
+  comment, nhìn như bot "quên" lỗi. Thật ra bot không lặp lại comment khi thread cũ trên cùng dòng chưa resolve
+  (#66 sau đó ghi rõ "Duplicate comments: 1 ... the same unresolved issue raised in the previous review"). Phải
+  resolve thread Ngày 3 rồi chạy lại mới so được. So trước/sau trên cùng PR phải dọn trạng thái cũ trước.
+- **Giới hạn số review.** Lần chạy lại thứ hai gặp "Fair Usage Limits": gói hiện tại là 10 review mỗi giờ. 4 PR × 2
+  lần + 3 vòng của #72 là vượt. #66 phải chờ ~20 phút.
+- CodeRabbit ghi nguồn finding: "Coding guidelines, Path instructions, **Learnings**". Bot có bộ nhớ riêng từ các
+  review trước (Ngày 3), nên lần 2 không hoàn toàn "mù" như lần 1. Chưa thử tắt Learnings để so sạch hơn.
+- Cùng một lỗ hổng prompt xuất hiện ở cả hai bên: rule mới viết cho agent nhưng format báo cáo không cho trích nó
+  (CodeRabbit bắt trên #72), và agent vẫn trích rule cũ trong `CLAUDE.md`. Rule bảo mật nên nằm trong `CLAUDE.md`
+  nếu muốn được trích như rule của repo.
+- `reviewer` vẫn nhanh và đều: 28–46 s mỗi PR, 4–5 tool call.
+
+**Giả định / câu hỏi còn mở:**
+- CodeRabbit chưa nêu test thiếu ở #65 dù có instruction `src/**`. Có thể instruction chung bị lấn bởi finding
+  chính, hoặc profile `chill` lọc bớt. Thử `assertive` là biến tiếp theo, chưa làm.
+- Có nên đưa rule bảo mật (không lộ exception trong response) vào `CLAUDE.md` không: quyết định của user.
+- "500 phải còn được log" (.NET 10 có thể bỏ log khi `IExceptionHandler` trả `true`): vẫn chưa kiểm chạy thật, để ở
+  issue #70.
+- Bài khó hơn chưa làm: PR lớn trộn lỗi với thay đổi đúng, bỏ `xmin`, lỗi không có rule viết sẵn.
+- #63–#66 đã đóng, không merge (theo #62).
