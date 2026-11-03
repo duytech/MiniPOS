@@ -63,6 +63,7 @@ from `src/Pos.Api/Controllers` and the DTOs in `src/Pos.Application`.
 |---|---|
 | Each new service method | method, URL, params/body; returns the body unchanged (`orders-api.spec.ts`) |
 | Money on screen | the exact string from the API value (`15.4` → `$15.40`, `0` → `$0.00`) |
+| No derived money | every `$x.xx` on the page is a value the API sent; pick amounts so no sum or difference of two is another (`order-detail.spec.ts`, "shows no money value the API did not send") |
 | Each write | request sent; screen shows the returned order; the chosen operator's behavior on a second click |
 | Each error from step 0 | the agreed message, and the previous data stays on screen |
 | Reload | previous data + loading indicator while the request is pending |

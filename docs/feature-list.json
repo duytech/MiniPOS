@@ -45,7 +45,10 @@
       "behavior": "GET /api/menu-items/{id}: get one menu item.",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\"",
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.GetMenuItemHandlerTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.MenuItemsApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\"",
           "requires": [
             "db"
           ]
@@ -53,11 +56,12 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "testedAt": "2026-11-03T07:58:40Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "a735c57",
         "passed": [
-          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\""
+          "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.GetMenuItemHandlerTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.MenuItemsApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\""
         ],
         "skipped": []
       }
@@ -445,9 +449,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "testedAt": "2026-11-03T07:58:40Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "a735c57",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitEvenTests.\"",
           "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",
@@ -473,9 +477,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "testedAt": "2026-11-03T07:58:40Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "a735c57",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.\""
@@ -500,9 +504,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "testedAt": "2026-11-03T07:58:40Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "a735c57",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentSplitTests.\""
@@ -527,9 +531,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-02T09:55:41Z",
+      "testedAt": "2026-11-03T07:58:40Z",
       "evidence": {
-        "commit": "429481b",
+        "commit": "a735c57",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitByItemApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.\""
@@ -632,9 +636,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-02T12:13:04Z",
+      "testedAt": "2026-11-03T07:58:40Z",
       "evidence": {
-        "commit": "fd6e5f3",
+        "commit": "a735c57",
         "passed": [
           "npx ng test --watch=false --include src/app/orders/order-detail/order-detail.spec.ts",
           "npx playwright test specs/smoke.spec.ts specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts"
@@ -667,6 +671,29 @@
         "passed": [
           "npx ng test --watch=false --include src/app/orders/order-split/order-split.spec.ts",
           "npx playwright test specs/split-bill.spec.ts"
+        ],
+        "skipped": []
+      }
+    },
+    {
+      "id": "F25",
+      "area": "api",
+      "behavior": "Unexpected error (a bug): 500 ProblemDetails with no exception type, message or stack frame in the body; the error is logged.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.UnexpectedErrorTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": null,
+      "state": "passing",
+      "testedAt": "2026-11-03T07:58:40Z",
+      "evidence": {
+        "commit": "a735c57",
+        "passed": [
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.UnexpectedErrorTests.\""
         ],
         "skipped": []
       }
