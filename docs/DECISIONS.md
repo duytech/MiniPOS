@@ -5,13 +5,15 @@ Important design decisions: what, why, when. Newest first.
 ## 2026-11-03: Both PR reviewers check security and tests; CodeRabbit stays `chill` (#71)
 - **What:** `.claude/agents/reviewer.md` got a Security check (nothing a client receives exposes exception details,
   stack traces, SQL or server paths; a 500 returns a generic message), a "test edited to match the code" check and a
-  "tests for changed behavior" check. Security a request can reach and bent tests are `blocker`. `.coderabbit.yaml`
-  got the same points as path instructions. Its `profile` stays `chill`.
+  "tests for changed behavior" check. The agent rates security a request can reach and bent tests
+  `blocker`. `.coderabbit.yaml` got the same points as path instructions, rated Major. Its `profile` stays `chill`.
+  These are review severities only: the merge gate is still the required checks `dotnet`, `web`, `e2e`.
 - **Why:** Week 4 Day 3 (#62): the reviewer agent rated a stack trace in every 500 only `should-fix`, and CodeRabbit
   rarely named the missing test that let a bug through CI. Keeping the profile unchanged means the Day 3 and Day 4
   runs differ only in the instructions, so a change in the findings can be traced to them.
-- **Not decided:** whether 500s must stay logged when `ApiExceptionHandler` handles them (.NET 10 can suppress the
-  middleware's log); left to issue #70.
+- **Not decided:** today `ApiExceptionHandler` returns `false` for an unmapped exception, so the middleware writes the
+  500. If a handler ever returns `true` for it (as bug PR #64 did), .NET 10 can skip the middleware's error log.
+  Whether 500s must stay logged, and tested, is left to issue #70.
 
 ## 2026-11-02: Race tests hold a row lock until every request is waiting (#67)
 - **What:** the concurrency tests that must prove a 409 (parallel pays, parallel or mixed split PUT/DELETE) send
