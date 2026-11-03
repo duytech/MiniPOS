@@ -64,8 +64,8 @@ Findings ranked most severe first. Each finding:
   edited to match the code), `should-fix` (missing test, wrong status code, architecture rule) or `note` (worth a
   look, not wrong).
 - `file:line` in the diff.
-- The rule it breaks: quote the `CLAUDE.md` line, the plan line, or for a check that only this file states
-  (Security, tests edited to match the code), the line under "What to check".
+- The rule it breaks: quote the `CLAUDE.md` line, the plan line, or for a check that only this file states, its
+  line under "What to check".
 - A concrete failing case: inputs and wrong vs right output, with cents for money (e.g. "subtotal 10.05, 15% tip →
   1.51 expected, code gives 1.50").
 
