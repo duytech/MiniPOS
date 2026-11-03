@@ -1204,5 +1204,3 @@ có thật. Chạy `docker compose --profile app up -d`: `/` và `/api/orders` t
 - Bảng rule → check ghi rõ nhóm rule **vẫn chỉ do review bắt**: tự đặt business rule, cấu trúc thư mục use case, bảo
   mật response ngoài body 500, URL môi trường trong component.
 
-**Giả định / câu hỏi còn mở:**
-- Badge CI/CD trỏ tới `duytech/MiniPOS`; nếu repo còn private thì badge không hiện với người ngoài.
