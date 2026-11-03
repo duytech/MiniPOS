@@ -39,21 +39,25 @@ flowchart TD
     G1 --> IB[implementer: backend<br/>own worktree]
     G1 --> IF[implementer: frontend<br/>own worktree]
     G1 --> T[tester<br/>own worktree, tests/ only,<br/>writes from the contract]
-    IB --> I[integrator<br/>merge branches, run every verifier,<br/>open the app]
+    IB --> I[integrator: main session<br/>merge branches, run every verifier,<br/>open the app]
     IF --> I
     T --> I
     I --> R[reviewer<br/>read-only, diff vs CLAUDE.md]
     R --> G2{{gate: fix or accept findings}}
-    G2 --> PR[Pull request]
-    PR --> CI[CI: dotnet, web, e2e]
-    PR --> CR[CodeRabbit review]
+    G2 -->|fix| IB
+    G2 -->|fix| IF
+    G2 -->|accept| PR[Pull request]
+    PR --> CI[CI: dotnet, web, e2e<br/>required checks]
+    PR -.-> CR[CodeRabbit review<br/>advisory]
     CI --> G3{{gate: merge}}
-    CR --> G3
+    CR -.->|findings to weigh| G3
     G3 --> CD[CD: build images, push to GHCR]
 ```
 
 The two implementers never share a file: the planner splits the work into two file lists that do not overlap, and the
-contract (routes, request and response JSON, error codes) is what both sides and the tester build against.
+contract (routes, request and response JSON, error codes) is what both sides and the tester build against. There is
+no integrator agent: the main session (or the user) merges the branches and runs the verifiers. CodeRabbit is advice;
+only the CI checks block a merge.
 
 | Agent | Tools | Limits |
 | --- | --- | --- |
@@ -103,27 +107,28 @@ instructions for each layer.
 
 ## Review rules turned into automated checks
 
-Each row started as something a reviewer (human or AI) had to catch by reading. Now a check fails instead.
+Each row started as something a reviewer (human or AI) had to catch by reading. Now a check fails instead. The
+source column says where the rule is written down.
 
-| Rule (from `CLAUDE.md`) | Check that enforces it |
-| --- | --- |
-| No `double` / `float` anywhere | `No_layer_uses_floating_point_types` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs), IL scan) |
-| Amounts are rounded only in Domain | `Only_domain_rounds_amounts` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
-| Totals are added up only in Domain | `Only_domain_adds_up_money` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
-| Domain and Application signatures use `Money`, not raw `decimal` | `Domain_and_application_signatures_use_money_not_raw_decimal` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
-| Dependencies point inward | Three tests in [`LayerDependencyTests.cs`](tests/Pos.ArchitectureTests/LayerDependencyTests.cs) |
-| Repositories return Domain types, not DTOs | `Repositories_return_domain_types_not_application_types` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
-| Each pricing step rounds to cents `AwayFromZero`, with a midpoint test | [`OrderPricingTests.cs`](tests/Pos.Domain.Tests/OrderPricingTests.cs) (midpoints chosen so `ToEven` would round the other way) |
-| Split parts add up exactly; leftover cents go where the rules say | [`SplitBillContractTests.cs`](tests/Pos.Api.IntegrationTests/SplitBillContractTests.cs), written from the contract by the `tester` |
-| Concurrency conflict is a 409, never a lost update or a 500 | Parallel-request tests: [`ConcurrentAddItemTests.cs`](tests/Pos.Api.IntegrationTests/ConcurrentAddItemTests.cs), [`OrderConcurrencyTests.cs`](tests/Pos.Api.IntegrationTests/OrderConcurrencyTests.cs), [`ConcurrentOrderAdjustmentTests.cs`](tests/Pos.Api.IntegrationTests/ConcurrentOrderAdjustmentTests.cs), [`ConcurrentSplitTests.cs`](tests/Pos.Api.IntegrationTests/ConcurrentSplitTests.cs) |
-| Money in JSON has exactly 2 decimals; list total equals detail total | `List_total_equals_get_order_total_with_two_decimals` ([`OrdersListApiTests.cs`](tests/Pos.Api.IntegrationTests/OrdersListApiTests.cs)) and the raw-JSON tests in [`OrdersApiTests.cs`](tests/Pos.Api.IntegrationTests/OrdersApiTests.cs) |
-| A 500 leaks nothing about the exception, and is still logged | [`UnexpectedErrorTests.cs`](tests/Pos.Api.IntegrationTests/UnexpectedErrorTests.cs) |
-| The frontend never calculates money | `shows no money value the API did not send` ([`order-detail.spec.ts`](web/src/app/orders/order-detail/order-detail.spec.ts)) |
-| Reloading keeps the old data with a small loading indicator | [`slow-network.spec.ts`](tests/e2e/specs/slow-network.spec.ts) |
-| The migrate-on-startup flag works outside Development | [`StartupMigrationTests.cs`](tests/Pos.Api.IntegrationTests/StartupMigrationTests.cs) |
-| Cognitive complexity at most 15 | Sonar S3776 (.NET) and `sonarjs/cognitive-complexity` (web), both as build errors |
-| Never commit to `main`; no Claude co-author; UTF-8 files | Hooks `block-main-branch.mjs`, `block-claude-coauthor.mjs`, `check-utf8.mjs` |
-| A feature is done only when its tests pass | `protect-feature-state.mjs` + `scripts/verify-features.mjs` |
+| Rule | Source | Check that enforces it |
+| --- | --- | --- |
+| No `double` / `float` in any .NET layer | `CLAUDE.md` | `No_layer_uses_floating_point_types` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs), IL scan) |
+| Amounts are rounded only in Domain | `CLAUDE.md` | `Only_domain_rounds_amounts` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
+| Totals are added up only in Domain | `CLAUDE.md` | `Only_domain_adds_up_money` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
+| Domain and Application signatures use `Money`, not raw `decimal` | `CLAUDE.md` | `Domain_and_application_signatures_use_money_not_raw_decimal` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
+| Dependencies point inward | Clean Architecture (the line left `CLAUDE.md` when this test took over) | Three tests in [`LayerDependencyTests.cs`](tests/Pos.ArchitectureTests/LayerDependencyTests.cs) |
+| Repositories return Domain types, not DTOs | [`docs/architecture.md`](docs/architecture.md) | `Repositories_return_domain_types_not_application_types` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
+| Each pricing step rounds to cents `AwayFromZero`, with a midpoint test | `CLAUDE.md` | [`OrderPricingTests.cs`](tests/Pos.Domain.Tests/OrderPricingTests.cs) (discount, tax, tip) and [`OrderSurchargeTests.cs`](tests/Pos.Domain.Tests/OrderSurchargeTests.cs) (surcharge); midpoints chosen so `ToEven` would round the other way |
+| Split parts add up exactly; leftover cents go where the rules say | [`docs/business-rules.md`](docs/business-rules.md) | [`SplitBillContractTests.cs`](tests/Pos.Api.IntegrationTests/SplitBillContractTests.cs), written from the contract by the `tester` |
+| Concurrency conflict is a 409, never a lost update or a 500 | `CLAUDE.md` | Parallel-request tests: [`ConcurrentAddItemTests.cs`](tests/Pos.Api.IntegrationTests/ConcurrentAddItemTests.cs), [`OrderConcurrencyTests.cs`](tests/Pos.Api.IntegrationTests/OrderConcurrencyTests.cs), [`ConcurrentOrderAdjustmentTests.cs`](tests/Pos.Api.IntegrationTests/ConcurrentOrderAdjustmentTests.cs), [`ConcurrentSplitTests.cs`](tests/Pos.Api.IntegrationTests/ConcurrentSplitTests.cs) |
+| Money in JSON has exactly 2 decimals; list total equals detail total | `CLAUDE.md` | `List_total_equals_get_order_total_with_two_decimals` ([`OrdersListApiTests.cs`](tests/Pos.Api.IntegrationTests/OrdersListApiTests.cs)) and the raw-JSON tests in [`OrdersApiTests.cs`](tests/Pos.Api.IntegrationTests/OrdersApiTests.cs) |
+| A 500 leaks nothing about the exception, and is still logged | `reviewer` agent, CodeRabbit instructions | [`UnexpectedErrorTests.cs`](tests/Pos.Api.IntegrationTests/UnexpectedErrorTests.cs) |
+| The frontend never calculates money | `CLAUDE.md` | `shows no money value the API did not send` ([`order-detail.spec.ts`](web/src/app/orders/order-detail/order-detail.spec.ts)) |
+| Reloading keeps the old data with a small loading indicator | `CLAUDE.md` | [`slow-network.spec.ts`](tests/e2e/specs/slow-network.spec.ts) |
+| The migrate-on-startup flag works outside Development | [`docs/DECISIONS.md`](docs/DECISIONS.md) (#77) | [`StartupMigrationTests.cs`](tests/Pos.Api.IntegrationTests/StartupMigrationTests.cs) |
+| Cognitive complexity at most 15 | `CLAUDE.md` | Sonar S3776 (.NET) and `sonarjs/cognitive-complexity` (web), both as build errors |
+| Never commit to `main`; no Claude co-author; UTF-8 files | `CLAUDE.md` | Hooks `block-main-branch.mjs`, `block-claude-coauthor.mjs`, `check-utf8.mjs` |
+| A feature is done only when its tests pass | `CLAUDE.md` | `protect-feature-state.mjs` + `scripts/verify-features.mjs` |
 
 Still caught only by review (`reviewer` agent and CodeRabbit path instructions): business rules or limits the task did
 not state, use-case folder layout (Command/Query + Handler + Validator), security of what a response exposes beyond
@@ -133,17 +138,17 @@ the 500 body, and environment URLs in components.
 
 Numbers from the learning journal ([`docs/journal.md`](docs/journal.md), in Vietnamese):
 
-- **Instruction file.** The Order feature built with no instructions had 22 convention errors, two of them losing
-  money silently: 20 parallel "add item" requests all returned 200 but only 2 items were stored, and parallel new
-  lines returned 500. Rebuilt from scratch with `CLAUDE.md`: 16 fixed outright, 3 partly, no high-severity error left,
-  and the hidden concurrency test passed 3 runs out of 3.
+- **Instruction file.** The Order feature and the order list, built with no instructions, had 22 convention errors
+  between them. The worst lost money silently: 20 parallel "add item" requests all returned 200 but only 2 items were
+  stored. Parallel new lines returned 500. Both rebuilt from scratch with `CLAUDE.md`: 16 fixed outright, 3 partly, no
+  high-severity error left, and the hidden concurrency test passed 3 runs out of 3.
 - **Verifiers vs. a rounding trap.** For "split the bill evenly", six deliberate bugs were planted one at a time. The
   "parts add up to the order" invariant stayed green for two of them (one made a part −$0.04); a bug through `double`
   passed every business test and only the IL architecture test caught it. Tightening the tests turned both misses red,
   and the gap that let a total be recalculated and rounded outside Domain became the `Only_domain_rounds_amounts`
   architecture test.
 - **AI review on deliberately broken PRs.** Four PRs, each with one bug and a neutral description: CodeRabbit flagged
-  4/4 with no noise, the local `reviewer` agent 4/4, CI only 1/4. The two misses with no possible test (leaking the
+  4/4 with no noise, the local `reviewer` agent 4/4, CI only 1/4. The two misses that no existing test could catch (leaking the
   exception in a 500, money arithmetic in the frontend) are now the `UnexpectedErrorTests` and the Vitest money spec
   in the table above.
 - **Tuning the review prompts** after that run raised the `reviewer` agent's rating of the exception leak from
@@ -165,10 +170,17 @@ source.
 
 ### Development
 
-Needs the .NET 10 SDK, Node.js with npm, and Docker Desktop. Copy `.env.example` to `.env` and put the connection
-string (`ConnectionStrings:Pos`, pointing at `localhost:5433`) in the user secrets of `src/Pos.Api` and
-`tests/Pos.Api.IntegrationTests`, or in the `ConnectionStrings__Pos` environment variable. No credentials are
-committed.
+Needs the .NET 10 SDK, Node.js with npm, and Docker Desktop. Copy `.env.example` to `.env`, then put the connection
+string in the user secrets of the API and of the integration tests, with the values from your `.env`. No credentials
+are committed.
+
+```bash
+dotnet user-secrets set ConnectionStrings:Pos "Host=localhost;Port=5433;Database=pos;Username=<user>;Password=<password>" --project src/Pos.Api
+dotnet user-secrets set ConnectionStrings:Pos "Host=localhost;Port=5433;Database=pos;Username=<user>;Password=<password>" --project tests/Pos.Api.IntegrationTests
+```
+
+The integration tests also accept the `ConnectionStrings__Pos` environment variable instead; the API check in
+`init.sh` reads only user secrets.
 
 ```bash
 bash init.sh
