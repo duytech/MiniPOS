@@ -2,6 +2,13 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-03: A spec, not a lint rule, catches money arithmetic in the frontend (#70)
+- **What:** a page that shows money has a Vitest spec that collects every `$x.xx` on screen and checks each one is a
+  value the API sent, with amounts picked so that no sum or difference of two is another. First one:
+  `order-detail.spec.ts`. The `add-angular-feature` skill lists it as a required test.
+- **Why:** bug PR #66 showed "before tip" as `total - tip` and Vitest, lint and E2E passed. A lint rule would have to
+  guess money fields by name; the spec checks what the user actually sees.
+
 ## 2026-11-03: A 500 says nothing about the exception, stays logged, and both are tested (#70)
 - **What:** `UnexpectedErrorTests` replaces a service with one that throws and checks that the 500 body is a plain
   ProblemDetails (no exception type, message, inner exception or stack frame) and that one `Error` log entry carries

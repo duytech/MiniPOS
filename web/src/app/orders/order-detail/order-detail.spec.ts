@@ -143,6 +143,37 @@ describe('OrderDetail', () => {
     expect(text('total')).toBe('$15.56');
   });
 
+  // The frontend only displays money (CLAUDE.md). The amounts are picked so that no sum or difference of two of them
+  // is another one: a derived row such as "before tip" (total − tip = $41.38) shows a value the API never sent.
+  it('shows no money value the API did not send', () => {
+    const sent = {
+      lines: [line({ unitPrice: 20, quantity: 2, lineTotal: 40 })],
+      subtotal: 40,
+      discount: 3.1,
+      surcharge: 1.11,
+      tax: 3.37,
+      tip: 7.23,
+      total: 48.61,
+    };
+    load(order(sent));
+
+    const page = fixture.nativeElement.cloneNode(true) as HTMLElement;
+    page.querySelector('app-order-split')?.remove(); // the split section has its own spec
+    const shown = page.textContent?.match(/\$[\d,]+\.\d{2}/g) ?? [];
+    const apiValues = [
+      ...sent.lines.flatMap((l) => [l.unitPrice, l.lineTotal]),
+      sent.subtotal,
+      sent.discount,
+      sent.surcharge,
+      sent.tax,
+      sent.tip,
+      sent.total,
+    ].map((amount) => `$${amount.toFixed(2)}`);
+
+    expect(shown.length).toBeGreaterThanOrEqual(8);
+    expect(shown.filter((value) => !apiValues.includes(value))).toEqual([]);
+  });
+
   it('has a Back to orders link', () => {
     load();
     expect(el('back')?.getAttribute('href')).toBe('/orders');
