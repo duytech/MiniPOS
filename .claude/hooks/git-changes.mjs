@@ -30,13 +30,14 @@ export function gitCommands(command, cwd = process.cwd()) {
 
   const commands = [];
   let dir = cwd;
-  for (const segment of masked.split(/&&|\|\||[;|\n]/)) {
-    const all = words(segment.trim());
+  // A single & also separates commands, except in a redirect (2>&1, &>file). Brackets may touch git: (git push), {git push}.
+  for (const segment of masked.split(/&&|\|\||[;|\n]|(?<!>)&(?!>)/)) {
+    const all = words(segment.replace(/[(){}]/g, ' ').trim());
     if (/^(cd|Set-Location|sl|pushd)$/i.test(all[0] ?? '') && all[1]) {
       dir = path.resolve(dir, fromShell(all.slice(1).filter((w) => !w.startsWith('-'))[0] ?? '.'));
       continue;
     }
-    // git may follow a wrapper such as `if ($?) {` or `& `, so look for it anywhere in the segment.
+    // git may follow a wrapper such as `if ($?) {`, so look for it anywhere in the segment.
     const at = all.findIndex((w) => /^git(\.exe)?$/i.test(w));
     if (at < 0) continue;
     const rest = all.slice(at + 1);

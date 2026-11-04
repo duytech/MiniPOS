@@ -8,7 +8,7 @@ Important design decisions: what, why, when. Newest first.
   writes it with `--stamp` after the `reviewer` returns and its findings are handled.
 - **Why:** PR #81 showed the reviewer takes about 2 minutes and catches errors CodeRabbit cannot, and running it by
   hand is easy to forget.
-- **Every push, docs and tests too:** PR #81 was README-only and the reviewer still found errors.
+- **Every push, docs and tests too:** PR #81 was docs-only and the reviewer still found errors.
 - **Open blockers:** no stamp while a `blocker` is open, unless the user waives it. This is a rule for the main session
   in `CLAUDE.md`; the hook only compares SHAs.
 - **`--stamp`, not a shell redirect:** `>` in Windows PowerShell 5.1 can write a BOM or UTF-16, and the SHA would not
@@ -17,7 +17,9 @@ Important design decisions: what, why, when. Newest first.
   check the old SHA and let the new commit through. The push has to be its own command.
 - **Limits:** a reminder, not a hard gate, because Claude writes the stamp. A push typed in a terminal is not checked;
   a git `pre-push` hook calling `claude -p --agent reviewer` was considered and not chosen. Only `HEAD` is compared, so
-  `git push origin other-branch` is not looked at. Deletes and dry runs pass, because they send no new code.
+  `git push origin other-branch` is not looked at. Deletes and dry runs pass, because they send no new code. The hook
+  reads the command text, so it does not see `bash -c "git push"`, `/usr/bin/git push`, `git --git-dir x push` or a git
+  alias. Text such as `echo git push` counts as a push: a false block is the cheaper mistake.
 - **No test file:** the other hooks have none and CI runs none for hooks. It was checked with sample inputs and a real
   push, as the PR describes.
 
