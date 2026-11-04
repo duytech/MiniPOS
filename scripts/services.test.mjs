@@ -29,11 +29,11 @@ async function closedUrl() {
 }
 
 /** A fresh copy of the module: it reads the addresses at import and keeps results per run. */
-async function services(api, web) {
+async function services(api, web, startTimeoutMs = '1') {
   process.env.E2E_API_URL = api;
   process.env.E2E_BASE_URL = web;
   // If a refusal ever breaks, the test fails fast and afterEach stops what got started.
-  process.env.VERIFY_START_TIMEOUT_MS = '1';
+  process.env.VERIFY_START_TIMEOUT_MS = startTimeoutMs;
   moduleCount += 1;
   const module = await import(`./services.mjs?case=${moduleCount}`);
   loaded.push(module);
@@ -92,16 +92,16 @@ test('names only the API as not running with --no-start, when the web app runs',
   assert.equal(await ensure('e2e', false), `not running: API (${api}); see tests/e2e/README.md`);
 });
 
-test('counts the started API as bound only when its own log says so', async () => {
-  const { apiBound } = await services(await closedUrl(), await closedUrl());
+test('does not take an answer on the port for the started API, until its own log says it bound', async () => {
+  const { startedStackUp } = await services(await serverUrl(), await serverUrl(), '5000');
   const folder = mkdtempSync(path.join(os.tmpdir(), 'services-test-'));
   const log = path.join(folder, 'api.log');
   try {
     writeFileSync(log, 'Building...\nSystem.IO.IOException: Failed to bind to address: address already in use.\n');
-    assert.equal(apiBound(log), false);
+    assert.equal(await startedStackUp(log, [{ exitCode: 1 }]), false);
 
     writeFileSync(log, 'info: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://localhost:5191\n');
-    assert.equal(apiBound(log), true);
+    assert.equal(await startedStackUp(log, [{ exitCode: null }]), true);
   } finally {
     rmSync(folder, { recursive: true });
   }

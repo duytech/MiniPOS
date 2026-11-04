@@ -154,8 +154,12 @@ function createE2eDatabase() {
   return result.ok ? undefined : `could not create the ${E2E_DATABASE} database: ${result.lastLine}`;
 }
 
-/** Whether the API behind this log has bound its port: an answer on the port alone can come from another process. */
-export const apiBound = (log) => readFileSync(log, 'utf8').includes(API_LISTENING);
+/**
+ * Waits for the API behind this log and the web app. The log must say the API bound its port: an answer on the port
+ * alone can come from another process.
+ */
+export const startedStackUp = (apiLog, children) =>
+  waitFor(async () => readFileSync(apiLog, 'utf8').includes(API_LISTENING) && (await apiUp()) && (await webUp()), children);
 
 async function startE2e() {
   if (await apiUp()) return API_REFUSAL;
@@ -167,7 +171,7 @@ async function startE2e() {
   const api = background('API on pos_e2e', `${shell} -NoProfile -ExecutionPolicy Bypass -File tests/e2e/start-api.ps1`, 'api');
   const runs = [api];
   if (!(await webUp())) runs.push(background('web app', 'npm start --prefix web', 'web'));
-  const ok = await waitFor(async () => apiBound(api.log) && (await apiUp()) && (await webUp()), runs.map((run) => run.child));
+  const ok = await startedStackUp(api.log, runs.map((run) => run.child));
   return ok ? undefined : `API (${API}) or web app (${WEB}) did not start; logs: ${runs.map((run) => run.log).join(', ')}`;
 }
 
