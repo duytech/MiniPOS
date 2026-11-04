@@ -44,7 +44,9 @@ if (process.argv.includes('--stamp')) {
 }
 
 const input = readHookInput();
-const commands = gitCommands(input.tool_input?.command ?? '', input.cwd || process.env.CLAUDE_PROJECT_DIR || process.cwd());
+const commands = gitCommands(input.tool_input?.command ?? '', input.cwd || process.env.CLAUDE_PROJECT_DIR || process.cwd(), {
+  subshells: input.tool_name !== 'PowerShell',
+});
 
 for (const [index, { repo, sub, args }] of commands.entries()) {
   if (sub !== 'push' || sendsNoCode(args)) continue;
