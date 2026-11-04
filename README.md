@@ -162,9 +162,13 @@ Numbers from the learning journal ([`docs/journal.md`](docs/journal.md), in Viet
 
 ```bash
 cp .env.example .env
+# Set POSTGRES_PASSWORD in .env before the next commands: compose stops while it is blank.
 docker compose --profile app pull
 docker compose --profile app up -d
 ```
+
+Postgres takes the password in `.env` only when the `pgdata` volume is first created. Its port is published on
+127.0.0.1 only.
 
 Open http://localhost:8080. The API migrates the database on startup. If `pull` answers `denied`, the GHCR packages
 are private: `docker login ghcr.io` with a token that has `read:packages`, or add `--build` to build the images from
@@ -173,9 +177,9 @@ source.
 ### Development
 
 Needs Git, the .NET 10 SDK, Node.js with npm, and the Docker CLI with a running daemon (Docker Desktop or Docker
-Engine). Copy `.env.example` to `.env`, then put the connection
-string in the user secrets of the API and of the integration tests, with the values from your `.env`. No credentials
-are committed.
+Engine). Copy `.env.example` to `.env` and set `POSTGRES_PASSWORD` in it before `docker compose up`, then put the
+connection string in the user secrets of the API and of the integration tests, with the values from your `.env`. No
+credentials are committed.
 
 ```bash
 dotnet user-secrets set ConnectionStrings:Pos "Host=localhost;Port=5433;Database=pos;Username=<user>;Password=<password>" --project src/Pos.Api
