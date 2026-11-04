@@ -1,7 +1,8 @@
 // PreToolUse hook (Bash, PowerShell): blocks `git commit` while on main and any `git push` that would update main.
 // Work goes on a branch and reaches main through a pull request. Exit 2 blocks the call and tells Claude why.
 // Push targets: each refspec's destination (HEAD = current branch, :main deletes main), or with no refspec the
-// current branch's upstream (or the current branch itself when it has none). --all and --mirror include main.
+// current branch's upstream (or the current branch itself when it has none). --all, --mirror and the refspec `:`
+// (push all matching branches) include main.
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -62,7 +63,9 @@ function pushTargets(dir, args) {
     return [upstream ? upstream.slice(upstream.indexOf('/') + 1) : current];
   }
   return refspecs.map((spec) => {
-    const [src, dst] = spec.replace(/^\+/, '').split(':');
+    const refspec = spec.replace(/^\+/, '');
+    if (refspec === ':') return PROTECTED;
+    const [src, dst] = refspec.split(':');
     const target = dst ?? src;
     return branchOf(target === 'HEAD' || target === '@' ? current : target);
   });
