@@ -199,7 +199,7 @@ bash init.sh
 `init.sh` checks the tools and the local config, then builds and runs every check that needs no database (`--full`
 also runs the .NET tests against Postgres).
 
-- Database: `docker compose up -d` (Postgres on **localhost:5433**)
+- Database: `docker compose up -d` (Postgres on **127.0.0.1:5433**)
 - API: `dotnet run --project src/Pos.Api --launch-profile http`, on http://localhost:5191 (migrates in Development)
 - Web: `npm start` in `web/`, on http://localhost:4200 (proxies `/api` to the API)
 

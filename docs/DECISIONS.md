@@ -10,7 +10,7 @@ Important design decisions: what, why, when. Newest first.
   the repo.
 - **Blank, not `change-me`:** any text placeholder is a known password that works if the reader skips the step.
 - **`127.0.0.1`, not `localhost`:** with no listener on `::1`, Windows takes about 2 s to refuse each new connection
-  before Npgsql tries IPv4. The integration tests took 41 s with `localhost` and 8 s with `127.0.0.1`.
+  before Npgsql tries IPv4. The integration tests took 41-45 s with `localhost` and 8 s with `127.0.0.1`.
 - **Limit:** an existing `.env`, volume or user secret is not changed. Each machine that set up before this change keeps
   the old password until it is changed there, and a `Host=localhost` secret keeps working but stays slow on Windows.
 
