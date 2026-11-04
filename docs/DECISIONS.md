@@ -27,7 +27,7 @@ Important design decisions: what, why, when. Newest first.
   same misses. Examples per group, not a full list:
   - Command text the parser does not open: `bash -c "git push"`, `eval "git push"`, `Start-Process git "push origin x"`,
     `${x:-$(git push)}`, `x="$(git commit -m "m")"`, and apostrophes that pair across commands (`# don't`).
-  - Subcommand lost: `git --git-dir x push`, `git --work-tree x push`, `git -C (Split-Path (Get-Location)) push`, and
+  - Subcommand lost: `git --git-dir x push`, `git --work-tree x push`, `git -C (Split-Path (Get-Location)) push`, `git -C {a} commit`, and
     a line continuation between `git` and `push`.
   - Other command names: `/usr/bin/git push`, `git.cmd push`, `$GIT push`, an alias such as `git p`,
     `git subtree push`, `hub push`.

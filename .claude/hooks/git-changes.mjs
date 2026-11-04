@@ -50,7 +50,7 @@ export function gitCommands(command, cwd = process.cwd(), { subshells = true } =
   for (let previous; previous !== unwrapped; ) {
     previous = unwrapped;
     unwrapped = unwrapped.replace(
-      /(?:(?<=[^\s;&|(){}])|(?<=\s-[Cc]\s+))\(([^()]*)\)|\$\{[^{}]*\}|(?<=[^\s;&|(){}\u0001])\{[^{}\s]*\}/g,
+      /(?:(?<=[^\s;&|(){}])|(?<=\s-[Cc]\s+))\(([^()]*)\)|\$\{[^{}]*\}|(?<=[^\s;&|(){}\u0001])\{[^{}\s\u0001]*\}/g,
       (text, inner) => keepWord(text, inner ? [inner] : []),
     );
   }
