@@ -27,7 +27,7 @@ by hand:
    startup. In Git Bash:
 
    ```bash
-   export ConnectionStrings__Pos="$(dotnet user-secrets list --project src/Pos.Api | sed -n 's/^ConnectionStrings:Pos = //p' | sed 's/Database=[^;]*/Database=pos_e2e/')"
+   export ConnectionStrings__Pos="$(dotnet user-secrets list --project src/Pos.Api | sed -n 's/^ConnectionStrings:Pos = //p');Database=pos_e2e"
    dotnet run --project src/Pos.Api --launch-profile http
    ```
 
