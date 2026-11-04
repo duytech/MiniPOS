@@ -85,13 +85,13 @@ Findings ranked most severe first, one finding per root cause. Each finding:
 so as its own finding and name a simpler design. Its severity is `note`, because it has no wrong output of its own;
 the findings it groups still count.
 
-**Accepted limits**: a form in a limits group the user accepted (`docs/DECISIONS.md`), or a finding the caller says the
-user waived, gets one line and does not count against the verdict. A form the user has not accepted still counts, even
-when it looks like a recorded one.
+**Accepted limits**: a form that fits a limits group the user accepted (`docs/DECISIONS.md`), listed there or not, or a
+finding the caller says the user waived, gets one line and does not count against the verdict. A form that fits no
+accepted group still counts, even when it looks like a recorded one.
 
 **Scope**: the full range is `git diff origin/main...HEAD`, plus uncommitted changes if there are any. A verdict on less
-is partial: write `(partial: <range>)` after it, and list what it excluded under Not checked. If the caller narrowed
-the scope, say so.
+is partial: write `(partial: <range>)` after it, or `(partial, narrowed by caller: <range>)` when the caller narrowed
+the scope, and list what it excluded under Not checked.
 
 Then **Not checked**: anything you could not verify from the diff (e.g. a test you could not find). Last line:
 `Verdict: approve` or `Verdict: changes requested` (any blocker or should-fix). No findings → say so and approve.

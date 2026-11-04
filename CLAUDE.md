@@ -115,6 +115,6 @@ Run what the change touches, in this order; CI runs all of it on every PR.
   review. Run the push as its own command: the hook also blocks one that follows a command that can move `HEAD`, such
   as `git commit` or `git switch`, in the same command.
 - A reviewer finding with a concrete wrong output is fixed, or moved to documented limits only with the user's OK.
-- Before fixing a `traced` finding about behavior, reproduce it with a sample input (in `src/` or `web/`, a failing
-  test), and add that input to the set you re-run.
+- Before a `traced` finding about behavior is fixed, the main session reproduces it with a sample input (in `src/` or
+  `web/`, a failing test) and adds that input to the set it re-runs.
 - File docs/DECISIONS.md. Record important design decisions and reasons. No need for detailed design documents — just "what decision, why, when".
