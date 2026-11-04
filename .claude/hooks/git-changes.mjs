@@ -24,8 +24,10 @@ export function gitCommands(command, cwd = process.cwd(), { subshells = true } =
     return `\u0001${word}\u0001`;
   };
   // A double-quoted string still runs $(x), and `x` in a POSIX shell, unless escaped. PowerShell's backtick only escapes.
-  const inDoubleQuotes = subshells ? /(?<!\\)\$\(([^()]*)\)|(?<!\\)`([^`]*)`/g : /(?<!`)\$\(([^()]*)\)/g;
-  const substitutions = (text) => [...text.matchAll(inDoubleQuotes)].map((match) => match[1] ?? match[2]);
+  // The first branch takes each escape with its character, so \\$(x) is a live command and \\\$(x) is not.
+  const inDoubleQuotes = subshells ? /\\[\s\S]|\$\(([^()]*)\)|`([^`]*)`/g : /`[\s\S]|\$\(([^()]*)\)/g;
+  const substitutions = (text) =>
+    [...text.matchAll(inDoubleQuotes)].map((match) => match[1] ?? match[2]).filter((inner) => inner !== undefined);
   // A heredoc loses its marker and body. The rest of its opening line is still commands: <<EOF && git push.
   const masked = command
     .replace(/<<-?\s*['"]?(\w+)['"]?([^\n]*)\n(?:[\s\S]*?\n)?\s*\1\b/g, '$2')
