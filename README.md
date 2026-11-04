@@ -162,9 +162,14 @@ Numbers from the learning journal ([`docs/journal.md`](docs/journal.md), in Viet
 
 ```bash
 cp .env.example .env
+# Set POSTGRES_PASSWORD in .env before the next commands: compose stops while it is blank.
 docker compose --profile app pull
 docker compose --profile app up -d
 ```
+
+Use only letters and digits in the password, for example from `openssl rand -hex 24`: it goes into the connection
+string unescaped, here and in the development setup below, and a `;` would end its value. Postgres takes the password in
+`.env` only when the `pgdata` volume is first created. Its port is published on 127.0.0.1 only.
 
 Open http://localhost:8080. The API migrates the database on startup. If `pull` answers `denied`, the GHCR packages
 are private: `docker login ghcr.io` with a token that has `read:packages`, or add `--build` to build the images from
@@ -173,14 +178,17 @@ source.
 ### Development
 
 Needs Git, the .NET 10 SDK, Node.js with npm, and the Docker CLI with a running daemon (Docker Desktop or Docker
-Engine). Copy `.env.example` to `.env`, then put the connection
-string in the user secrets of the API and of the integration tests, with the values from your `.env`. No credentials
-are committed.
+Engine). Copy `.env.example` to `.env` and set `POSTGRES_PASSWORD` in it before `docker compose up`, then put the
+connection string in the user secrets of the API and of the integration tests, with the values from your `.env`. No
+credentials are committed.
 
 ```bash
-dotnet user-secrets set ConnectionStrings:Pos "Host=localhost;Port=5433;Database=pos;Username=<user>;Password=<password>" --project src/Pos.Api
-dotnet user-secrets set ConnectionStrings:Pos "Host=localhost;Port=5433;Database=pos;Username=<user>;Password=<password>" --project tests/Pos.Api.IntegrationTests
+dotnet user-secrets set ConnectionStrings:Pos "Host=127.0.0.1;Port=5433;Database=pos;Username=<user>;Password=<password>" --project src/Pos.Api
+dotnet user-secrets set ConnectionStrings:Pos "Host=127.0.0.1;Port=5433;Database=pos;Username=<user>;Password=<password>" --project tests/Pos.Api.IntegrationTests
 ```
+
+Use `127.0.0.1`, not `localhost`: Postgres does not listen on `::1`, and on Windows each new connection to `localhost`
+first waits about 2 s for `::1` to refuse.
 
 The integration tests also accept the `ConnectionStrings__Pos` environment variable instead; the API check in
 `init.sh` reads only user secrets.
@@ -192,7 +200,7 @@ bash init.sh
 `init.sh` checks the tools and the local config, then builds and runs every check that needs no database (`--full`
 also runs the .NET tests against Postgres).
 
-- Database: `docker compose up -d` (Postgres on **localhost:5433**)
+- Database: `docker compose up -d` (Postgres on **127.0.0.1:5433**)
 - API: `dotnet run --project src/Pos.Api --launch-profile http`, on http://localhost:5191 (migrates in Development)
 - Web: `npm start` in `web/`, on http://localhost:4200 (proxies `/api` to the API)
 
