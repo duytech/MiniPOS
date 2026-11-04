@@ -90,7 +90,7 @@ start_docker() {
   echo "  OK: Docker is running"
 }
 
-echo "[4/7] Starting Postgres (localhost:5433)..."
+echo "[4/7] Starting Postgres (127.0.0.1:5433)..."
 if ! start_docker; then
   DB_PROBLEM="the Docker daemon is not running and Docker Desktop could not be started"
 elif ! docker compose up -d --wait > /dev/null 2>&1; then
