@@ -92,9 +92,10 @@ export function gitCommands(command, cwd = process.cwd(), { subshells = true } =
   return commands;
 }
 
-/** Whether a shell command runs `git commit`. */
-export function runsGitCommit(command) {
-  return gitCommands(command).some(({ sub }) => sub === 'commit');
+/** Whether the hook input's shell command runs `git commit`. */
+export function runsGitCommit({ tool_name, tool_input }) {
+  const commands = gitCommands(tool_input?.command ?? '', undefined, { subshells: tool_name !== 'PowerShell' });
+  return commands.some(({ sub }) => sub === 'commit');
 }
 
 /** Modified, added and untracked files (deleted ones need no check), relative to the repo root with forward slashes. */
