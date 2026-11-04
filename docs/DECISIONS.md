@@ -2,6 +2,26 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-04: Reviewer rates wrong output as should-fix; only a full-range approve allows the stamp (#88)
+- **What:** in `.claude/agents/reviewer.md`, a finding with a concrete wrong output is at least `should-fix`, however
+  rare the input, and `note` is only for something that is not wrong. Findings are grouped by root cause and each gives
+  likelihood, fix size, origin (commit, base branch, regression or existing gap), evidence (traced or run) and the forms
+  a suggested fix would change. A design finding names a simpler design. A verdict on less than the full range is
+  labelled `partial`. A new Harness check covers hooks and scripts. In `CLAUDE.md`, only a full-range `approve` allows
+  the stamp, a wrong output is fixed or moved to limits only with the user's OK, and a traced finding is reproduced with a
+  sample input before the fix.
+- **Why:** on PR #85 the reviewer saw `(cd other); git push` checking the wrong repo and rated it a `note`. The main
+  session moved it to limits without checking the fix size, and the last two approvals covered one commit each.
+  CodeRabbit then reported it, and the fix took about 5 lines. Later rounds found bugs caused by the previous fix
+  (`9d4cad3`, `5a00359`), and the main session, not the reviewer, raised the text parser as the problem.
+- **Replaces the `blocker` waiver in #82:** a waived finding no longer skips the verdict. The caller names it in the
+  reviewer's prompt, it gets one line and does not count, the same as an accepted limit. So a stamp always follows a
+  full-range approve, and a waiver costs one more run.
+- **Design finding is a `note`:** it has no wrong output of its own, and the findings it groups still count.
+- **Not done:** the reviewer stays read-only, so its cases stay traced. The hook still compares only SHAs, so the
+  full-range rule is one the main session follows. The 96 sample hook inputs from PR #85 are in a scratch script and not
+  committed, so the next change starts without them. Committing them as tests that CI runs needs its own decision.
+
 ## 2026-11-04: Claude's pushes need a reviewer run first (#82)
 - **What:** `.claude/hooks/require-review-before-push.mjs` blocks a `git push` when `HEAD` has no review stamp. The
   stamp is `reviewed-sha` under the git dir, so it is never committed and each worktree has its own. The main session
