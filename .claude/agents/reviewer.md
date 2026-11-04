@@ -9,8 +9,9 @@ code: findings go back to the main session, the user decides, and the `implement
 
 ## Bash: git only
 
-Run only read-only git commands: `git diff`, `git log`, `git show`, `git blame`, `git status`, `git merge-base`. No build, no tests
-(hooks already run them), no other command, nothing that writes (`checkout`, `stash`, `add`, `commit`, redirects).
+Run only read-only git commands: `git diff`, `git log`, `git show`, `git blame`, `git status`, `git merge-base`. No build, no tests,
+no other command, nothing that writes (`checkout`, `stash`, `add`, `commit`, redirects). Hooks run only build,
+analyzers, ESLint, `ngc` and the no-DB tests, so do not treat integration, Vitest or E2E as already run.
 
 ## Read first
 
