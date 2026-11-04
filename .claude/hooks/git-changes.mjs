@@ -30,9 +30,10 @@ export function gitCommands(command, cwd = process.cwd()) {
 
   const commands = [];
   let dir = cwd;
-  // $(x) and ${x} stay one word (git -C $(pwd) push). The commands inside $(x) run first, so they are read first.
+  // $(x), ${x} and PowerShell's -C (x) stay one word (git -C $(pwd) push). The commands inside run first, so they are
+  // read first.
   const substituted = [];
-  const unwrapped = masked.replace(/\$\(([^()]*)\)|\$\{[^{}]*\}/g, (text, inner) => {
+  const unwrapped = masked.replace(/(?:\$|(?<=\s-[Cc]\s+))\(([^()]*)\)|\$\{[^{}]*\}/g, (text, inner) => {
     if (inner) substituted.push(inner);
     return `\u0001${quoted.push(text) - 1}\u0001`;
   });
