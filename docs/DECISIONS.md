@@ -2,6 +2,16 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-04: The verifier refuses a running API (#84)
+- **What:** when something already answers on `E2E_API_URL`, `scripts/services.mjs` refuses it and starts nothing;
+  steps that require `e2e` are skipped, the feature is `blocked`, and the reason is printed. A running web app is still
+  reused: it holds no data. With `--no-start`, `e2e` steps are now always `blocked`.
+- **Why:** a reused API on the dev database made E2E steps write to dev data. The API does not expose its database, and a
+  route for it was declined (the user's choice): no API change. So only an API the verifier starts itself is known to be
+  on `pos_e2e`.
+- **Limit:** the web proxy always targets 5191. With `E2E_API_URL` set to another port, the check looks at that port and
+  not at the API the tests reach.
+
 ## 2026-11-04: Reviewer rates wrong output as should-fix; only a full-range approve allows the stamp (#88)
 - **What:** in `.claude/agents/reviewer.md`, a finding with a concrete wrong output is at least `should-fix`, however
   rare the input, and `note` is only for something that is not wrong. Findings are grouped by root cause and each gives
@@ -160,6 +170,7 @@ Important design decisions: what, why, when. Newest first.
   the old behavior (skip, `blocked`).
 - **Why:** checking only meant three terminals of setup before an e2e feature could pass, so it stayed `blocked`.
 - **Limit:** an API already running on 5191 is used as is, even when it is on the dev database and not `pos_e2e`.
+  Closed by #84.
 
 ## 2026-11-02: Feature list is JSON with a verifier (#52)
 - **What:** `docs/feature-list.md` became `docs/feature-list.json`. Each feature has a behavior, verification steps
