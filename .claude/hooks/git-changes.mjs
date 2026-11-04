@@ -39,7 +39,12 @@ export function gitCommands(command, cwd = process.cwd()) {
   });
 
   // A single & also separates commands, except in a redirect (2>&1, &>file). So do brackets: if (git x) { git push }.
-  for (const segment of [...substituted, unwrapped].join('\n').split(/&&|\|\||[;|\n(){}]|(?<!>)&(?!>)/)) {
+  // A cd inside (x) or $(x) ends with the bracket: the shell is back in the old folder after it.
+  const script = [...substituted.map((inner) => `(${inner})`), unwrapped].join('\n');
+  const outerDirs = [];
+  for (const segment of script.split(/(&&|\|\||[;|\n(){}]|(?<!>)&(?!>))/)) {
+    if (segment === '(') outerDirs.push(dir);
+    if (segment === ')') dir = outerDirs.pop() ?? dir;
     const all = words(segment.trim());
     if (/^(cd|Set-Location|sl|pushd)$/i.test(all[0] ?? '') && all[1]) {
       dir = path.resolve(dir, fromShell(all.slice(1).filter((w) => !w.startsWith('-'))[0] ?? '.'));

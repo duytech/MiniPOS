@@ -22,7 +22,7 @@ Important design decisions: what, why, when. Newest first.
   `git push origin other-branch` is not looked at. Deletes and dry runs pass, because they send no new code. The hook
   reads the command text, so it can miss a push, e.g. `bash -c "git push"`, `/usr/bin/git push`, `git --git-dir x push`
   or a git alias, `git commit; echo $(git push)` (the inner command is read first), `git push origin :a (Get-Branch)`,
-  and can read the wrong folder after `Push-Location`, `popd` or `x=$(cd ../other && pwd)`. It can also block by
+  and can read the wrong folder after `Push-Location`, `popd` or PowerShell's `(cd ../other)`, which is no subshell. It can also block by
   mistake, e.g. `echo git push` or the combined flags in `git push -nu`. A full shell parser is not worth it for a
   reminder.
 - **No test file:** the other hooks have none and CI runs none for hooks. It was checked with sample inputs and a real
