@@ -2,6 +2,18 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-04: Postgres listens on 127.0.0.1 and has no default password (#83)
+- **What:** `docker-compose.yml` publishes Postgres as `127.0.0.1:5433:5432`. `POSTGRES_PASSWORD` is blank in
+  `.env.example`, and `${POSTGRES_PASSWORD:?...}` stops compose while it is unset or blank. The README connection strings
+  use `Host=127.0.0.1`.
+- **Why:** the port was open on every host interface, and the password that the README copied to `.env` is public in
+  the repo.
+- **Blank, not `change-me`:** any text placeholder is a known password that works if the reader skips the step.
+- **`127.0.0.1`, not `localhost`:** with no listener on `::1`, Windows takes about 2 s to refuse each new connection
+  before Npgsql tries IPv4. The integration tests took 41 s with `localhost` and 8 s with `127.0.0.1`.
+- **Limit:** an existing `.env`, volume or user secret is not changed. Each machine that set up before this change keeps
+  the old password until it is changed there, and a `Host=localhost` secret keeps working but stays slow on Windows.
+
 ## 2026-11-04: Reviewer rates wrong output as should-fix; only a full-range approve allows the stamp (#88)
 - **What:** in `.claude/agents/reviewer.md`, a finding with a concrete wrong output is at least `should-fix`, however
   rare the input, and `note` is only for something that is not wrong. Findings are grouped by root cause and each gives

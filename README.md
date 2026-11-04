@@ -182,9 +182,12 @@ connection string in the user secrets of the API and of the integration tests, w
 credentials are committed.
 
 ```bash
-dotnet user-secrets set ConnectionStrings:Pos "Host=localhost;Port=5433;Database=pos;Username=<user>;Password=<password>" --project src/Pos.Api
-dotnet user-secrets set ConnectionStrings:Pos "Host=localhost;Port=5433;Database=pos;Username=<user>;Password=<password>" --project tests/Pos.Api.IntegrationTests
+dotnet user-secrets set ConnectionStrings:Pos "Host=127.0.0.1;Port=5433;Database=pos;Username=<user>;Password=<password>" --project src/Pos.Api
+dotnet user-secrets set ConnectionStrings:Pos "Host=127.0.0.1;Port=5433;Database=pos;Username=<user>;Password=<password>" --project tests/Pos.Api.IntegrationTests
 ```
+
+Use `127.0.0.1`, not `localhost`: Postgres does not listen on `::1`, and on Windows each new connection to `localhost`
+first waits about 2 s for `::1` to refuse.
 
 The integration tests also accept the `ConnectionStrings__Pos` environment variable instead; the API check in
 `init.sh` reads only user secrets.
