@@ -170,7 +170,8 @@ source.
 
 ### Development
 
-Needs Git, the .NET 10 SDK, Node.js with npm, and Docker Desktop. Copy `.env.example` to `.env`, then put the connection
+Needs Git, the .NET 10 SDK, Node.js with npm, and the Docker CLI with a running daemon (Docker Desktop or Docker
+Engine). Copy `.env.example` to `.env`, then put the connection
 string in the user secrets of the API and of the integration tests, with the values from your `.env`. No credentials
 are committed.
 

@@ -21,6 +21,9 @@ Ghi chú ngày 2026-11-03. Cả hai cùng review PR [#81](https://github.com/duy
 | Finding sai | 0 | 0, nhưng có 1 khẳng định sai ("sơ đồ khớp") |
 | Verdict | Comment | Changes requested |
 
+Các finding và số dòng dưới đây tính theo commit `ba520bc`, trước các commit sửa sau đó; bảng này không mô tả README
+hiện tại.
+
 | Finding | CodeRabbit | `reviewer` | Kiểm lại |
 |---|---|---|---|
 | README cho dùng biến môi trường `ConnectionStrings__Pos` thay user-secrets, nhưng `init.sh` chỉ nhận user-secrets cho API | Minor | note | Đúng (`init.sh:47`) |
