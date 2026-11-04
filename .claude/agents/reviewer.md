@@ -91,9 +91,10 @@ finding with no concrete wrong output that the caller says the user waived, gets
 the verdict. A form that fits no accepted group still counts, even when it looks like a recorded one or the caller says
 it was waived: a waived wrong output has to be recorded in those limits first.
 
-**Scope**: the full range is `git diff origin/main...HEAD`, plus uncommitted changes if there are any. A verdict on less
-is partial: write `(partial: <range>)` after it, or `(partial, narrowed by caller: <range>)` when the caller narrowed
-the scope, and list what it excluded under Not checked.
+**Scope**: the full range is `git diff origin/main...HEAD`. A verdict on less is partial: write `(partial: <range>)`
+after it, or `(partial, narrowed by caller: <range>)` when the caller narrowed the scope, and list what it excluded under
+Not checked. A push does not send uncommitted changes, so report on them separately: they cannot clear a finding in
+`HEAD`.
 
 Then **Not checked**: anything you could not verify from the diff (e.g. a test you could not find). Last line:
 `Verdict: approve` or `Verdict: changes requested` (any blocker or should-fix). No findings → say so and approve.

@@ -46,7 +46,7 @@ flowchart TD
     R -->|changes requested| G2{{gate: fix or accept findings}}
     G2 -->|fix| IB
     G2 -->|fix| IF
-    G2 -->|accept: record, re-run| R
+    G2 -->|accept: re-run| R
     R -->|full-range approve| PR[Pull request]
     PR --> CI[CI: dotnet, web, e2e<br/>required checks]
     PR -.-> CR[CodeRabbit review<br/>advisory]
