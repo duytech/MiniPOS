@@ -23,8 +23,8 @@ export function gitCommands(command, cwd = process.cwd(), { subshells = true } =
     if (commandsInside.length) inners.set(word, commandsInside);
     return `\u0001${word}\u0001`;
   };
-  // A double-quoted string still runs $(x), and `x` in a POSIX shell. PowerShell's backtick only escapes.
-  const inDoubleQuotes = subshells ? /\$\(([^()]*)\)|(?<!\\)`([^`]*)`/g : /\$\(([^()]*)\)/g;
+  // A double-quoted string still runs $(x), and `x` in a POSIX shell, unless escaped. PowerShell's backtick only escapes.
+  const inDoubleQuotes = subshells ? /(?<!\\)\$\(([^()]*)\)|(?<!\\)`([^`]*)`/g : /(?<!`)\$\(([^()]*)\)/g;
   const substitutions = (text) => [...text.matchAll(inDoubleQuotes)].map((match) => match[1] ?? match[2]);
   // A heredoc loses its marker and body. The rest of its opening line is still commands: <<EOF && git push.
   const masked = command
@@ -43,13 +43,14 @@ export function gitCommands(command, cwd = process.cwd(), { subshells = true } =
 
   const commands = [];
   let dir = cwd;
-  // `x`, ${x}, PowerShell's -C (x) and brackets that touch a word ($(x), x=(y), D:\foo(1)) stay one word. Repeated, so an
-  // outer bracket is seen once its inner one is a word: $(dirname $(pwd)).
+  // `x`, ${x}, PowerShell's -C (x) and brackets that touch a word ($(x), x=(y), D:\foo(1), foo{1}) stay one word. A brace
+  // with a space or after a bracket is a block: else{git push}, if(x){git push}. Repeated, so an outer bracket is seen
+  // once its inner one is a word: $(dirname $(pwd)).
   let unwrapped = subshells ? masked.replace(/`([^`]*)`/g, (text, inner) => keepWord(text, [inner])) : masked;
   for (let previous; previous !== unwrapped; ) {
     previous = unwrapped;
     unwrapped = unwrapped.replace(
-      /(?:(?<=[^\s;&|(){}])|(?<=\s-[Cc]\s+))\(([^()]*)\)|\$\{[^{}]*\}/g,
+      /(?:(?<=[^\s;&|(){}])|(?<=\s-[Cc]\s+))\(([^()]*)\)|\$\{[^{}]*\}|(?<=[^\s;&|(){}\u0001])\{[^{}\s]*\}/g,
       (text, inner) => keepWord(text, inner ? [inner] : []),
     );
   }

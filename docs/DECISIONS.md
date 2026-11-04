@@ -20,11 +20,12 @@ Important design decisions: what, why, when. Newest first.
 - **Limits:** a reminder, not a hard gate, because Claude writes the stamp. A push typed in a terminal is not checked;
   a git `pre-push` hook calling `claude -p --agent reviewer` was considered and not chosen. Only `HEAD` is compared, so
   `git push origin other-branch` is not looked at. Deletes and dry runs pass, because they send no new code. The hook is
-  called from the main checkout: on a branch without the script, it fails to start and the push goes ahead.
+  called from the main checkout: on a branch without the script, it fails to start and the push goes ahead. The stamp
+  holds one SHA, so reviewing a second branch and returning to the first blocks that push until it is stamped again.
 - **Parser limits, accepted by the user on PR #85:** the hook reads the command text, and a full shell parser is not
   worth it for a reminder. Commit detection for `verify-on-edit.mjs` and `check-utf8.mjs` shares the same parser and the
   same misses. Examples per group, not a full list:
-  - Command text the parser does not open: `bash -c "git push"`, `eval "git push"`, `Start-Process git "push"`,
+  - Command text the parser does not open: `bash -c "git push"`, `eval "git push"`, `Start-Process git "push origin x"`,
     `${x:-$(git push)}`, `x="$(git commit -m "m")"`, and apostrophes that pair across commands (`# don't`).
   - Subcommand lost: `git --git-dir x push`, `git --work-tree x push`, `git -C (Split-Path (Get-Location)) push`, and
     a line continuation between `git` and `push`.
