@@ -1,6 +1,8 @@
-// Helpers shared by the hooks: reading the hook input, and the uncommitted changes (verify-on-edit.mjs, check-utf8.mjs).
+// Helpers shared by the hooks: reading the hook input, the git commands in a shell command, and the uncommitted changes
+// (verify-on-edit.mjs, check-utf8.mjs, require-review-before-push.mjs).
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import path from 'node:path';
 
 /** The hook input JSON from stdin (a BOM is dropped: Windows PowerShell may add one). */
 export function readHookInput() {
@@ -8,22 +10,52 @@ export function readHookInput() {
 }
 
 /**
- * Whether a shell command runs `git commit`. Heredoc and here-string bodies and quoted strings are dropped first, so a
- * commit message or an echo that mentions "git commit" does not count.
+ * The git commands in a shell command, in order: `{ repo, sub, args }` per command. `cd` and `git -C` set `repo`.
+ * Heredoc and here-string bodies are dropped and quoted strings stay one word, so a commit message or an echo that
+ * mentions "git commit" does not count.
  */
-export function runsGitCommit(command) {
+export function gitCommands(command, cwd = process.cwd()) {
+  const quoted = [];
   const masked = command
     .replace(/<<-?\s*['"]?(\w+)['"]?[^\n]*\n[\s\S]*?\n\s*\1\b/g, '')
     .replace(/@(['"])\r?\n[\s\S]*?\r?\n\1@/g, '""')
-    .replace(/"[^"]*"|'[^']*'/g, '""');
-  return masked.split(/&&|\|\||[;|\n]/).some((segment) => {
-    const words = segment.trim().split(/\s+/);
-    const at = words.findIndex((w) => /^git(\.exe)?$/i.test(w));
-    if (at < 0) return false;
-    let i = at + 1;
-    while (words[i]?.startsWith('-')) i += words[i] === '-C' || words[i] === '-c' ? 2 : 1;
-    return words[i] === 'commit';
-  });
+    .replace(/"([^"]*)"|'([^']*)'/g, (_, double, single) => `\u0001${quoted.push(double ?? single) - 1}\u0001`);
+  const words = (text) =>
+    text
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((word) => word.replace(/\u0001(\d+)\u0001/g, (_, i) => quoted[Number(i)]));
+  // Git Bash writes D:\x as /d/x; path.resolve would read that as a folder on the current drive.
+  const fromShell = (dir) => (process.platform === 'win32' ? dir.replace(/^\/([a-zA-Z])(?=\/|$)/, '$1:') : dir);
+
+  const commands = [];
+  let dir = cwd;
+  for (const segment of masked.split(/&&|\|\||[;|\n]/)) {
+    const all = words(segment.trim());
+    if (/^(cd|Set-Location|sl|pushd)$/i.test(all[0] ?? '') && all[1]) {
+      dir = path.resolve(dir, fromShell(all.slice(1).filter((w) => !w.startsWith('-'))[0] ?? '.'));
+      continue;
+    }
+    // git may follow a wrapper such as `if ($?) {` or `& `, so look for it anywhere in the segment.
+    const at = all.findIndex((w) => /^git(\.exe)?$/i.test(w));
+    if (at < 0) continue;
+    const rest = all.slice(at + 1);
+    let repo = dir;
+    let i = 0;
+    while (rest[i]?.startsWith('-')) {
+      if (rest[i] === '-C') repo = path.resolve(repo, fromShell(rest[++i] ?? '.'));
+      else if (rest[i] === '-c') i++;
+      i++;
+    }
+    const [sub, ...args] = rest.slice(i);
+    if (sub) commands.push({ repo, sub, args });
+  }
+  return commands;
+}
+
+/** Whether a shell command runs `git commit`. */
+export function runsGitCommit(command) {
+  return gitCommands(command).some(({ sub }) => sub === 'commit');
 }
 
 /** Modified, added and untracked files (deleted ones need no check), relative to the repo root with forward slashes. */
