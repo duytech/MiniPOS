@@ -86,8 +86,10 @@ test('says what is not running with --no-start, when the API is down', async () 
 });
 
 test('names only the API as not running with --no-start, when the web app runs', async () => {
+  // The web port is held first: a port closedUrl() has released could be handed to the web server.
+  const web = await serverUrl();
   const api = await closedUrl();
-  const { ensure } = await services(api, await serverUrl());
+  const { ensure } = await services(api, web);
 
   assert.equal(await ensure('e2e', false), `not running: API (${api}); see tests/e2e/README.md`);
 });
