@@ -7,8 +7,8 @@
 //   --no-start                                  do not start missing services (see below)
 //
 // A step's `requires` (db: Postgres; e2e: API on pos_e2e and web app) is started when it is not running, and what the
-// script started is stopped at the end (scripts/services.mjs). With --no-start, or when it cannot start, the step is
-// skipped. Result per feature:
+// script started is stopped at the end (scripts/services.mjs). With --no-start, when it cannot start, or when an API it
+// did not start is already running, the step is skipped and the reason printed. Result per feature:
 // a step failed → active; every step that ran passed but some were skipped → blocked; all passed → passing.
 // testedAt is the start of the run when at least one step ran, and stays as it was when none did.
 // Exits 1 when a `prepare` command or any feature fails.
@@ -58,7 +58,9 @@ async function runSteps(feature) {
   for (const step of feature.verification) {
     const reasons = await missing(step.requires ?? []);
     if (reasons.length) {
-      skipped.push({ run: step.run, reason: reasons.join('; ') });
+      const reason = reasons.join('; ');
+      console.log(`  skipped: ${reason}`);
+      skipped.push({ run: step.run, reason });
       continue;
     }
     const result = run(step);
