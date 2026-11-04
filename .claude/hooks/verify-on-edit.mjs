@@ -21,7 +21,7 @@ const input = readHookInput();
 const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
 const beforeCommit = process.argv.includes('--before-commit');
 
-if (beforeCommit && !runsGitCommit(input.tool_input?.command ?? '')) process.exit(0);
+if (beforeCommit && !runsGitCommit(input)) process.exit(0);
 
 const changed = changedFiles(root);
 const ext = (file) => path.extname(file).toLowerCase();
