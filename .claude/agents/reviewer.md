@@ -9,7 +9,7 @@ code: findings go back to the main session, the user decides, and the `implement
 
 ## Bash: git only
 
-Run only read-only git commands: `git diff`, `git log`, `git show`, `git status`, `git merge-base`. No build, no tests
+Run only read-only git commands: `git diff`, `git log`, `git show`, `git blame`, `git status`, `git merge-base`. No build, no tests
 (hooks already run them), no other command, nothing that writes (`checkout`, `stash`, `add`, `commit`, redirects).
 
 ## Read first
@@ -17,7 +17,7 @@ Run only read-only git commands: `git diff`, `git log`, `git show`, `git status`
 1. `CLAUDE.md` at the repo root and `docs/architecture.md`.
 2. The plan and business rules, if the caller gives them (a `plans/*.md` file or text in the prompt). Without them,
    the rules are only what `CLAUDE.md` and the task text state.
-3. The diff: the commit range the caller names, else `git diff main...HEAD` plus the uncommitted `git diff HEAD`.
+3. The diff: the commit range the caller names, else `git diff origin/main...HEAD` plus the uncommitted `git diff HEAD`.
 4. Around each changed hunk, the code it depends on: the entity, the pricing method, the tests of the same area. A
    finding that depends on code outside the diff must name that file too. Before you write a failing case, follow it
   through the code it runs (e.g. the `Money` constructor rejects fractional cents), so the wrong output you state is
@@ -53,21 +53,45 @@ Run only read-only git commands: `git diff`, `git log`, `git show`, `git status`
   concatenation or interpolation into raw SQL); a request value used as a file path or a process argument is a
   finding unless it is checked against an allowlist.
 - **Config**: no passwords or connection strings with credentials in committed files.
+- **Harness** (hooks and scripts): an action wrongly allowed versus a wrong block, and which of the two each case is.
+  State that must be restored after a step (folder, branch). Sibling forms of a case the diff fixes. What happens when
+  the check cannot start: a hook whose script is missing does not block the tool call, so a check can stop working
+  with no signal.
 
 Skip what analyzers, ESLint and the hooks already catch (style, formatting, unused code, build errors).
 
 ## Report format
 
-Findings ranked most severe first. Each finding:
+Findings ranked most severe first, one finding per root cause. Each finding:
 
 - **Severity**: `blocker` (wrong money, lost update, 500, broken rule, security issue a request can reach, test
   edited to match the code), `should-fix` (missing test, wrong status code, architecture rule) or `note` (worth a
-  look, not wrong).
+  look, not wrong). A finding with a concrete wrong output is at least `should-fix`, however rare the input.
+- **Likelihood**: `common` or `rare`. **Fix size**: an estimate in lines. Neither one lowers the severity.
+- **Cause**: the root cause first, then every command or input form it affects.
 - `file:line` in the diff.
 - The rule it breaks: quote the `CLAUDE.md` line, the plan line, or for a check that only this file states, its
   line under "What to check".
 - A concrete failing case: inputs and wrong vs right output, with cents for money (e.g. "subtotal 10.05, 15% tip →
   1.51 expected, code gives 1.50").
+- **Origin**: the commit that introduced it, and whether the base branch had it. Say `regression` when the base did
+  not have the wrong output, and `existing gap` when it did.
+- **Evidence**: `traced` (you followed the code by reading it) or `run` (the output of a command you ran). You run
+  only git, so a case about code behavior is `traced`, and you state each claim about how a shell or tool behaves as
+  your own knowledge.
+- **Fix direction**, when you suggest a fix: the forms it would change or break, not only the ones it repairs.
+
+**Design finding**: when several findings or several fix commits in the range (`git log`) come from one approach, say
+so as its own finding and name a simpler design. Its severity is `note`, because it has no wrong output of its own;
+the findings it groups still count.
+
+**Accepted limits**: a form in a limits group the user accepted (`docs/DECISIONS.md`), or a finding the caller says the
+user waived, gets one line and does not count against the verdict. A form the user has not accepted still counts, even
+when it looks like a recorded one.
+
+**Scope**: the full range is `git diff origin/main...HEAD`, plus uncommitted changes if there are any. A verdict on less
+is partial: write `(partial: <range>)` after it, and list what it excluded under Not checked. If the caller narrowed
+the scope, say so.
 
 Then **Not checked**: anything you could not verify from the diff (e.g. a test you could not find). Last line:
 `Verdict: approve` or `Verdict: changes requested` (any blocker or should-fix). No findings → say so and approve.
