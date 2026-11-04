@@ -21,6 +21,10 @@ Important design decisions: what, why, when. Newest first.
 - **The hook's block message changed, nothing else in it:** it stated the #82 rule at the moment the main session
   decides whether to stamp. No push moves between allowed and blocked.
 - **Design finding is a `note`:** it has no wrong output of its own, and the findings it groups still count.
+- **An unlisted form in an accepted group counts as accepted:** the #82 groups say they list examples, not every form, so
+  rating each unlisted form again would reopen what the user accepted.
+- **The full range excludes uncommitted changes:** a push does not send them, so they cannot block a stamp or clear a
+  finding in `HEAD`.
 - **Not done:** the reviewer stays read-only, so its cases stay traced. The hook still compares only SHAs, so the
   full-range rule is one the main session follows. The 96 sample hook inputs from PR #85 are in a scratch script and not
   committed, so the next change starts without them. Committing them as tests that CI runs needs its own decision.
