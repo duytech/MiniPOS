@@ -14,12 +14,15 @@ Important design decisions: what, why, when. Newest first.
 - **`--stamp`, not a shell redirect:** `>` in Windows PowerShell 5.1 can write a BOM or UTF-16, and the SHA would not
   match.
 - **Same-command moves are blocked:** the hook runs before the whole command, so in `git commit && git push` it would
-  check the old SHA and let the new commit through. The push has to be its own command.
+  check the old SHA and let the new commit through. The push has to be its own command. A move in any folder counts,
+  even in another repository: `cd web && git commit && cd .. && git push` names one repository with two paths, so
+  comparing paths let it through. `git -C ../other commit && git push` is a false block, the cheaper mistake.
 - **Limits:** a reminder, not a hard gate, because Claude writes the stamp. A push typed in a terminal is not checked;
   a git `pre-push` hook calling `claude -p --agent reviewer` was considered and not chosen. Only `HEAD` is compared, so
   `git push origin other-branch` is not looked at. Deletes and dry runs pass, because they send no new code. The hook
-  reads the command text, so it does not see `bash -c "git push"`, `/usr/bin/git push`, `git --git-dir x push` or a git
-  alias. Text such as `echo git push` counts as a push: a false block is the cheaper mistake.
+  reads the command text, so it can miss a push, e.g. `bash -c "git push"`, `/usr/bin/git push`, `git --git-dir x push`
+  or a git alias, and can read the wrong folder after `Push-Location` or `popd`. It can also block by mistake, e.g.
+  `echo git push` or the combined flags in `git push -nu`.
 - **No test file:** the other hooks have none and CI runs none for hooks. It was checked with sample inputs and a real
   push, as the PR describes.
 

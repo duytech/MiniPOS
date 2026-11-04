@@ -30,9 +30,16 @@ export function gitCommands(command, cwd = process.cwd()) {
 
   const commands = [];
   let dir = cwd;
-  // A single & also separates commands, except in a redirect (2>&1, &>file). Brackets may touch git: (git push), {git push}.
-  for (const segment of masked.split(/&&|\|\||[;|\n]|(?<!>)&(?!>)/)) {
-    const all = words(segment.replace(/[(){}]/g, ' ').trim());
+  // $(x) and ${x} stay one word (git -C $(pwd) push). The commands inside $(x) run first, so they are read first.
+  const substituted = [];
+  const unwrapped = masked.replace(/\$\(([^()]*)\)|\$\{[^{}]*\}/g, (text, inner) => {
+    if (inner) substituted.push(inner);
+    return `\u0001${quoted.push(text) - 1}\u0001`;
+  });
+
+  // A single & also separates commands, except in a redirect (2>&1, &>file). So do brackets: if (git x) { git push }.
+  for (const segment of [...substituted, unwrapped].join('\n').split(/&&|\|\||[;|\n(){}]|(?<!>)&(?!>)/)) {
+    const all = words(segment.trim());
     if (/^(cd|Set-Location|sl|pushd)$/i.test(all[0] ?? '') && all[1]) {
       dir = path.resolve(dir, fromShell(all.slice(1).filter((w) => !w.startsWith('-'))[0] ?? '.'));
       continue;
