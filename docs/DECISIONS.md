@@ -2,6 +2,13 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-03: README is in English; the journal and roadmap stay in Vietnamese (#80)
+- **What:** `README.md` explains the harness in English and links to `docs/journal.md` and `roadmap.md` (Vietnamese)
+  for the day-by-day story. Its results section quotes numbers from the journal, not new ones.
+- **Why:** the README is what a CV reader and an English-speaking interviewer open first, and `CLAUDE.md`, the agents
+  and `.coderabbit.yaml` are already in English. The journal is a personal learning log; translating it would double
+  the upkeep.
+
 ## 2026-11-03: The app ships as two images on GHCR; Docker Desktop runs them with a compose profile (#77)
 - **What:** `src/Pos.Api/Dockerfile` and `web/Dockerfile` (nginx serves the Angular build and proxies `/api` to the
   API). `api` and `web` are in the `app` profile of `docker-compose.yml`. `.github/workflows/cd.yml` builds both on
