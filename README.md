@@ -43,10 +43,11 @@ flowchart TD
     IF --> I
     T --> I
     I --> R[reviewer<br/>read-only, diff vs CLAUDE.md]
-    R --> G2{{gate: fix or accept findings}}
+    R -->|changes requested| G2{{gate: fix or accept findings}}
     G2 -->|fix| IB
     G2 -->|fix| IF
-    G2 -->|accept| PR[Pull request]
+    G2 -->|accept: re-run| R
+    R -->|full-range approve| PR[Pull request]
     PR --> CI[CI: dotnet, web, e2e<br/>required checks]
     PR -.-> CR[CodeRabbit review<br/>advisory]
     CI --> G3{{gate: merge}}
@@ -64,7 +65,7 @@ only the CI checks block a merge.
 | [`planner`](.claude/agents/planner.md) | Read, Glob, Grep | Cannot edit or run anything; asks the business questions the task leaves open before planning |
 | [`implementer`](.claude/agents/implementer.md) | Read, Glob, Grep, Edit, Write, Bash, PowerShell, Skill; preloads `add-endpoint` and `add-angular-feature` | Builds only an approved plan; does not commit or push |
 | [`tester`](.claude/agents/tester.md) | Read, Glob, Grep, Edit, Write, Bash, PowerShell, Playwright MCP browser | Edits only `tests/` (hook `tests-only.mjs`); runs in a worktree and the run is dropped if its diff touches anything else |
-| [`reviewer`](.claude/agents/reviewer.md) | Read, Glob, Grep, Bash (read-only git) | Never edits; every finding names the rule it breaks |
+| [`reviewer`](.claude/agents/reviewer.md) | Read, Glob, Grep, Bash (read-only git) | Never edits; every blocker and should-fix names the rule it breaks |
 
 ## Verifiers
 
@@ -77,7 +78,7 @@ The agent is not done until these pass. Most of them run without being asked.
 | `verify-on-edit.mjs` | End of every turn, and before every `git commit` | Changed `.cs`: `dotnet build` + the tests that need no DB. Changed `web/src/**/*.ts\|html`: ESLint on those files + `ngc` (`tsc` for specs). Blocks the commit on failure |
 | `check-utf8.mjs` | Same | Rejects changed text files that are not UTF-8 |
 | `block-main-branch.mjs` | Before `git commit` / `git push` | No commit on `main`, no push that updates `main` |
-| `require-review-before-push.mjs` | Before `git push` | `HEAD` needs a stamp written after a `reviewer` run, so a new commit needs a new review. A reminder, not a hard gate: Claude writes the stamp, and a push typed in a terminal is not checked |
+| `require-review-before-push.mjs` | Before `git push` | `HEAD` needs a stamp written after a full-range `reviewer` approve, so a new commit needs a new review. A reminder, not a hard gate: Claude writes the stamp, and a push typed in a terminal is not checked |
 | `block-claude-coauthor.mjs` | Before commands | No `Co-Authored-By: Claude` in commits, PRs or issues |
 | `tests-only.mjs` | Before the `tester` edits a file | Refuses any path outside `tests/` |
 | `protect-feature-state.mjs` | Before edits to `docs/feature-list.json` | `state`, `testedAt`, `evidence` are written only by the verifier script |
