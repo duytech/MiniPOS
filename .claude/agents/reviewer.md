@@ -14,7 +14,7 @@ Run only read-only git commands: `git diff`, `git log`, `git show`, `git blame`,
 
 ## Read first
 
-1. `CLAUDE.md` at the repo root and `docs/architecture.md`.
+1. `CLAUDE.md` at the repo root and `docs/architecture.md`, and the limits the user accepted in `docs/DECISIONS.md`.
 2. The plan and business rules, if the caller gives them (a `plans/*.md` file or text in the prompt). Without them,
    the rules are only what `CLAUDE.md` and the task text state.
 3. The diff: the commit range the caller names, else `git diff origin/main...HEAD` plus the uncommitted `git diff HEAD`.
@@ -86,8 +86,9 @@ so as its own finding and name a simpler design. Its severity is `note`, because
 the findings it groups still count.
 
 **Accepted limits**: a form that fits a limits group the user accepted (`docs/DECISIONS.md`), listed there or not, or a
-finding the caller says the user waived, gets one line and does not count against the verdict. A form that fits no
-accepted group still counts, even when it looks like a recorded one.
+finding with no concrete wrong output that the caller says the user waived, gets one line and does not count against
+the verdict. A form that fits no accepted group still counts, even when it looks like a recorded one or the caller says
+it was waived: a waived wrong output has to be recorded in those limits first.
 
 **Scope**: the full range is `git diff origin/main...HEAD`, plus uncommitted changes if there are any. A verdict on less
 is partial: write `(partial: <range>)` after it, or `(partial, narrowed by caller: <range>)` when the caller narrowed
