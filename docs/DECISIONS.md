@@ -13,6 +13,10 @@ Important design decisions: what, why, when. Newest first.
   before Npgsql tries IPv4. The integration tests took 41-45 s with `localhost` and 8 s with `127.0.0.1`.
 - **Limit:** an existing `.env`, volume or user secret is not changed. Each machine that set up before this change keeps
   the old password until it is changed there, and a `Host=localhost` secret keeps working but stays slow on Windows.
+- **Limit, password alphabet:** the password goes unescaped into `ConnectionStrings__Pos` in `docker-compose.yml` and
+  into the README user-secrets commands, so a `;` ends its value and the API cannot connect. Compose cannot check the
+  alphabet or escape the value, and nothing validates it, so the rule is only written down: letters and digits, in the
+  README and `.env.example`. Accepted by the user on PR #92, after CodeRabbit reported it.
 
 ## 2026-11-04: Reviewer rates wrong output as should-fix; only a full-range approve allows the stamp (#88)
 - **What:** in `.claude/agents/reviewer.md`, a finding with a concrete wrong output is at least `should-fix`, however

@@ -167,8 +167,9 @@ docker compose --profile app pull
 docker compose --profile app up -d
 ```
 
-Postgres takes the password in `.env` only when the `pgdata` volume is first created. Its port is published on
-127.0.0.1 only.
+Use only letters and digits in the password, for example from `openssl rand -hex 24`: it goes into the connection
+string unescaped, here and in the development setup below, and a `;` would end its value. Postgres takes the password in
+`.env` only when the `pgdata` volume is first created. Its port is published on 127.0.0.1 only.
 
 Open http://localhost:8080. The API migrates the database on startup. If `pull` answers `denied`, the GHCR packages
 are private: `docker login ghcr.io` with a token that has `read:packages`, or add `--build` to build the images from
