@@ -68,6 +68,15 @@ Important design decisions: what, why, when. Newest first.
   - False blocks: values the hook cannot expand (`cd "$CLAUDE_PROJECT_DIR" && git push`, `git -C $(pwd) push`,
     `cd ~/x && git push`), `git checkout -- f && git push`, `git reset HEAD f; git push`,
     `git push origin :foo > out.txt`, `git push origin +:foo`, `git push -nu`, `echo git push`, a `# git push` line.
+- **More parser limits, accepted by the user on PR #91:** each one runs the push but the parser misses it, and a fix
+  needs a nesting-aware or quote-aware parser:
+  - PowerShell: ``echo "$(echo `$(git push))"``. Inside `$(x)`, a backtick does not stop the inner bracket from running.
+    The `git commit` spelling is new in PR #91: `main` read it as a commit only because commit detection used POSIX
+    rules. PowerShell's rules also fix the simpler ``echo "\$(git commit -m x)"``, so the user accepted this trade.
+  - An escaped quote or backtick that pairs across commands: `echo "a\"" && git push && echo "b"`,
+    ``echo \` && echo `git push` ``.
+  - A bracket or backtick inside a substitution: `echo "$(git push origin $(git branch --show-current))"` reads only
+    `branch`, ``echo "$(echo `git push`)"`` reads nothing.
 - **Brackets depend on the shell:** a `cd` inside `(x)` or `$(x)` ends with the bracket in a POSIX shell and stays in
   PowerShell, so the hook reads `tool_name`. The docs show `tool_name` only for `Bash`; `PowerShell` follows from the
   `Bash|PowerShell` matcher and was not seen in a real input.
