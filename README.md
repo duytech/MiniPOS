@@ -77,7 +77,7 @@ The agent is not done until these pass. Most of them run without being asked.
 | `verify-on-edit.mjs` | End of every turn, and before every `git commit` | Changed `.cs`: `dotnet build` + the tests that need no DB. Changed `web/src/**/*.ts\|html`: ESLint on those files + `ngc` (`tsc` for specs). Blocks the commit on failure |
 | `check-utf8.mjs` | Same | Rejects changed text files that are not UTF-8 |
 | `block-main-branch.mjs` | Before `git commit` / `git push` | No commit on `main`, no push that updates `main` |
-| `require-review-before-push.mjs` | Before `git push` | `HEAD` needs a stamp written after a `reviewer` run, so a new commit needs a new review. A reminder, not a hard gate: Claude writes the stamp, and a push typed in a terminal is not checked |
+| `require-review-before-push.mjs` | Before `git push` | `HEAD` needs a stamp written after a full-range `reviewer` approve, so a new commit needs a new review. A reminder, not a hard gate: Claude writes the stamp, and a push typed in a terminal is not checked |
 | `block-claude-coauthor.mjs` | Before commands | No `Co-Authored-By: Claude` in commits, PRs or issues |
 | `tests-only.mjs` | Before the `tester` edits a file | Refuses any path outside `tests/` |
 | `protect-feature-state.mjs` | Before edits to `docs/feature-list.json` | `state`, `testedAt`, `evidence` are written only by the verifier script |
