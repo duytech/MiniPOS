@@ -43,10 +43,11 @@ flowchart TD
     IF --> I
     T --> I
     I --> R[reviewer<br/>read-only, diff vs CLAUDE.md]
-    R --> G2{{gate: fix or accept findings}}
+    R -->|changes requested| G2{{gate: fix or accept findings}}
     G2 -->|fix| IB
     G2 -->|fix| IF
-    G2 -->|accept| PR[Pull request]
+    G2 -->|accept: record, re-run| R
+    R -->|full-range approve| PR[Pull request]
     PR --> CI[CI: dotnet, web, e2e<br/>required checks]
     PR -.-> CR[CodeRabbit review<br/>advisory]
     CI --> G3{{gate: merge}}
