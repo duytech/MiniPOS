@@ -110,7 +110,8 @@ Run what the change touches, in this order; CI runs all of it on every PR.
 - Before every `git push`, docs-only and tests-only pushes too: run the `reviewer` agent on `git diff origin/main...HEAD`
   and handle its findings, then from the repo root run `node .claude/hooks/require-review-before-push.mjs --stamp`. Only
   `Verdict: approve` on that full range allows the stamp, not a `partial` verdict. A finding the user explicitly waives
-  is named in the reviewer's prompt, so it does not count against the verdict. A `PreToolUse` hook
+  does not count against the verdict: one with a concrete wrong output is recorded in the limits in
+  `docs/DECISIONS.md`, any other is named in the reviewer's prompt. A `PreToolUse` hook
   (`.claude/hooks/require-review-before-push.mjs`) blocks a push when `HEAD` has no stamp, so a new commit needs a new
   review. Run the push as its own command: the hook also blocks one that follows a command that can move `HEAD`, such
   as `git commit` or `git switch`, in the same command.

@@ -14,9 +14,12 @@ Important design decisions: what, why, when. Newest first.
   session moved it to limits without checking the fix size, and the last two approvals covered one commit each.
   CodeRabbit then reported it, and the fix took about 5 lines. Later rounds found bugs caused by the previous fix
   (`9d4cad3`, `5a00359`), and the main session, not the reviewer, raised the text parser as the problem.
-- **Replaces the `blocker` waiver in #82:** a waived finding no longer skips the verdict. The caller names it in the
-  reviewer's prompt, it gets one line and does not count, the same as an accepted limit. So a stamp always follows a
-  full-range approve, and a waiver costs one more run.
+- **Replaces the `blocker` waiver in #82:** a waived finding no longer skips the verdict. One with a concrete wrong
+  output is recorded in the limits here, so it leaves a trace and later runs read it; any other is named in the reviewer's
+  prompt. Either way it gets one line and does not count. So a stamp always follows a full-range approve, and a waiver
+  costs one more run.
+- **The hook's block message changed, nothing else in it:** it stated the #82 rule at the moment the main session
+  decides whether to stamp. No push moves between allowed and blocked.
 - **Design finding is a `note`:** it has no wrong output of its own, and the findings it groups still count.
 - **Not done:** the reviewer stays read-only, so its cases stay traced. The hook still compares only SHAs, so the
   full-range rule is one the main session follows. The 96 sample hook inputs from PR #85 are in a scratch script and not

@@ -72,7 +72,7 @@ for (const [index, { repo, sub, args }] of commands.entries()) {
   if (readStamp(repo) !== head) {
     process.stderr.write(
       `Blocked: HEAD (${head}) has no review stamp. Run the reviewer agent on git diff origin/main...HEAD and handle ` +
-        'its findings. Do not stamp while a blocker is open, unless the user waives that finding. ' +
+        'its findings. Only Verdict: approve on that full range allows the stamp, not a partial verdict. ' +
         `Then, from ${repo}, run: ${STAMP_COMMAND}\n`,
     );
     process.exit(2);
