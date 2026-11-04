@@ -107,4 +107,10 @@ Run what the change touches, in this order; CI runs all of it on every PR.
   plan is approved, the task list is exactly that list.
 - Git commits as checkpoints. Commit after completing each atomic unit of work. Commit messages should explain what was done and why, Must start with a task id like: 13245 | Do something.
 - Branch name must start with a task id.
+- Before every `git push`, docs-only and tests-only pushes too: run the `reviewer` agent on `git diff origin/main...HEAD`
+  and handle its findings, then from the repo root run `node .claude/hooks/require-review-before-push.mjs --stamp`. Never stamp while a
+  `blocker` finding is open, unless the user explicitly waives that finding. A `PreToolUse` hook
+  (`.claude/hooks/require-review-before-push.mjs`) blocks a push when `HEAD` has no stamp, so a new commit needs a new
+  review. Run the push as its own command: the hook also blocks one that follows a command that can move `HEAD`, such
+  as `git commit` or `git switch`, in the same command.
 - File docs/DECISIONS.md. Record important design decisions and reasons. No need for detailed design documents — just "what decision, why, when".

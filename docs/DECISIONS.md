@@ -2,6 +2,59 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-04: Claude's pushes need a reviewer run first (#82)
+- **What:** `.claude/hooks/require-review-before-push.mjs` blocks a `git push` when `HEAD` has no review stamp. The
+  stamp is `reviewed-sha` under the git dir, so it is never committed and each worktree has its own. The main session
+  writes it with `--stamp` after the `reviewer` returns and its findings are handled.
+- **Why:** PR #81 showed the reviewer takes about 2 minutes and catches errors CodeRabbit cannot, and running it by
+  hand is easy to forget.
+- **Every push, docs and tests too:** PR #81 was docs-only and the reviewer still found errors.
+- **Open blockers:** no stamp while a `blocker` is open, unless the user waives it. This is a rule for the main session
+  in `CLAUDE.md`; the hook only compares SHAs.
+- **`--stamp`, not a shell redirect:** `>` in Windows PowerShell 5.1 can write a BOM or UTF-16, and the SHA would not
+  match.
+- **Same-command moves are blocked:** the hook runs before the whole command, so in `git commit && git push` it would
+  check the old SHA and let the new commit through. The push has to be its own command. A move in any folder counts,
+  even in another repository: `cd web && git commit && cd .. && git push` names one repository with two paths, so
+  comparing paths let it through. `git -C ../other commit && git push` is a false block, the cheaper mistake.
+- **Limits:** a reminder, not a hard gate, because Claude writes the stamp. A push typed in a terminal is not checked;
+  a git `pre-push` hook calling `claude -p --agent reviewer` was considered and not chosen. Only `HEAD` is compared, so
+  `git push origin other-branch` is not looked at. Deletes and dry runs pass, because they send no new code. The hook is
+  called from the main checkout: on a branch without the script, it fails to start and the push goes ahead. The stamp
+  holds one SHA, so reviewing a second branch and returning to the first blocks that push until it is stamped again.
+- **Parser limits, accepted by the user on PR #85:** the hook reads the command text, and a full shell parser is not
+  worth it for a reminder. Commit detection for `verify-on-edit.mjs` and `check-utf8.mjs` shares the same parser and the
+  same misses. Examples per group, not a full list:
+  - Command text the parser does not open: `bash -c "git push"`, `eval "git push"`, `Start-Process git "push origin x"`,
+    `${x:-$(git push)}`, `x="$(git commit -m "m")"`, and apostrophes that pair across commands (`# don't`).
+  - Subcommand lost: `git --git-dir x push`, `git --work-tree x push`, `git -C (Split-Path (Get-Location)) push`, `git -C {a} commit`, and
+    a line continuation between `git` and `push`.
+  - Other command names: `/usr/bin/git push`, `git.cmd push`, `$GIT push`, an alias such as `git p`,
+    `git subtree push`, `hub push`.
+  - `HEAD` moved by something not on the list: `git ci`, `gh pr checkout 5`, `npm version patch`,
+    `git update-ref HEAD <sha>`, `git bisect good`.
+  - A push read as a delete or a dry run: `git push origin :a (Get-Branch)`, `git push origin :a {b,c}`,
+    `git push -o -n origin x`.
+  - Wrong folder: `if cd other; then git push; fi`, `then cd x`, `command cd`, `Push-Location`, `popd`, `cd -`, `chdir`,
+    `cd (Join-Path .. other)`, `cd other & git push`, `cd other | cat`, `GIT_DIR=x git push`.
+  - False blocks: values the hook cannot expand (`cd "$CLAUDE_PROJECT_DIR" && git push`, `git -C $(pwd) push`,
+    `cd ~/x && git push`), `git checkout -- f && git push`, `git reset HEAD f; git push`,
+    `git push origin :foo > out.txt`, `git push origin +:foo`, `git push -nu`, `echo git push`, a `# git push` line.
+- **More parser limits, accepted by the user on PR #91:** each one runs the push but the parser misses it, and a fix
+  needs a nesting-aware or quote-aware parser:
+  - PowerShell: ``echo "$(echo `$(git push))"``. Inside `$(x)`, a backtick does not stop the inner bracket from running.
+    The `git commit` spelling is new in PR #91: `main` read it as a commit only because commit detection used POSIX
+    rules. PowerShell's rules also fix the simpler ``echo "\$(git commit -m x)"``, so the user accepted this trade.
+  - An escaped quote or backtick that pairs across commands: `echo "a\"" && git push && echo "b"`,
+    ``echo \` && echo `git push` ``.
+  - A bracket or backtick inside a substitution: `echo "$(git push origin $(git branch --show-current))"` reads only
+    `branch`, ``echo "$(echo `git push`)"`` reads nothing.
+- **Brackets depend on the shell:** a `cd` inside `(x)` or `$(x)` ends with the bracket in a POSIX shell and stays in
+  PowerShell, so the hook reads `tool_name`. The docs show `tool_name` only for `Bash`; `PowerShell` follows from the
+  `Bash|PowerShell` matcher and was not seen in a real input.
+- **No test file:** the other hooks have none and CI runs none for hooks. It was checked with sample inputs and a real
+  push, as the PR describes.
+
 ## 2026-11-03: README is in English; the journal and roadmap stay in Vietnamese (#80)
 - **What:** `README.md` explains the harness in English and links to `docs/journal.md` and `roadmap.md` (Vietnamese)
   for the day-by-day story. Its results section quotes numbers from the journal, not new ones.
