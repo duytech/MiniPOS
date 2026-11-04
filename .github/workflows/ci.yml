@@ -73,7 +73,7 @@ jobs:
             web/package-lock.json
             tests/e2e/package-lock.json
       - name: Verifier script tests
-        run: node --test scripts/
+        run: node --test "scripts/*.test.mjs"
       - uses: ./.github/actions/postgres
         with:
           database: pos_e2e

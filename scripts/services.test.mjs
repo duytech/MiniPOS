@@ -1,6 +1,9 @@
 // Tests of scripts/services.mjs: the verifier never reuses an API it did not start (#84).
 import assert from 'node:assert/strict';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
+import os from 'node:os';
+import path from 'node:path';
 import { afterEach, beforeEach, test } from 'node:test';
 
 const servers = [];
@@ -87,4 +90,19 @@ test('names only the API as not running with --no-start, when the web app runs',
   const { ensure } = await services(api, await serverUrl());
 
   assert.equal(await ensure('e2e', false), `not running: API (${api}); see tests/e2e/README.md`);
+});
+
+test('counts the started API as bound only when its own log says so', async () => {
+  const { apiBound } = await services(await closedUrl(), await closedUrl());
+  const folder = mkdtempSync(path.join(os.tmpdir(), 'services-test-'));
+  const log = path.join(folder, 'api.log');
+  try {
+    writeFileSync(log, 'Building...\nSystem.IO.IOException: Failed to bind to address: address already in use.\n');
+    assert.equal(apiBound(log), false);
+
+    writeFileSync(log, 'info: Microsoft.Hosting.Lifetime[14]\n      Now listening on: http://localhost:5191\n');
+    assert.equal(apiBound(log), true);
+  } finally {
+    rmSync(folder, { recursive: true });
+  }
 });

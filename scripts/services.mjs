@@ -6,7 +6,7 @@
 // database cannot be read from outside, and only one started here is known to be on pos_e2e. Addresses come from the
 // environment, with the defaults of CLAUDE.md.
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, openSync } from 'node:fs';
+import { existsSync, openSync, readFileSync } from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -18,6 +18,8 @@ const DB_PORT = Number(process.env.POS_DB_PORT ?? 5433);
 const WEB = process.env.E2E_BASE_URL ?? 'http://localhost:4200';
 const API = process.env.E2E_API_URL ?? 'http://localhost:5191';
 const E2E_DATABASE = 'pos_e2e';
+// What the API prints once it has bound its port. Another process on the port makes it exit instead.
+const API_LISTENING = 'Now listening on:';
 const API_REFUSAL = `something already answers on ${API} and the verifier cannot tell its database; stop it and run again`;
 const CHECK_TIMEOUT_MS = 3000;
 // dotnet run and ng serve build first: a cold start takes minutes.
@@ -152,6 +154,9 @@ function createE2eDatabase() {
   return result.ok ? undefined : `could not create the ${E2E_DATABASE} database: ${result.lastLine}`;
 }
 
+/** Whether the API behind this log has bound its port: an answer on the port alone can come from another process. */
+export const apiBound = (log) => readFileSync(log, 'utf8').includes(API_LISTENING);
+
 async function startE2e() {
   if (await apiUp()) return API_REFUSAL;
   const db = await ensure('db', true);
@@ -159,9 +164,10 @@ async function startE2e() {
   const created = createE2eDatabase();
   if (created) return created;
   const shell = process.platform === 'win32' ? 'powershell' : 'pwsh';
-  const runs = [background('API on pos_e2e', `${shell} -NoProfile -ExecutionPolicy Bypass -File tests/e2e/start-api.ps1`, 'api')];
+  const api = background('API on pos_e2e', `${shell} -NoProfile -ExecutionPolicy Bypass -File tests/e2e/start-api.ps1`, 'api');
+  const runs = [api];
   if (!(await webUp())) runs.push(background('web app', 'npm start --prefix web', 'web'));
-  const ok = await waitFor(async () => (await apiUp()) && (await webUp()), runs.map((run) => run.child));
+  const ok = await waitFor(async () => apiBound(api.log) && (await apiUp()) && (await webUp()), runs.map((run) => run.child));
   return ok ? undefined : `API (${API}) or web app (${WEB}) did not start; logs: ${runs.map((run) => run.log).join(', ')}`;
 }
 
