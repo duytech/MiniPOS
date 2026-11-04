@@ -1,4 +1,5 @@
-# Quality gate for every PR into main: the same checks as the local hooks, plus integration and E2E tests.
+# Quality gate for every PR into main: the same checks as the local hooks, plus integration and E2E tests and the
+# Postgres guards of docker-compose.yml.
 # The three job names (dotnet, web, e2e) are the required status checks of main.
 name: CI
 
@@ -25,6 +26,18 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+      # The postgres action below uses docker run, so nothing else in CI reads docker-compose.yml.
+      - name: Compose keeps its Postgres guards (127.0.0.1 bind, no blank password)
+        run: |
+          # config prints the password: only the ports go past jq.
+          POSTGRES_PASSWORD="$(openssl rand -hex 24)" docker compose config --format json \
+            | jq -ce '.services.db.ports | ., (length > 0 and all(.host_ip == "127.0.0.1"))'
+          if errors="$(docker compose --env-file .env.example config 2>&1 > /dev/null)"; then
+            echo "docker compose accepted the POSTGRES_PASSWORD in .env.example; it must stop on a blank one"
+            exit 1
+          fi
+          echo "$errors"
+          grep -q 'required variable POSTGRES_PASSWORD' <<< "$errors"
       - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x

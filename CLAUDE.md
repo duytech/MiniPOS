@@ -22,7 +22,7 @@ Architecture rules (use-case folders, validators vs domain, repositories): `docs
 adding or changing code in `src/`.
 
 ## Commands
-- DB: `docker compose up -d` (Postgres on **localhost:5433**; 5432 is taken by another install on this machine)
+- DB: `docker compose up -d` (Postgres on **127.0.0.1:5433**; 5432 is taken by another install on this machine)
 - Whole app in Docker: `docker compose --profile app up -d` → http://localhost:8080 (images from GHCR, built by
   `.github/workflows/cd.yml`; add `--build` to build from source)
 - Build: `dotnet build Pos.slnx` · Test: `dotnet test Pos.slnx` (integration tests need the DB running). Warnings are

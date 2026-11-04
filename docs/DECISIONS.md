@@ -13,6 +13,34 @@ Important design decisions: what, why, when. Newest first.
 - **Limit:** the web proxy always targets 5191. With `E2E_API_URL` set to another port, the check looks at that port and
   not at the API the tests reach. With `E2E_BASE_URL` on the compose `app` web (8080), that reused web app reaches the
   compose API on `POSTGRES_DB`.
+## 2026-11-04: CI checks the Postgres guards in docker-compose.yml (#93)
+- **What:** the `dotnet` job starts by parsing `docker compose config` and fails unless `db` publishes a port and each has
+  `host_ip: 127.0.0.1`. It also fails unless `docker compose --env-file .env.example config` stops on the blank
+  `POSTGRES_PASSWORD`.
+- **Why:** CI starts Postgres with `docker run`, so removing a guard from #83 left every check green.
+- **In `dotnet`, not a new job:** a new job counts only after someone adds it to the required checks of `main`. `dotnet`
+  is required already and has `docker` and no default working directory. `web` runs in `web/`, and `e2e` is the slowest.
+- **Password only in one command:** a variable set in the shell wins over `--env-file`, so setting it for the whole step
+  would make compose accept the blank `.env.example`. `docker compose config` prints the password, so its output goes only
+  to `jq` or `/dev/null`.
+- **Limit:** the step checks the two guards as written. `network_mode: host` on `db` keeps the ports in the config while
+  Docker ignores them, so it stays green.
+
+## 2026-11-04: Postgres listens on 127.0.0.1 and has no default password (#83)
+- **What:** `docker-compose.yml` publishes Postgres as `127.0.0.1:5433:5432`. `POSTGRES_PASSWORD` is blank in
+  `.env.example`, and `${POSTGRES_PASSWORD:?...}` stops compose while it is unset or blank. The README connection strings
+  use `Host=127.0.0.1`.
+- **Why:** the port was open on every host interface, and the password that the README copied to `.env` is public in
+  the repo.
+- **Blank, not `change-me`:** any text placeholder is a known password that works if the reader skips the step.
+- **`127.0.0.1`, not `localhost`:** with no listener on `::1`, Windows takes about 2 s to refuse each new connection
+  before Npgsql tries IPv4. The integration tests took 41-45 s with `localhost` and 8 s with `127.0.0.1`.
+- **Limit:** an existing `.env`, volume or user secret is not changed. Each machine that set up before this change keeps
+  the old password until it is changed there, and a `Host=localhost` secret keeps working but stays slow on Windows.
+- **Limit, password alphabet:** the password goes unescaped into `ConnectionStrings__Pos` in `docker-compose.yml` and
+  into the README user-secrets commands, so a `;` ends its value and the API cannot connect. Compose cannot check the
+  alphabet or escape the value, and nothing validates it, so the rule is only written down: letters and digits, in the
+  README and `.env.example`. Accepted by the user on PR #92, after CodeRabbit reported it.
 
 ## 2026-11-04: Reviewer rates wrong output as should-fix; only a full-range approve allows the stamp (#88)
 - **What:** in `.claude/agents/reviewer.md`, a finding with a concrete wrong output is at least `should-fix`, however
