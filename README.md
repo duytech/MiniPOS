@@ -65,7 +65,7 @@ only the CI checks block a merge.
 | [`planner`](.claude/agents/planner.md) | Read, Glob, Grep | Cannot edit or run anything; asks the business questions the task leaves open before planning |
 | [`implementer`](.claude/agents/implementer.md) | Read, Glob, Grep, Edit, Write, Bash, PowerShell, Skill; preloads `add-endpoint` and `add-angular-feature` | Builds only an approved plan; does not commit or push |
 | [`tester`](.claude/agents/tester.md) | Read, Glob, Grep, Edit, Write, Bash, PowerShell, Playwright MCP browser | Edits only `tests/` (hook `tests-only.mjs`); runs in a worktree and the run is dropped if its diff touches anything else |
-| [`reviewer`](.claude/agents/reviewer.md) | Read, Glob, Grep, Bash (read-only git) | Never edits; every finding names the rule it breaks |
+| [`reviewer`](.claude/agents/reviewer.md) | Read, Glob, Grep, Bash (read-only git) | Never edits; every blocker and should-fix names the rule it breaks |
 
 ## Verifiers
 

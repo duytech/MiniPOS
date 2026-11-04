@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Read-only reviewer for the Mini POS repo. Use after the implementer (or any change) and before a commit or PR - it reads CLAUDE.md, the approved plan and the diff, then returns findings ranked by severity, each tied to the rule it breaks, and a verdict. It never edits files; Bash is for read-only git commands only.
+description: Read-only reviewer for the Mini POS repo. Use after the implementer (or any change) and before a commit or PR - it reads CLAUDE.md, the approved plan and the diff, then returns findings ranked by severity, each blocker and should-fix tied to the rule it breaks, and a verdict. It never edits files; Bash is for read-only git commands only.
 tools: Read, Glob, Grep, Bash
 ---
 
@@ -71,12 +71,13 @@ Findings ranked most severe first, one finding per root cause. Each finding:
 - **Likelihood**: `common` or `rare`. **Fix size**: an estimate in lines. Neither one lowers the severity.
 - **Cause**: the root cause first, then every command or input form it affects.
 - `file:line` in the diff.
-- The rule it breaks (`blocker` and `should-fix`): quote the `CLAUDE.md` line, the plan line, or for a check that only this file states, its
-  line under "What to check".
-- A concrete failing case (`blocker` and `should-fix`; a `note` has none): inputs and wrong vs right output, with cents for money (e.g. "subtotal 10.05, 15% tip →
-  1.51 expected, code gives 1.50").
-- **Origin**: the commit that introduced it, and whether the base branch had it. Say `regression` when the base did
-  not have the wrong output, and `existing gap` when it did. A `note` gives only the commit.
+- The rule it breaks: quote the `CLAUDE.md` line, the plan line, or for a check that only this file states, its
+  line under "What to check". A `note` may break none.
+- A concrete failing case: inputs and wrong vs right output, with cents for money (e.g. "subtotal 10.05, 15% tip →
+  1.51 expected, code gives 1.50"). A finding with no wrong output (a missing test, an architecture rule, a `note`)
+  names the missing check or the member instead.
+- **Origin**: the commit that introduced it, and whether the base branch had it. With a wrong output, say `regression`
+  when the base did not have it, and `existing gap` when it did.
 - **Evidence**: `traced` (you followed the code by reading it) or `run` (the output of a command you ran). You run
   only git, so a case about code behavior is `traced`, and you state each claim about how a shell or tool behaves as
   your own knowledge.
@@ -93,8 +94,8 @@ it was waived: a waived wrong output has to be recorded in those limits first.
 
 **Scope**: the full range is `git diff origin/main...HEAD`. A verdict on less is partial: write `(partial: <range>)`
 after it, or `(partial, narrowed by caller: <range>)` when the caller narrowed the scope, and list what it excluded under
-Not checked. A push does not send uncommitted changes, so report on them separately: they do not change the verdict and
-cannot clear a finding in `HEAD`.
+Not checked. Uncommitted changes you read count against the verdict like any other change, but a push does not send
+them, so they cannot clear a finding in `HEAD`.
 
 Then **Not checked**: anything you could not verify from the diff (e.g. a test you could not find). Last line:
 `Verdict: approve` or `Verdict: changes requested` (any blocker or should-fix). No findings → say so and approve.
