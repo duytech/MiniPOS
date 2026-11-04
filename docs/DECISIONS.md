@@ -2,6 +2,19 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-04: CI checks the Postgres guards in docker-compose.yml (#93)
+- **What:** the `dotnet` job starts by parsing `docker compose config` and fails unless `db` publishes a port and each has
+  `host_ip: 127.0.0.1`. It also fails unless `docker compose --env-file .env.example config` stops on the blank
+  `POSTGRES_PASSWORD`.
+- **Why:** CI starts Postgres with `docker run`, so removing a guard from #83 left every check green.
+- **In `dotnet`, not a new job:** a new job counts only after someone adds it to the required checks of `main`. `dotnet`
+  is required already and has `docker` and no default working directory. `web` runs in `web/`, and `e2e` is the slowest.
+- **Password only in one command:** a variable set in the shell wins over `--env-file`, so setting it for the whole step
+  would make compose accept the blank `.env.example`. `docker compose config` prints the password, so its output goes only
+  to `jq` or `/dev/null`.
+- **Limit:** the step checks the two guards as written. `network_mode: host` on `db` keeps the ports in the config while
+  Docker ignores them, so it stays green.
+
 ## 2026-11-04: Postgres listens on 127.0.0.1 and has no default password (#83)
 - **What:** `docker-compose.yml` publishes Postgres as `127.0.0.1:5433:5432`. `POSTGRES_PASSWORD` is blank in
   `.env.example`, and `${POSTGRES_PASSWORD:?...}` stops compose while it is unset or blank. The README connection strings
