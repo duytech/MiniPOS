@@ -10,7 +10,8 @@ change one, with `verification` steps that run its tests.
 - `state`, `testedAt` and `evidence` are set only by `node scripts/verify-features.mjs [id ...]` (it runs the steps;
   a hook blocks hand edits). A new entry starts `not_started`, with `testedAt` and `evidence` `null`. It starts the
   services a step `requires` when they are down (Docker Desktop, Postgres, the API on `pos_e2e`, the web app) and stops
-  at the end only what it started; `--no-start` skips those steps instead (`blocked`).
+  at the end only what it started; `--no-start` skips those steps instead (`blocked`). An API already running on
+  `E2E_API_URL` is refused, not reused (it cannot tell its database): those steps are `blocked` until you stop it.
 - Work on one feature at a time: at most one feature is `active` (a failed verification) while you work.
 - A feature is done when the verifier sets it to `passing`.
 - Do not invent business rules, limits, or scope that the task doesn't state (max quantities, max page size, merge
@@ -94,6 +95,7 @@ Run what the change touches, in this order; CI runs all of it on every PR.
 - Web (`web/`, in that folder): `npm run lint`, `npm run build`, `npx ng test --watch=false`.
 - E2E (a change the user sees in the browser): setup and run in `tests/e2e/README.md`: API on the `pos_e2e` database
   (`tests/e2e/start-api.ps1`), `npm start` in `web/`, then in `tests/e2e` `npx tsc -p .` and `npx playwright test`.
+- Verifier scripts (`scripts/`): `node --test scripts/services.test.mjs`.
 - The hooks run only build, analyzers, eslint, `ngc` and the no-DB tests: integration, Vitest and E2E are yours to run.
 
 ## Definition of done

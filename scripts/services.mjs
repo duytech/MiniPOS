@@ -2,10 +2,11 @@
 //   db   Postgres of docker-compose.yml
 //   e2e  the API on the pos_e2e database and the web app, as in tests/e2e/README.md (needs db)
 // ensure() checks a service and, when allowed, starts what is missing and waits for it. stopStarted() stops only what
-// ensure() started; a service that was already running is left alone. Addresses come from the environment, with the
-// defaults of CLAUDE.md.
+// ensure() started; a service that was already running is left alone. A running API is refused instead of reused: its
+// database cannot be read from outside, and only one started here is known to be on pos_e2e. Addresses come from the
+// environment, with the defaults of CLAUDE.md.
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync, openSync } from 'node:fs';
+import { existsSync, openSync, readFileSync } from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -17,6 +18,9 @@ const DB_PORT = Number(process.env.POS_DB_PORT ?? 5433);
 const WEB = process.env.E2E_BASE_URL ?? 'http://localhost:4200';
 const API = process.env.E2E_API_URL ?? 'http://localhost:5191';
 const E2E_DATABASE = 'pos_e2e';
+// What the API prints once it has bound its port. Another process on the port makes it exit instead.
+const API_LISTENING = 'Now listening on:';
+const API_REFUSAL = `something already answers on ${API} and the verifier cannot tell its database; stop it and run again`;
 const CHECK_TIMEOUT_MS = 3000;
 // dotnet run and ng serve build first: a cold start takes minutes.
 const START_TIMEOUT_MS = Number(process.env.VERIFY_START_TIMEOUT_MS ?? 300_000);
@@ -150,18 +154,24 @@ function createE2eDatabase() {
   return result.ok ? undefined : `could not create the ${E2E_DATABASE} database: ${result.lastLine}`;
 }
 
+/**
+ * Waits for the API behind this log and the web app. The log must say the API bound its port: an answer on the port
+ * alone can come from another process.
+ */
+export const startedStackUp = (apiLog, children) =>
+  waitFor(async () => readFileSync(apiLog, 'utf8').includes(API_LISTENING) && (await apiUp()) && (await webUp()), children);
+
 async function startE2e() {
+  if (await apiUp()) return API_REFUSAL;
   const db = await ensure('db', true);
   if (db) return db;
   const created = createE2eDatabase();
   if (created) return created;
   const shell = process.platform === 'win32' ? 'powershell' : 'pwsh';
-  const runs = [];
-  if (!(await apiUp())) {
-    runs.push(background('API on pos_e2e', `${shell} -NoProfile -ExecutionPolicy Bypass -File tests/e2e/start-api.ps1`, 'api'));
-  }
+  const api = background('API on pos_e2e', `${shell} -NoProfile -ExecutionPolicy Bypass -File tests/e2e/start-api.ps1`, 'api');
+  const runs = [api];
   if (!(await webUp())) runs.push(background('web app', 'npm start --prefix web', 'web'));
-  const ok = await waitFor(async () => (await apiUp()) && (await webUp()), runs.map((run) => run.child));
+  const ok = await startedStackUp(api.log, runs.map((run) => run.child));
   return ok ? undefined : `API (${API}) or web app (${WEB}) did not start; logs: ${runs.map((run) => run.log).join(', ')}`;
 }
 
@@ -172,11 +182,12 @@ const SERVICES = {
     start: startDb,
   },
   e2e: {
+    // The API is never reported as available: this check runs before the verifier has started one.
     down: async () => {
-      const down = [];
-      if (!(await webUp())) down.push(`web app (${WEB})`);
-      if (!(await apiUp())) down.push(`API (${API})`);
-      return down.length ? `not running: ${down.join(', ')}; see tests/e2e/README.md` : undefined;
+      if (await apiUp()) return API_REFUSAL;
+      const down = [`API (${API})`];
+      if (!(await webUp())) down.unshift(`web app (${WEB})`);
+      return `not running: ${down.join(', ')}; see tests/e2e/README.md`;
     },
     start: startE2e,
   },
