@@ -16,10 +16,23 @@ export function readHookInput() {
  */
 export function gitCommands(command, cwd = process.cwd(), { subshells = true } = {}) {
   const quoted = [];
+  // The commands inside a word that stays whole, per word: $(x), `x`.
+  const inners = new Map();
+  const keepWord = (text, commandsInside = []) => {
+    const word = quoted.push(text) - 1;
+    if (commandsInside.length) inners.set(word, commandsInside);
+    return `\u0001${word}\u0001`;
+  };
+  // A double-quoted string still runs $(x), and `x` in a POSIX shell. PowerShell's backtick only escapes.
+  const inDoubleQuotes = subshells ? /\$\(([^()]*)\)|(?<!\\)`([^`]*)`/g : /\$\(([^()]*)\)/g;
+  const substitutions = (text) => [...text.matchAll(inDoubleQuotes)].map((match) => match[1] ?? match[2]);
+  // A heredoc loses its marker and body. The rest of its opening line is still commands: <<EOF && git push.
   const masked = command
-    .replace(/<<-?\s*['"]?(\w+)['"]?[^\n]*\n[\s\S]*?\n\s*\1\b/g, '')
+    .replace(/<<-?\s*['"]?(\w+)['"]?([^\n]*)\n(?:[\s\S]*?\n)?\s*\1\b/g, '$2')
     .replace(/@(['"])\r?\n[\s\S]*?\r?\n\1@/g, '""')
-    .replace(/"([^"]*)"|'([^']*)'/g, (_, double, single) => `\u0001${quoted.push(double ?? single) - 1}\u0001`);
+    .replace(/"([^"]*)"|'([^']*)'/g, (_, double, single) =>
+      double === undefined ? keepWord(single) : keepWord(double, substitutions(double)),
+    );
   const words = (text) =>
     text
       .split(/\s+/)
@@ -30,13 +43,16 @@ export function gitCommands(command, cwd = process.cwd(), { subshells = true } =
 
   const commands = [];
   let dir = cwd;
-  // $(x), ${x} and PowerShell's -C (x) stay one word (git -C $(pwd) push). The commands inside are kept per word.
-  const inners = new Map();
-  const unwrapped = masked.replace(/(?:\$|(?<=\s-[Cc]\s+))\(([^()]*)\)|\$\{[^{}]*\}/g, (text, inner) => {
-    const word = quoted.push(text) - 1;
-    if (inner) inners.set(word, inner);
-    return `\u0001${word}\u0001`;
-  });
+  // `x`, ${x}, PowerShell's -C (x) and brackets that touch a word ($(x), x=(y), D:\foo(1)) stay one word. Repeated, so an
+  // outer bracket is seen once its inner one is a word: $(dirname $(pwd)).
+  let unwrapped = subshells ? masked.replace(/`([^`]*)`/g, (text, inner) => keepWord(text, [inner])) : masked;
+  for (let previous; previous !== unwrapped; ) {
+    previous = unwrapped;
+    unwrapped = unwrapped.replace(
+      /(?:(?<=[^\s;&|(){}])|(?<=\s-[Cc]\s+))\(([^()]*)\)|\$\{[^{}]*\}/g,
+      (text, inner) => keepWord(text, inner ? [inner] : []),
+    );
+  }
 
   const outerDirs = [];
   // A single & also separates commands, except in a redirect (2>&1, &>file). So do brackets: if (git x) { git push }.
@@ -47,7 +63,7 @@ export function gitCommands(command, cwd = process.cwd(), { subshells = true } =
       if (subshells && segment === ')') dir = outerDirs.pop() ?? dir;
       // The commands inside a substitution run just before the command that holds it.
       for (const [, word] of segment.matchAll(/\u0001(\d+)\u0001/g)) {
-        if (inners.has(Number(word))) walk(`(${inners.get(Number(word))})`);
+        for (const inner of inners.get(Number(word)) ?? []) walk(`(${inner})`);
       }
       const all = words(segment.trim());
       if (/^(cd|Set-Location|sl|pushd)$/i.test(all[0] ?? '') && all[1]) {

@@ -19,13 +19,29 @@ Important design decisions: what, why, when. Newest first.
   comparing paths let it through. `git -C ../other commit && git push` is a false block, the cheaper mistake.
 - **Limits:** a reminder, not a hard gate, because Claude writes the stamp. A push typed in a terminal is not checked;
   a git `pre-push` hook calling `claude -p --agent reviewer` was considered and not chosen. Only `HEAD` is compared, so
-  `git push origin other-branch` is not looked at. Deletes and dry runs pass, because they send no new code. The hook
-  reads the command text, so it can miss a push, e.g. `bash -c "git push"`, `/usr/bin/git push`, `git --git-dir x push`
-  or a git alias, `git push origin :a (Get-Branch)`, and can read the wrong folder after `Push-Location` or `popd`. It
-  can also block by mistake, e.g. `echo git push` or the combined flags in `git push -nu`. A full shell parser is not
-  worth it for a reminder.
+  `git push origin other-branch` is not looked at. Deletes and dry runs pass, because they send no new code. The hook is
+  called from the main checkout: on a branch without the script, it fails to start and the push goes ahead.
+- **Parser limits, accepted by the user on PR #85:** the hook reads the command text, and a full shell parser is not
+  worth it for a reminder. Commit detection for `verify-on-edit.mjs` and `check-utf8.mjs` shares the same parser and the
+  same misses. Examples per group, not a full list:
+  - Command text the parser does not open: `bash -c "git push"`, `eval "git push"`, `Start-Process git "push"`,
+    `${x:-$(git push)}`, `x="$(git commit -m "m")"`, and apostrophes that pair across commands (`# don't`).
+  - Subcommand lost: `git --git-dir x push`, `git --work-tree x push`, `git -C (Split-Path (Get-Location)) push`, and
+    a line continuation between `git` and `push`.
+  - Other command names: `/usr/bin/git push`, `git.cmd push`, `$GIT push`, an alias such as `git p`,
+    `git subtree push`, `hub push`.
+  - `HEAD` moved by something not on the list: `git ci`, `gh pr checkout 5`, `npm version patch`,
+    `git update-ref HEAD <sha>`, `git bisect good`.
+  - A push read as a delete or a dry run: `git push origin :a (Get-Branch)`, `git push origin :a {b,c}`,
+    `git push -o -n origin x`.
+  - Wrong folder: `if cd other; then git push; fi`, `then cd x`, `command cd`, `Push-Location`, `popd`, `cd -`, `chdir`,
+    `cd (Join-Path .. other)`, `cd other & git push`, `cd other | cat`, `GIT_DIR=x git push`.
+  - False blocks: values the hook cannot expand (`cd "$CLAUDE_PROJECT_DIR" && git push`, `git -C $(pwd) push`,
+    `cd ~/x && git push`), `git checkout -- f && git push`, `git reset HEAD f; git push`,
+    `git push origin :foo > out.txt`, `git push origin +:foo`, `git push -nu`, `echo git push`, a `# git push` line.
 - **Brackets depend on the shell:** a `cd` inside `(x)` or `$(x)` ends with the bracket in a POSIX shell and stays in
-  PowerShell, so the hook reads `tool_name`.
+  PowerShell, so the hook reads `tool_name`. The docs show `tool_name` only for `Bash`; `PowerShell` follows from the
+  `Bash|PowerShell` matcher and was not seen in a real input.
 - **No test file:** the other hooks have none and CI runs none for hooks. It was checked with sample inputs and a real
   push, as the PR describes.
 
