@@ -113,7 +113,7 @@ source column says where the rule is written down.
 | Rule | Source | Check that enforces it |
 | --- | --- | --- |
 | No `double` / `float` in any .NET layer | `CLAUDE.md` | `No_layer_uses_floating_point_types` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs), IL scan) |
-| Amounts are rounded only in Domain | `CLAUDE.md` | `Only_domain_rounds_amounts` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
+| Pricing calculations are rounded only in Domain | `CLAUDE.md` | `Only_domain_rounds_amounts` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
 | Totals are added up only in Domain | `CLAUDE.md` | `Only_domain_adds_up_money` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
 | Domain and Application signatures use `Money`, not raw `decimal` | `CLAUDE.md` | `Domain_and_application_signatures_use_money_not_raw_decimal` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
 | Dependencies point inward | Clean Architecture (the line left `CLAUDE.md` when this test took over) | Three tests in [`LayerDependencyTests.cs`](tests/Pos.ArchitectureTests/LayerDependencyTests.cs) |
@@ -126,7 +126,7 @@ source column says where the rule is written down.
 | The frontend never calculates money | `CLAUDE.md` | `shows no money value the API did not send` ([`order-detail.spec.ts`](web/src/app/orders/order-detail/order-detail.spec.ts)) |
 | Reloading keeps the old data with a small loading indicator | `CLAUDE.md` | [`slow-network.spec.ts`](tests/e2e/specs/slow-network.spec.ts) |
 | The migrate-on-startup flag works outside Development | [`docs/DECISIONS.md`](docs/DECISIONS.md) (#77) | [`StartupMigrationTests.cs`](tests/Pos.Api.IntegrationTests/StartupMigrationTests.cs) |
-| Cognitive complexity at most 15 | `CLAUDE.md` | Sonar S3776 (.NET) and `sonarjs/cognitive-complexity` (web), both as build errors |
+| Cognitive complexity at most 15 | `CLAUDE.md` | Sonar S3776 (.NET) and `sonarjs/cognitive-complexity` (web): the .NET build and the web lint fail on it |
 | Never commit to `main`; no Claude co-author; UTF-8 files | `CLAUDE.md` | Hooks `block-main-branch.mjs`, `block-claude-coauthor.mjs`, `check-utf8.mjs` |
 | A feature is done only when its tests pass | `CLAUDE.md` | `protect-feature-state.mjs` + `scripts/verify-features.mjs` |
 
@@ -170,7 +170,7 @@ source.
 
 ### Development
 
-Needs the .NET 10 SDK, Node.js with npm, and Docker Desktop. Copy `.env.example` to `.env`, then put the connection
+Needs Git, the .NET 10 SDK, Node.js with npm, and Docker Desktop. Copy `.env.example` to `.env`, then put the connection
 string in the user secrets of the API and of the integration tests, with the values from your `.env`. No credentials
 are committed.
 
