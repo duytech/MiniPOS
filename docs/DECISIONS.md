@@ -43,6 +43,8 @@ Important design decisions: what, why, when. Newest first.
 - **More parser limits, accepted by the user on PR #91:** each one runs the push but the parser misses it, and a fix
   needs a nesting-aware or quote-aware parser:
   - PowerShell: ``echo "$(echo `$(git push))"``. Inside `$(x)`, a backtick does not stop the inner bracket from running.
+    The `git commit` spelling is new in PR #91: `main` read it as a commit only because commit detection used POSIX
+    rules. PowerShell's rules also fix the simpler ``echo "\$(git commit -m x)"``, so the user accepted this trade.
   - An escaped quote or backtick that pairs across commands: `echo "a\"" && git push && echo "b"`,
     ``echo \` && echo `git push` ``.
   - A bracket or backtick inside a substitution: `echo "$(git push origin $(git branch --show-current))"` reads only
