@@ -56,7 +56,6 @@ for file in CLAUDE.md docs/feature-list.json docs/business-rules.md docs/archite
   scripts/verify-features.mjs .claude/hooks/protect-feature-state.mjs \
   .claude/settings.json .claude/hooks/verify-on-edit.mjs .claude/hooks/check-utf8.mjs \
   .claude/hooks/block-main-branch.mjs .claude/hooks/block-claude-coauthor.mjs \
-  .claude/hooks/require-review-before-push.mjs \
   .github/workflows/ci.yml tests/e2e/README.md; do
   if [ -f "$file" ]; then echo "  OK: $file"; else warn "missing $file"; fi
 done

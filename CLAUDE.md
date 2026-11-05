@@ -108,13 +108,9 @@ Run what the change touches, in this order; CI runs all of it on every PR.
   when a list is empty.
 - Git commits as checkpoints. Commit after completing each atomic unit of work. Commit messages should explain what was done and why, Must start with a task id like: 13245 | Do something.
 - Branch name must start with a task id.
-- Before every `git push`, docs-only and tests-only pushes too: run the `reviewer` agent on `git diff origin/main...HEAD`
-  and handle its findings, then from the repo root run `node .claude/hooks/require-review-before-push.mjs --stamp`. Only
-  `Verdict: approve` on that full range allows the stamp, not a `partial` verdict. A finding the user explicitly waives
-  does not count against the verdict: one with a concrete wrong output is recorded in the limits in
-  `docs/DECISIONS.md`, any other is named in the reviewer's prompt. A hook blocks a push when `HEAD` has no
-  stamp, so a new commit needs a new review. Run the push as its own command. Read `docs/hooks.md` for
-  which commands in the same command block it.
+- Run the `reviewer` agent only when the user asks for it, on `git diff origin/main...HEAD`. A finding the user
+  explicitly waives does not count against the verdict: one with a concrete wrong output is recorded in the limits in
+  `docs/DECISIONS.md`, any other is named in the reviewer's prompt.
 - A reviewer finding with a concrete wrong output is fixed, or moved to documented limits only with the user's OK.
 - Before a `traced` finding about behavior is fixed, the main session reproduces it with a sample input (in `src/` or
   `web/`, a failing test) and adds that input to the set it re-runs.

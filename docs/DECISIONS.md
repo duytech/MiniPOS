@@ -2,6 +2,12 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-05: The reviewer runs only when asked (#98)
+- **What:** the rule to run the `reviewer` agent before every push and `.claude/hooks/require-review-before-push.mjs`
+  are removed. `.claude/agents/reviewer.md` stays, and the agent runs when the user asks. This replaces the push gate of
+  #82 and #85 below.
+- **Why:** the user's decision.
+
 ## 2026-11-05: Hook details live in docs/hooks.md (#98)
 - **What:** script paths, events and what each hook checks moved from `CLAUDE.md` to `docs/hooks.md`, which also covers
   the scripts `CLAUDE.md` did not name. The rules and steps stayed in `CLAUDE.md`: no Claude co-author, no commit or

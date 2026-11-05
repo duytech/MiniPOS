@@ -1,5 +1,5 @@
 // Helpers shared by the hooks: reading the hook input, the git commands in a shell command, and the uncommitted changes
-// (verify-on-edit.mjs, check-utf8.mjs, require-review-before-push.mjs).
+// (verify-on-edit.mjs, check-utf8.mjs).
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
