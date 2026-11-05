@@ -1,4 +1,87 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".coderabbit.yaml" />
+    <File Path=".dockerignore" />
+    <File Path=".editorconfig" />
+    <File Path=".env.example" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path=".mcp.json" />
+    <File Path="CLAUDE.md" />
+    <File Path="CodeMetricsConfig.txt" />
+    <File Path="Directory.Build.props" />
+    <File Path="docker-compose.yml" />
+    <File Path="init.sh" />
+    <File Path="README.md" />
+    <File Path="roadmap.md" />
+    <File Path="sonar.globalconfig" />
+  </Folder>
+  <Folder Name="/.claude/">
+    <File Path=".claude/launch.json" />
+    <File Path=".claude/settings.json" />
+  </Folder>
+  <Folder Name="/.claude/agents/">
+    <File Path=".claude/agents/implementer.md" />
+    <File Path=".claude/agents/planner.md" />
+    <File Path=".claude/agents/reviewer.md" />
+    <File Path=".claude/agents/tester.md" />
+  </Folder>
+  <Folder Name="/.claude/hooks/">
+    <File Path=".claude/hooks/block-claude-coauthor.mjs" />
+    <File Path=".claude/hooks/block-main-branch.mjs" />
+    <File Path=".claude/hooks/check-utf8.mjs" />
+    <File Path=".claude/hooks/git-changes.mjs" />
+    <File Path=".claude/hooks/protect-feature-state.mjs" />
+    <File Path=".claude/hooks/require-review-before-push.mjs" />
+    <File Path=".claude/hooks/tests-only.mjs" />
+    <File Path=".claude/hooks/verify-on-edit.mjs" />
+  </Folder>
+  <Folder Name="/.claude/skills/add-angular-feature/">
+    <File Path=".claude/skills/add-angular-feature/SKILL.md" />
+  </Folder>
+  <Folder Name="/.claude/skills/add-angular-feature/references/">
+    <File Path=".claude/skills/add-angular-feature/references/templates.md" />
+  </Folder>
+  <Folder Name="/.claude/skills/add-endpoint/">
+    <File Path=".claude/skills/add-endpoint/SKILL.md" />
+  </Folder>
+  <Folder Name="/.claude/skills/add-endpoint/references/">
+    <File Path=".claude/skills/add-endpoint/references/templates.md" />
+  </Folder>
+  <Folder Name="/.claude/skills/verify-ui/">
+    <File Path=".claude/skills/verify-ui/SKILL.md" />
+  </Folder>
+  <Folder Name="/.github/actions/postgres/">
+    <File Path=".github/actions/postgres/action.yml" />
+  </Folder>
+  <Folder Name="/.github/workflows/">
+    <File Path=".github/workflows/cd.yml" />
+    <File Path=".github/workflows/ci.yml" />
+  </Folder>
+  <Folder Name="/docs/">
+    <File Path="docs/architecture.md" />
+    <File Path="docs/business-rules.md" />
+    <File Path="docs/clean-state-checklist.md" />
+    <File Path="docs/DECISIONS.md" />
+    <File Path="docs/feature-list.json" />
+    <File Path="docs/harness-engineering.md" />
+    <File Path="docs/harness-va-loop-engineering.md" />
+    <File Path="docs/journal.md" />
+    <File Path="docs/loop-engineering.md" />
+    <File Path="docs/multi-agent-va-sub-agent.md" />
+    <File Path="docs/reviewer-va-coderabbit.md" />
+    <File Path="docs/skill-hay-agent.md" />
+  </Folder>
+  <Folder Name="/plans/">
+    <File Path="plans/tuan-3-ngay-2-skill-add-angular-feature.md" />
+    <File Path="plans/tuan-3-ngay-3-dong-order.md" />
+    <File Path="plans/tuan-3-ngay-7-split-bill.md" />
+  </Folder>
+  <Folder Name="/scripts/">
+    <File Path="scripts/services.mjs" />
+    <File Path="scripts/services.test.mjs" />
+    <File Path="scripts/verify-features.mjs" />
+  </Folder>
   <Folder Name="/src/">
     <Project Path="src/Pos.Api/Pos.Api.csproj" />
     <Project Path="src/Pos.Application/Pos.Application.csproj" />
@@ -6,10 +89,32 @@
     <Project Path="src/Pos.Infrastructure/Pos.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <File Path="tests/.editorconfig" />
     <Project Path="tests/Pos.Api.IntegrationTests/Pos.Api.IntegrationTests.csproj" />
     <Project Path="tests/Pos.Application.Tests/Pos.Application.Tests.csproj" />
     <Project Path="tests/Pos.ArchitectureTests/Pos.ArchitectureTests.csproj" />
     <Project Path="tests/Pos.Domain.Tests/Pos.Domain.Tests.csproj" />
+  </Folder>
+  <Folder Name="/tests/e2e/">
+    <File Path="tests/e2e/package-lock.json" />
+    <File Path="tests/e2e/package.json" />
+    <File Path="tests/e2e/playwright.config.ts" />
+    <File Path="tests/e2e/README.md" />
+    <File Path="tests/e2e/start-api.ps1" />
+    <File Path="tests/e2e/tsconfig.json" />
+  </Folder>
+  <Folder Name="/tests/e2e/specs/">
+    <File Path="tests/e2e/specs/long-names.spec.ts" />
+    <File Path="tests/e2e/specs/many-lines.spec.ts" />
+    <File Path="tests/e2e/specs/slow-network.spec.ts" />
+    <File Path="tests/e2e/specs/smoke.spec.ts" />
+    <File Path="tests/e2e/specs/split-bill.spec.ts" />
+  </Folder>
+  <Folder Name="/tests/e2e/support/">
+    <File Path="tests/e2e/support/api.ts" />
+    <File Path="tests/e2e/support/checks.ts" />
+    <File Path="tests/e2e/support/pages.ts" />
+    <File Path="tests/e2e/support/split.ts" />
   </Folder>
   <Folder Name="/web/">
     <Project Path="web/Pos.Web.esproj" />
