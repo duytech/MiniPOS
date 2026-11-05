@@ -66,6 +66,7 @@
     <File Path="docs/feature-list.json" />
     <File Path="docs/harness-engineering.md" />
     <File Path="docs/harness-va-loop-engineering.md" />
+    <File Path="docs/hooks.md" />
     <File Path="docs/journal.md" />
     <File Path="docs/loop-engineering.md" />
     <File Path="docs/multi-agent-va-sub-agent.md" />

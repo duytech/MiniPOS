@@ -37,15 +37,10 @@ adding or changing code in `src/`.
   `vi.useFakeTimers()`). ESLint runs one Sonar rule, `sonarjs/cognitive-complexity` (max 15 per function, `.ts`
   only), same as S3776 in .NET: split the function, don't raise the limit
 
-- A `Stop` hook (`.claude/hooks/verify-on-edit.mjs`) checks the uncommitted changes when you finish a turn: `.cs` →
-  build + the tests that need no DB; `web/src/**/*.ts|html` → eslint on those files + `ngc` (`tsc` for specs). The
-  same checks run as a `PreToolUse` hook before any `git commit` and block it when they fail. A separate hook on the
-  same two events (`.claude/hooks/check-utf8.mjs`) rejects changed text files that are not UTF-8. When they report
-  errors, fix them.
-- No `Co-Authored-By: Claude` in commits, PRs or issues. A `PreToolUse` hook (`.claude/hooks/block-claude-coauthor.mjs`)
-  blocks such commands.
-- Never commit or push to `main`: branch, push the branch, open a PR. A `PreToolUse` hook
-  (`.claude/hooks/block-main-branch.mjs`) blocks `git commit` on main and any `git push` that updates main.
+- Hooks check your changes and block some commands: `docs/hooks.md` says what each one does. When they report errors,
+  fix them.
+- No `Co-Authored-By: Claude` in commits, PRs or issues.
+- Never commit or push to `main`: branch, push the branch, open a PR.
 - CI (`.github/workflows/ci.yml`): its jobs `dotnet`, `web`, `e2e` are required checks of `main`. A red check is
   fixed in the branch, never bypassed.
 
@@ -113,10 +108,8 @@ Run what the change touches, in this order; CI runs all of it on every PR.
   and handle its findings, then from the repo root run `node .claude/hooks/require-review-before-push.mjs --stamp`. Only
   `Verdict: approve` on that full range allows the stamp, not a `partial` verdict. A finding the user explicitly waives
   does not count against the verdict: one with a concrete wrong output is recorded in the limits in
-  `docs/DECISIONS.md`, any other is named in the reviewer's prompt. A `PreToolUse` hook
-  (`.claude/hooks/require-review-before-push.mjs`) blocks a push when `HEAD` has no stamp, so a new commit needs a new
-  review. Run the push as its own command: the hook also blocks one that follows a command that can move `HEAD`, such
-  as `git commit` or `git switch`, in the same command.
+  `docs/DECISIONS.md`, any other is named in the reviewer's prompt. A hook blocks a push when `HEAD` has no
+  stamp, so a new commit needs a new review. Run the push as its own command (`docs/hooks.md`).
 - A reviewer finding with a concrete wrong output is fixed, or moved to documented limits only with the user's OK.
 - Before a `traced` finding about behavior is fixed, the main session reproduces it with a sample input (in `src/` or
   `web/`, a failing test) and adds that input to the set it re-runs.
