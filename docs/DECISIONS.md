@@ -9,6 +9,9 @@ Important design decisions: what, why, when. Newest first.
 - **Why:** the details were spread over three sections of `CLAUDE.md`, and the agent needs them only when a hook blocks
   it or changes. The rules stayed because `CLAUDE.md` loads every session and other docs load only when read, so a rule
   moved out could be missed. The reviewer also takes its rules from `CLAUDE.md`.
+- **Limits, accepted by the user on this PR until a separate task fixes them:** both exit 0 instead of 2, and both were
+  there before this PR. `block-main-branch.mjs` does not see `(git push origin main)`, because `git` must be a separate
+  word. `block-claude-coauthor.mjs` does not check `gh pr merge --body`, and that body becomes a commit on `main`.
 
 ## 2026-11-04: The verifier refuses a running API (#84)
 - **What:** when something already answers on `E2E_API_URL`, `scripts/services.mjs` refuses it and starts nothing;
