@@ -48,57 +48,6 @@
   <Folder Name="/.claude/skills/add-endpoint/references/">
     <File Path=".claude/skills/add-endpoint/references/templates.md" />
   </Folder>
-  <Folder Name="/.claude/skills/angular-developer/">
-    <File Path=".claude/skills/angular-developer/SKILL.md" />
-  </Folder>
-  <Folder Name="/.claude/skills/angular-developer/references/">
-    <File Path=".claude/skills/angular-developer/references/angular-animations.md" />
-    <File Path=".claude/skills/angular-developer/references/angular-aria.md" />
-    <File Path=".claude/skills/angular-developer/references/cli.md" />
-    <File Path=".claude/skills/angular-developer/references/component-harnesses.md" />
-    <File Path=".claude/skills/angular-developer/references/component-styling.md" />
-    <File Path=".claude/skills/angular-developer/references/components.md" />
-    <File Path=".claude/skills/angular-developer/references/creating-services.md" />
-    <File Path=".claude/skills/angular-developer/references/data-resolvers.md" />
-    <File Path=".claude/skills/angular-developer/references/deferrable-views.md" />
-    <File Path=".claude/skills/angular-developer/references/define-routes.md" />
-    <File Path=".claude/skills/angular-developer/references/defining-providers.md" />
-    <File Path=".claude/skills/angular-developer/references/di-fundamentals.md" />
-    <File Path=".claude/skills/angular-developer/references/e2e-testing.md" />
-    <File Path=".claude/skills/angular-developer/references/effects.md" />
-    <File Path=".claude/skills/angular-developer/references/environment-configuration.md" />
-    <File Path=".claude/skills/angular-developer/references/hierarchical-injectors.md" />
-    <File Path=".claude/skills/angular-developer/references/host-elements.md" />
-    <File Path=".claude/skills/angular-developer/references/http-client.md" />
-    <File Path=".claude/skills/angular-developer/references/injection-context.md" />
-    <File Path=".claude/skills/angular-developer/references/inputs.md" />
-    <File Path=".claude/skills/angular-developer/references/linked-signal.md" />
-    <File Path=".claude/skills/angular-developer/references/loading-strategies.md" />
-    <File Path=".claude/skills/angular-developer/references/mcp.md" />
-    <File Path=".claude/skills/angular-developer/references/migrations.md" />
-    <File Path=".claude/skills/angular-developer/references/naming-conventions.md" />
-    <File Path=".claude/skills/angular-developer/references/navigate-to-routes.md" />
-    <File Path=".claude/skills/angular-developer/references/outputs.md" />
-    <File Path=".claude/skills/angular-developer/references/pipes.md" />
-    <File Path=".claude/skills/angular-developer/references/queries-and-projection.md" />
-    <File Path=".claude/skills/angular-developer/references/reactive-forms.md" />
-    <File Path=".claude/skills/angular-developer/references/rendering-strategies.md" />
-    <File Path=".claude/skills/angular-developer/references/resource.md" />
-    <File Path=".claude/skills/angular-developer/references/route-animations.md" />
-    <File Path=".claude/skills/angular-developer/references/route-guards.md" />
-    <File Path=".claude/skills/angular-developer/references/router-lifecycle.md" />
-    <File Path=".claude/skills/angular-developer/references/router-testing.md" />
-    <File Path=".claude/skills/angular-developer/references/server-side-rendering.md" />
-    <File Path=".claude/skills/angular-developer/references/show-routes-with-outlets.md" />
-    <File Path=".claude/skills/angular-developer/references/signal-forms.md" />
-    <File Path=".claude/skills/angular-developer/references/signals-overview.md" />
-    <File Path=".claude/skills/angular-developer/references/tailwind-css.md" />
-    <File Path=".claude/skills/angular-developer/references/template-driven-forms.md" />
-    <File Path=".claude/skills/angular-developer/references/testing-fundamentals.md" />
-  </Folder>
-  <Folder Name="/.claude/skills/angular-new-app/">
-    <File Path=".claude/skills/angular-new-app/SKILL.md" />
-  </Folder>
   <Folder Name="/.claude/skills/verify-ui/">
     <File Path=".claude/skills/verify-ui/SKILL.md" />
   </Folder>
