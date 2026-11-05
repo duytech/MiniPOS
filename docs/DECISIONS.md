@@ -4,10 +4,11 @@ Important design decisions: what, why, when. Newest first.
 
 ## 2026-11-05: Hook details live in docs/hooks.md (#98)
 - **What:** script paths, events and what each hook checks moved from `CLAUDE.md` to `docs/hooks.md`, which also covers
-  the scripts `CLAUDE.md` did not name. The rules and steps stayed in `CLAUDE.md`: no Claude co-author, no commit on
-  `main`, the review stamp, the push as its own command, what the hooks do not run.
-- **Why:** `CLAUDE.md` loads every session and other docs load only when read, so a rule moved out could be missed. The
-  reviewer also takes its rules from `CLAUDE.md`.
+  the scripts `CLAUDE.md` did not name. The rules and steps stayed in `CLAUDE.md`: no Claude co-author, no commit or
+  push to `main`, UTF-8 text files, the review stamp, the push as its own command, what the hooks do not run.
+- **Why:** the details were spread over three sections of `CLAUDE.md`, and the agent needs them only when a hook blocks
+  it or changes. The rules stayed because `CLAUDE.md` loads every session and other docs load only when read, so a rule
+  moved out could be missed. The reviewer also takes its rules from `CLAUDE.md`.
 
 ## 2026-11-04: The verifier refuses a running API (#84)
 - **What:** when something already answers on `E2E_API_URL`, `scripts/services.mjs` refuses it and starts nothing;

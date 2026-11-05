@@ -41,6 +41,7 @@ adding or changing code in `src/`.
   fix them.
 - No `Co-Authored-By: Claude` in commits, PRs or issues.
 - Never commit or push to `main`: branch, push the branch, open a PR.
+- Text files are UTF-8.
 - CI (`.github/workflows/ci.yml`): its jobs `dotnet`, `web`, `e2e` are required checks of `main`. A red check is
   fixed in the branch, never bypassed.
 
