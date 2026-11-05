@@ -32,7 +32,6 @@
     <File Path=".claude/hooks/check-utf8.mjs" />
     <File Path=".claude/hooks/git-changes.mjs" />
     <File Path=".claude/hooks/protect-feature-state.mjs" />
-    <File Path=".claude/hooks/require-review-before-push.mjs" />
     <File Path=".claude/hooks/tests-only.mjs" />
     <File Path=".claude/hooks/verify-on-edit.mjs" />
   </Folder>
@@ -66,6 +65,7 @@
     <File Path="docs/feature-list.json" />
     <File Path="docs/harness-engineering.md" />
     <File Path="docs/harness-va-loop-engineering.md" />
+    <File Path="docs/hooks.md" />
     <File Path="docs/journal.md" />
     <File Path="docs/loop-engineering.md" />
     <File Path="docs/multi-agent-va-sub-agent.md" />

@@ -2,6 +2,23 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-05: The reviewer runs only when asked (#98)
+- **What:** the rule to run the `reviewer` agent before every push and `.claude/hooks/require-review-before-push.mjs`
+  are removed. `.claude/agents/reviewer.md` stays, and the agent runs when the user asks. This replaces the push gate of
+  #82 and #85 and the stamp rule of #88 below. The severity rules of #88 for the reviewer still apply when it runs.
+- **Why:** the user's decision.
+
+## 2026-11-05: Hook details live in docs/hooks.md (#98)
+- **What:** script paths, events and what each hook checks moved from `CLAUDE.md` to `docs/hooks.md`, which also covers
+  the scripts `CLAUDE.md` did not name. The rules and steps stayed in `CLAUDE.md`: no Claude co-author, no commit or
+  push to `main`, UTF-8 text files, what the hooks do not run.
+- **Why:** the details were spread over three sections of `CLAUDE.md`, and the agent needs them only when a hook blocks
+  it or changes. The rules stayed because `CLAUDE.md` loads every session and other docs load only when read, so a rule
+  moved out could be missed. The reviewer also takes its rules from `CLAUDE.md`.
+- **Limits, accepted by the user on this PR until a separate task fixes them:** both exit 0 instead of 2, and both were
+  there before this PR. `block-main-branch.mjs` does not see `(git push origin main)`, because `git` must be a separate
+  word. `block-claude-coauthor.mjs` does not check `gh pr merge --body`, and that body becomes a commit on `main`.
+
 ## 2026-11-04: The verifier refuses a running API (#84)
 - **What:** when something already answers on `E2E_API_URL`, `scripts/services.mjs` refuses it and starts nothing;
   steps that require `e2e` are skipped, the feature is `blocked`, and the reason is printed. A running web app is still

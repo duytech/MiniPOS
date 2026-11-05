@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Read-only reviewer for the Mini POS repo. Use after the implementer (or any change) and before a commit or PR - it reads CLAUDE.md, the approved plan and the diff, then returns findings ranked by severity, each blocker and should-fix tied to the rule it breaks, and a verdict. It never edits files; Bash is for read-only git commands only.
+description: Read-only reviewer for the Mini POS repo. Use only when the user asks for a review - it reads CLAUDE.md, the approved plan and the diff, then returns findings ranked by severity, each blocker and should-fix tied to the rule it breaks, and a verdict. It never edits files; Bash is for read-only git commands only.
 tools: Read, Glob, Grep, Bash
 ---
 
