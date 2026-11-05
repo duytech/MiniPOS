@@ -4,9 +4,10 @@
 discounts, surcharge/dual pricing, split bill. **Some existing code predates these rules: follow this file, not the
 surrounding code.**
 
-Existing features (API routes, web pages) with how each is verified: `docs/feature-list.json`. Business rules already
-decided: `docs/business-rules.md`. Read both before adding a feature; add or update the feature's entry when you add or
-change one, with `verification` steps that run its tests.
+Read `docs/business-rules.md` before adding a feature: business rules already decided.
+
+Read `docs/feature-list.json` before adding a feature: existing features (API routes, web pages) with how each is
+verified. Add or update the feature's entry when you add or change one, with `verification` steps that run its tests.
 - `state`, `testedAt` and `evidence` are set only by `node scripts/verify-features.mjs [id ...]` (it runs the steps;
   a hook blocks hand edits). A new entry starts `not_started`, with `testedAt` and `evidence` `null`. It starts the
   services a step `requires` when they are down (Docker Desktop, Postgres, the API on `pos_e2e`, the web app) and stops
@@ -18,8 +19,8 @@ change one, with `verification` steps that run its tests.
   behavior, extra entities, seed data). If the task can't be done without one, stop and ask **before** building it;
   listing it afterwards as an open question is not enough. A rule the user decides goes into `docs/business-rules.md`.
 
-Architecture rules (use-case folders, validators vs domain, repositories): `docs/architecture.md`. Read it before
-adding or changing code in `src/`.
+Read `docs/architecture.md` before adding or changing code in `src/`: architecture rules (use-case folders, validators
+vs domain, repositories).
 
 ## Commands
 - DB: `docker compose up -d` (Postgres on **127.0.0.1:5433**; 5432 is taken by another install on this machine)
@@ -37,8 +38,8 @@ adding or changing code in `src/`.
   `vi.useFakeTimers()`). ESLint runs one Sonar rule, `sonarjs/cognitive-complexity` (max 15 per function, `.ts`
   only), same as S3776 in .NET: split the function, don't raise the limit
 
-- Hooks check your changes and block some commands: `docs/hooks.md` says what each one does. When they report errors,
-  fix them.
+- Read `docs/hooks.md` when a hook blocks you or before you change one: what each hook does. Hooks check your changes
+  and block some commands. When they report errors, fix them.
 - No `Co-Authored-By: Claude` in commits, PRs or issues.
 - Never commit or push to `main`: branch, push the branch, open a PR.
 - Text files are UTF-8.
@@ -89,14 +90,14 @@ Run what the change touches, in this order; CI runs all of it on every PR.
   architecture, integration and concurrency tests; integration needs the DB). Only the no-DB projects:
   `dotnet test tests/Pos.Domain.Tests`, `tests/Pos.Application.Tests`, `tests/Pos.ArchitectureTests`.
 - Web (`web/`, in that folder): `npm run lint`, `npm run build`, `npx ng test --watch=false`.
-- E2E (a change the user sees in the browser): setup and run in `tests/e2e/README.md`: API on the `pos_e2e` database
+- E2E (a change the user sees in the browser): Read `tests/e2e/README.md` for setup and run: API on the `pos_e2e` database
   (`tests/e2e/start-api.ps1`), `npm start` in `web/`, then in `tests/e2e` `npx tsc -p .` and `npx playwright test`.
 - Verifier scripts (`scripts/`): `node --test scripts/services.test.mjs`.
 - The hooks run only build, analyzers, eslint, `ngc` and the no-DB tests: integration, Vitest and E2E are yours to run.
 
 ## Definition of done
 - A feature is complete when it has enough code tests, not "code is written".
-- Go through `docs/clean-state-checklist.md` before opening a PR and at the end of each session
+- Read `docs/clean-state-checklist.md` before opening a PR and at the end of each session, and go through it.
 
 ## Development workflow
 - Every change needs a task id (a GitHub issue number).
@@ -110,8 +111,9 @@ Run what the change touches, in this order; CI runs all of it on every PR.
   `Verdict: approve` on that full range allows the stamp, not a `partial` verdict. A finding the user explicitly waives
   does not count against the verdict: one with a concrete wrong output is recorded in the limits in
   `docs/DECISIONS.md`, any other is named in the reviewer's prompt. A hook blocks a push when `HEAD` has no
-  stamp, so a new commit needs a new review. Run the push as its own command (`docs/hooks.md`).
+  stamp, so a new commit needs a new review. Run the push as its own command. Read `docs/hooks.md` for
+  which commands in the same command block it.
 - A reviewer finding with a concrete wrong output is fixed, or moved to documented limits only with the user's OK.
 - Before a `traced` finding about behavior is fixed, the main session reproduces it with a sample input (in `src/` or
   `web/`, a failing test) and adds that input to the set it re-runs.
-- File docs/DECISIONS.md. Record important design decisions and reasons. No need for detailed design documents — just "what decision, why, when".
+- Read `docs/DECISIONS.md` for past design decisions. Record important new ones and their reasons there. No need for detailed design documents — just "what decision, why, when".
