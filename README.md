@@ -42,12 +42,12 @@ flowchart TD
     IB --> I[integrator: main session<br/>merge branches, run every verifier,<br/>open the app]
     IF --> I
     T --> I
-    I --> R[reviewer<br/>read-only, diff vs CLAUDE.md]
-    R -->|changes requested| G2{{gate: fix or accept findings}}
+    I --> PR[Pull request]
+    I -.->|only when the user asks| R[reviewer<br/>read-only, diff vs CLAUDE.md]
+    R -.->|findings| G2{{gate: fix or accept findings}}
     G2 -->|fix| IB
     G2 -->|fix| IF
-    G2 -->|accept: re-run| R
-    R -->|full-range approve| PR[Pull request]
+    G2 -->|accept| PR
     PR --> CI[CI: dotnet, web, e2e<br/>required checks]
     PR -.-> CR[CodeRabbit review<br/>advisory]
     CI --> G3{{gate: merge}}
