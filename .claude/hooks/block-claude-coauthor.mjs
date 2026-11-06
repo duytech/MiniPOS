@@ -8,12 +8,15 @@ import path from 'node:path';
 // A trailer starts a line (or a -m "..." argument) and names an email: "Co-Authored-By: Claude <noreply@anthropic.com>".
 // Prose that mentions the trailer (indented, or without an email) is not one.
 const CO_AUTHOR = /(?:^|["'])co-authored-by:[^\n<]*(?:claude[^\n<]*<[^>\n]*>|<[^>\n]*noreply@anthropic\.com>)/im;
-const PUBLISHES_TEXT = /\bgit\b[^\n|;&]*\bcommit\b|\bgh\s+(pr|issue)\s+(create|edit|comment|review)\b|\bgh\s+api\b/;
+const PUBLISHES_TEXT =
+  /\bgit\b[^\n|;&]*\b(?:commit|merge)\b|\bgh\s+(pr|issue)\s+(create|edit|comment|review|merge|close|reopen)\b|\bgh\s+api\b/;
+// A line continuation in either shell: `git \<newline> commit` is one command.
+const LINE_CONTINUATION = /[\\`]\r?\n/g;
 const MESSAGE_FILE = /(?:^|\s)(?:-F|--file|--body-file)(?:=|\s+)(?:"([^"]+)"|'([^']+)'|(\S+))/g;
 
 const input = JSON.parse(readFileSync(0, 'utf8').replace(/^﻿/, '') || '{}');
 const command = input.tool_input?.command ?? '';
-if (!PUBLISHES_TEXT.test(command)) process.exit(0);
+if (!PUBLISHES_TEXT.test(command.replace(LINE_CONTINUATION, ' '))) process.exit(0);
 
 const cwd = input.cwd || process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const texts = [command];
