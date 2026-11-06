@@ -23,9 +23,9 @@ thứ không phải loop.
 
 - **Harness nhưng không phải loop:** `CLAUDE.md`, skill, `planner` chỉ đọc, `tester` chỉ sửa `tests/`, hook chặn commit
   lên `main`, cổng duyệt contract. Những thứ này chặn lỗi trước khi nó xảy ra, hoặc giao quyết định cho người.
-- **Loop:** hook `verify-on-edit` chạy build và test khi agent kết thúc lượt và trước `git commit`, rồi trả lỗi đã lọc
-  gọn (Expected/Actual, `file:line`). Các verifier đứng sau hook này là xUnit đến từng cent, arch test quét IL,
-  analyzers, ESLint, Vitest. Thêm vòng nhìn UI bằng Playwright.
+- **Loop:** hook `verify-on-edit` chạy toàn bộ check trước `git push`, chặn push khi có lỗi, rồi trả lỗi đã lọc
+  gọn (Expected/Actual, `file:line`). Các verifier đứng sau hook này là xUnit đến từng cent, integration và concurrency
+  test, arch test quét IL, analyzers, ESLint, Vitest, Playwright. Thêm vòng nhìn UI bằng Playwright MCP.
 
 ## Bài học riêng của loop engineering (Tuần 2)
 
@@ -35,7 +35,8 @@ thứ không phải loop.
 - **Output phải dùng được.** Bản đầu của hook dùng `dotnet test -v q`, chỉ in tên test fail, không có Expected/Actual,
   nên agent phải chạy lại test mới biết sai bao nhiêu.
 - **Nhiễu tốn vòng lặp.** 3/5 lần hook đỏ ở Tuần 2 Ngày 6 là do trạng thái dở dang giữa hai edit. Cách sửa là đổi
-  nhịp kiểm: chuyển hook từ `PostToolUse` (sau mỗi edit) sang `Stop` (một lần mỗi lượt).
+  nhịp kiểm: chuyển hook từ `PostToolUse` (sau mỗi edit) sang `Stop` (một lần mỗi lượt). Về sau (#103) hook chuyển tiếp
+  sang trước `git push`, để chạy cả các test chậm và cần DB.
 
 ## Chúng bổ sung cho nhau ra sao
 

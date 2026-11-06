@@ -76,8 +76,8 @@ each one checks):
 
 | Hook | When | What |
 | --- | --- | --- |
-| `verify-on-edit.mjs` | End of every turn, and before every `git commit` | Changed `.cs`: `dotnet build` + the tests that need no DB. Changed `web/src/**/*.ts\|html`: ESLint on those files + `ngc` (`tsc` for specs). Blocks the commit on failure |
-| `check-utf8.mjs` | Same | Rejects changed text files that are not UTF-8 |
+| `verify-on-edit.mjs` | Before `git push`, when the commits change more than `*.md` and `docs/` | `dotnet build`, `dotnet test`, verifier script tests, web lint, build and Vitest, E2E types and Playwright. Starts the services it needs. Runs on the working tree, uncommitted files included. Blocks the push on a failure |
+| `check-utf8.mjs` | End of every turn, and before every `git commit` | Rejects changed text files that are not UTF-8 |
 | `block-main-branch.mjs` | Before `git commit` / `git push` | No commit on `main`, no push that updates `main` |
 | `block-claude-coauthor.mjs` | Before commands | No `Co-Authored-By: Claude` in commits, PRs or issues |
 | `tests-only.mjs` | Before the `tester` edits a file | Refuses any path outside `tests/` |

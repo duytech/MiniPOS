@@ -93,8 +93,9 @@ Run what the change touches, in this order; CI runs all of it on every PR.
 - E2E (a change the user sees in the browser): Read `tests/e2e/README.md` for setup and run: API on the `pos_e2e` database
   (`tests/e2e/start-api.ps1`), `npm start` in `web/`, then in `tests/e2e` `npx tsc -p .` and `npx playwright test`.
 - Verifier scripts (`scripts/`): `node --test scripts/services.test.mjs`.
-- Hooks (`.claude/hooks/`): `node --test .claude/hooks/block-main-branch.test.mjs .claude/hooks/block-claude-coauthor.test.mjs`.
-- The hooks run only build, analyzers, eslint, `ngc` and the no-DB tests: integration, Vitest and E2E are yours to run.
+- Hooks (`.claude/hooks/`): `node --test .claude/hooks/block-main-branch.test.mjs .claude/hooks/block-claude-coauthor.test.mjs .claude/hooks/verify-on-edit.test.mjs`.
+- Build and tests run on their own only before `git push` (`verify-on-edit.mjs`: all of the above except the hook tests,
+  on the working tree). During a turn and at a commit, run what the change touches.
 
 ## Definition of done
 - A feature is complete when it has enough code tests, not "code is written".

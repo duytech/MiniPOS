@@ -88,7 +88,7 @@ jobs:
       - name: Verifier script tests
         run: node --test scripts/services.test.mjs
       - name: Hook tests
-        run: node --test .claude/hooks/block-main-branch.test.mjs .claude/hooks/block-claude-coauthor.test.mjs
+        run: node --test .claude/hooks/block-main-branch.test.mjs .claude/hooks/block-claude-coauthor.test.mjs .claude/hooks/verify-on-edit.test.mjs
       - uses: ./.github/actions/postgres
         with:
           database: pos_e2e

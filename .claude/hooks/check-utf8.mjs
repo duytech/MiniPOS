@@ -6,7 +6,7 @@
 // `git commit`, and exit 2 blocks the commit.
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import { changedFiles, readHookInput, runsGitCommit } from './git-changes.mjs';
+import { changedFiles, readHookInput, runsGit } from './git-changes.mjs';
 
 const TEXT_EXTENSIONS = ['.cs', '.csproj', '.props', '.ts', '.html', '.css', '.json', '.md', '.mjs'];
 
@@ -14,7 +14,7 @@ const input = readHookInput();
 const root = process.env.CLAUDE_PROJECT_DIR || input.cwd || process.cwd();
 const beforeCommit = process.argv.includes('--before-commit');
 
-if (beforeCommit && !runsGitCommit(input)) process.exit(0);
+if (beforeCommit && !runsGit(input, 'commit')) process.exit(0);
 
 const notUtf8 = changedFiles(root).filter((file) => {
   if (!TEXT_EXTENSIONS.includes(path.extname(file).toLowerCase())) return false;

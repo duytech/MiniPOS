@@ -68,5 +68,5 @@ that would be a second total implementation. SQL in tests reads stored columns (
 
 - `dotnet build Pos.slnx` (0 warnings), `docker compose up -d`, `dotnet test Pos.slnx` (integration tests need the DB).
 - Check the concurrency test really races: at least one 409 in a run, not N sequential 200s.
-- The `PreToolUse` hook re-runs build + fast tests before `git commit`; integration tests are yours to run.
+- The `PreToolUse` hook runs every check only before `git push`; while you work, build and tests are yours to run.
 - Summary: endpoint, status codes, the business rules you were given, anything still open.

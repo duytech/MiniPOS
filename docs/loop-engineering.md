@@ -15,9 +15,9 @@ tự đi đến code đúng mà không cần người nhắc.
 | Thành phần | Câu hỏi | Trong repo |
 |---|---|---|
 | **Verifier** | Máy kiểm cái gì? | xUnit đến từng cent (có case midpoint), architecture test, analyzer + warnings as errors, Sonar cognitive complexity (S3776 / `sonarjs/cognitive-complexity`), ESLint, `ngc`, Vitest, concurrency test, Playwright |
-| **Trigger** | Kiểm lúc nào, tự động hay chờ agent nhớ? | Hook `Stop` khi agent sắp kết thúc lượt, hook `PreToolUse` trước mỗi `git commit`, `check-utf8.mjs` trên cùng hai event |
+| **Trigger** | Kiểm lúc nào, tự động hay chờ agent nhớ? | Hook `PreToolUse` trước mỗi `git push` có đổi code (`verify-on-edit.mjs`). `check-utf8.mjs` chạy ở `Stop` và trước `git commit` |
 | **Feedback** | Agent nhận được gì, đủ để sửa mà không phải chạy lại? | Script lọc output: Expected/Actual, danh sách vi phạm của arch test, `file:dòng`, tối đa 40 dòng |
-| **Điểm dừng** | Bao giờ thì xong, bao giờ thì bỏ cuộc? | Exit 2 chặn agent cho tới khi check xanh. **Chưa có** giới hạn số vòng |
+| **Điểm dừng** | Bao giờ thì xong, bao giờ thì bỏ cuộc? | Exit 2 chặn push cho tới khi check xanh. **Chưa có** giới hạn số vòng |
 | **Kiểm chính vòng lặp** | Verifier có bắt được lỗi thật không? | Cố ý tạo lỗi (`ToEven`, `double`, `any`, sai template…), đếm số 409 trong concurrency test, ghi vào journal |
 
 ## Hook không phải phần quan trọng nhất
@@ -38,12 +38,20 @@ Chọn **nhịp kiểm** (sau mỗi edit hay mỗi lượt) và **giảm nhiễu
 - Ở `Stop`, hook chạy một lần trên toàn bộ thay đổi chưa commit, nên không còn thấy trạng thái dở dang.
 - Đánh đổi: lỗi thật (như arch test bắt `PercentageLimits`) được báo ở cuối lượt chứ không ngay sau file gây lỗi.
 
+## Chuyển từ `Stop` sang trước `git push` (#103)
+
+Hook ở `Stop` và trước `git commit` chỉ chạy các test không cần DB, nên integration, concurrency, Vitest và E2E vẫn phụ
+thuộc vào việc có ai nhớ chạy hay không. Giờ hook chạy toàn bộ check trước `git push` và tự bật service cần thiết.
+
+- Được: lỗi ở mọi tầng bị chặn trước khi lên CI, và lượt chỉ hỏi đáp không còn phải chờ check.
+- Mất: trong lượt và lúc commit không còn check tự động, nên lỗi có thể đến lúc push mới lộ. Agent phải tự chạy phần
+  mình vừa sửa.
+
 ## Những chỗ vòng lặp còn hở
 
-- **Integration test (gồm concurrency) và Vitest** không nằm trong hook: chúng chậm hoặc cần DB. CLAUDE.md chỉ nhắc agent
-  chạy trước khi xong. Tuần 4 Ngày 1 (GitHub Actions làm quality gate trước khi merge) sẽ đóng chỗ này.
-- **Không giới hạn số vòng**: nếu agent bế tắc, hook `Stop` chặn mãi cho tới khi người dùng ngắt.
-- **Hook dựa trên `git status`**: còn file chưa commit thì lượt chỉ hỏi đáp cũng phải chờ check.
+- **Phản hồi muộn**: build và test chỉ tự chạy trước push, và mỗi lần chạy mất vài phút.
+- **Không giới hạn số vòng**: nếu agent bế tắc, hook chặn push mãi cho tới khi người dùng ngắt.
+- **Chỉ push qua Claude Code mới được kiểm**: push từ terminal không qua hook, nên CI vẫn là cổng cuối.
 
 ## Câu trả lời khi phỏng vấn
 
@@ -55,4 +63,4 @@ Ví dụ cụ thể nên kể:
 
 - Đổi `AwayFromZero` thành `ToEven`: hook báo `Expected: 0.77 USD / Actual: 0.76 USD` kèm tên test.
 - Arch test bắt hằng số `decimal` trong Application ngay khi file vừa được tạo.
-- Chuyển hook sang `Stop` sau khi đo được 3 trên 5 lần đỏ là nhiễu.
+- Chuyển hook sang `Stop` sau khi đo được 3 trên 5 lần đỏ là nhiễu, rồi sang trước `git push` để chạy đủ mọi tầng test.
