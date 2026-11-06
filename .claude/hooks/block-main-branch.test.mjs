@@ -58,6 +58,11 @@ test('blocks a commit in brackets on main', () => {
   assert.equal(exitCode('(git commit -m x)', onMain), BLOCKED);
 });
 
+test('an escaped \\ or backtick at the end of a line does not continue it', () => {
+  assert.equal(exitCode('echo \\\\\ngit push origin main', onBranch, 'Bash'), BLOCKED);
+  assert.equal(exitCode('echo ``\ngit push origin main', onBranch, 'PowerShell'), BLOCKED);
+});
+
 test('blocks a PowerShell line continuation after git', () => {
   assert.equal(exitCode('git `\n  push origin main', onBranch, 'PowerShell'), BLOCKED);
 });
