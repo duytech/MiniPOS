@@ -76,7 +76,7 @@ each one checks):
 
 | Hook | When | What |
 | --- | --- | --- |
-| `verify-on-edit.mjs` | Before `git push`, when the commits change more than `*.md` and `docs/` | `dotnet build`, `dotnet test`, verifier script tests, web lint, build and Vitest, E2E types and Playwright. Starts the services it needs. Blocks the push on a failure or on uncommitted files |
+| `verify-on-edit.mjs` | Before `git push`, when the commits change more than `*.md` and `docs/` | `dotnet build`, `dotnet test`, verifier script tests, web lint, build and Vitest, E2E types and Playwright. Starts the services it needs. Runs on the working tree, uncommitted files included. Blocks the push on a failure |
 | `check-utf8.mjs` | End of every turn, and before every `git commit` | Rejects changed text files that are not UTF-8 |
 | `block-main-branch.mjs` | Before `git commit` / `git push` | No commit on `main`, no push that updates `main` |
 | `block-claude-coauthor.mjs` | Before commands | No `Co-Authored-By: Claude` in commits, PRs or issues |

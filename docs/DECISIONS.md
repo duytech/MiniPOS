@@ -8,11 +8,11 @@ Important design decisions: what, why, when. Newest first.
   they need. `check-utf8.mjs` stays on `Stop` and before `git commit`.
 - **Why:** the old hook ran only the no-DB tests, so integration, concurrency, Vitest and E2E tests ran only when someone
   remembered them, or in CI after the push.
+- **The user's decision, against the issue:** uncommitted files do not block the push. They count as changes when the hook
+  decides whether code is pushed, and the checks run on them. The hook runs once, before the whole command, so in
+  `git commit -a && git push` the code is not yet in a commit.
 - **Choices not in the issue:**
   - The hook stops at the first failed check, because a later check says little after an earlier one fails.
-  - Uncommitted files count as changes when the hook decides whether code is pushed (the user's decision). The hook runs
-    once, before the whole command, so in `git commit -a && git push` the code is not yet in a commit. An uncommitted doc
-    does not block a docs-only push.
   - The hook has its own limit of 30 minutes on the checks (`VERIFY_CHECKS_LIMIT_MS`), and blocks when it is reached.
 - **Timeout, measured:** a `PreToolUse` hook that passes its timeout does not block: in a temp repo with `claude -p`
   (2.1.312), a hook that exits 2 after 30 s with `timeout: 3` let the push through, and the same hook exiting 2 before its
@@ -21,6 +21,8 @@ Important design decisions: what, why, when. Newest first.
   of service starts (Docker, Postgres, API and web app at 5 minutes each) and 1 minute to stop them.
 - **Limits:**
   - Build, analyzers and tests no longer run automatically during a turn or at commit, so an error can first show at push.
+  - The checks read the working tree, not what is pushed. An uncommitted fix can make them pass while the pushed commits
+    still fail, and an uncommitted bug can block a push whose commits are correct. CI checks the pushed commits.
   - Only pushes made through Claude Code are checked. CI stays the final gate.
   - The hook checks the current `HEAD`, even when the command pushes another branch. `git push --delete` also runs the
     checks when the current branch has unpushed code.

@@ -1,7 +1,7 @@
 // PreToolUse hook (Bash, PowerShell): before a `git push`, runs every check of the repo on the working tree, in order, and
 // stops at the first failure. Exit 2 blocks the push and prints the errors on stderr, which keeps Claude working to fix them.
-// Commits and uncommitted files with only *.md or docs/ changes run no checks. Otherwise uncommitted files block the push:
-// the checks read the working tree, not what is pushed. Services a check needs are started through scripts/services.mjs and stopped at the end.
+// Commits and uncommitted files with only *.md or docs/ changes run no checks. The checks read the working tree, so
+// uncommitted files are checked too. Services a check needs are started through scripts/services.mjs and stopped at the end.
 // The UTF-8 check is a separate hook (check-utf8.mjs).
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
@@ -22,11 +22,6 @@ if (!runsGit(input, 'push')) process.exit(0);
 const started = Date.now();
 const git = (...args) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
 
-function block(heading, lines) {
-  process.stderr.write([`Push blocked: ${heading}`, ...lines].join('\n') + '\n');
-  process.exit(2);
-}
-
 const isCode = (file) => !NOT_CODE.test(file);
 const uncommitted = (git('status', '--porcelain', '-z', '--no-renames', '--untracked-files=all').stdout ?? '')
   .split('\0')
@@ -43,12 +38,6 @@ function commitsChangeCode() {
 
 // Uncommitted files count too: in `git commit -a && git push` the commit has not run yet when this hook reads the repo.
 if (!uncommitted.some(isCode) && !commitsChangeCode()) process.exit(0);
-
-if (uncommitted.length) {
-  block('the checks run on the working tree, and it has uncommitted files. Commit or stash them, then push again:', [
-    ...uncommitted.map((file) => `  ${file}`),
-  ]);
-}
 
 /** Keeps the distinct lines that match (compilers repeat the same error per target). */
 const matching = (pattern) => (lines) => [...new Set(lines.filter((line) => pattern.test(line)).map((l) => l.trim()))];
@@ -149,4 +138,7 @@ try {
 } finally {
   stopStarted();
 }
-if (failure) block('a check failed. Fix it, commit, then push again:', failure);
+if (failure) {
+  process.stderr.write(['Push blocked: a check failed. Fix it, then push again:', ...failure].join('\n') + '\n');
+  process.exit(2);
+}

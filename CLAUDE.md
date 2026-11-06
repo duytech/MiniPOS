@@ -94,8 +94,8 @@ Run what the change touches, in this order; CI runs all of it on every PR.
   (`tests/e2e/start-api.ps1`), `npm start` in `web/`, then in `tests/e2e` `npx tsc -p .` and `npx playwright test`.
 - Verifier scripts (`scripts/`): `node --test scripts/services.test.mjs`.
 - Hooks (`.claude/hooks/`): `node --test .claude/hooks/block-main-branch.test.mjs .claude/hooks/block-claude-coauthor.test.mjs .claude/hooks/verify-on-edit.test.mjs`.
-- Build and tests run on their own only before `git push` (`verify-on-edit.mjs`: all of the above except the hook tests;
-  commit first, because uncommitted files block the push). During a turn and at a commit, run what the change touches.
+- Build and tests run on their own only before `git push` (`verify-on-edit.mjs`: all of the above except the hook tests,
+  on the working tree). During a turn and at a commit, run what the change touches.
 
 ## Definition of done
 - A feature is complete when it has enough code tests, not "code is written".

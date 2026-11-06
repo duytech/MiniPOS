@@ -131,26 +131,25 @@ for (const [name, change] of [
   ['a changed code file', () => write('src/a.cs', 'changed')],
   ['a deleted code file', () => rmSync(path.join(repo, 'src/a.cs'))],
 ]) {
-  test(`${name} in the working tree blocks the push without running the checks`, () => {
+  test(`${name} in the working tree runs the checks`, () => {
     trackedBranch();
     change();
     const result = runHook();
     assert.equal(result.status, BLOCKED);
-    assert.match(result.stderr, /uncommitted files/);
-    assert.doesNotMatch(result.stderr, CHECKS_RAN);
+    assert.match(result.stderr, CHECKS_RAN);
   });
 }
 
-test('an uncommitted doc blocks a push whose commits change code', () => {
+test('an uncommitted doc next to commits that change code runs the checks', () => {
   trackedBranch();
   commit('src/b.cs');
   write('docs/new.md');
   const result = runHook();
   assert.equal(result.status, BLOCKED);
-  assert.match(result.stderr, /uncommitted files/);
+  assert.match(result.stderr, CHECKS_RAN);
 });
 
-test('an uncommitted doc does not block a docs-only push', () => {
+test('an uncommitted doc next to a docs-only push runs no checks', () => {
   trackedBranch();
   commit('docs/x.md');
   write('notes/new.md');
@@ -158,13 +157,13 @@ test('an uncommitted doc does not block a docs-only push', () => {
   assert.equal(result.status, ALLOWED, result.stderr);
 });
 
-test('git commit && git push in one command is blocked on the code file it would commit', () => {
+test('git commit && git push in one command runs the checks on the code file it would commit', () => {
   trackedBranch();
   write('src/b.cs');
   git('add', '-A');
   const result = runHook('git commit -m x && git push');
   assert.equal(result.status, BLOCKED);
-  assert.match(result.stderr, /uncommitted files/);
+  assert.match(result.stderr, CHECKS_RAN);
 });
 
 test('blocks when the checks reach their time limit', () => {
