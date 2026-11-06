@@ -127,9 +127,9 @@ test('runs the checks when the base cannot be resolved', () => {
 });
 
 for (const [name, change] of [
-  ['a new file', () => write('docs/new.md')],
-  ['a changed file', () => write('src/a.cs', 'changed')],
-  ['a deleted file', () => rmSync(path.join(repo, 'src/a.cs'))],
+  ['a new code file', () => write('src/b.cs')],
+  ['a changed code file', () => write('src/a.cs', 'changed')],
+  ['a deleted code file', () => rmSync(path.join(repo, 'src/a.cs'))],
 ]) {
   test(`${name} in the working tree blocks the push without running the checks`, () => {
     trackedBranch();
@@ -141,7 +141,24 @@ for (const [name, change] of [
   });
 }
 
-test('git commit && git push in one command is blocked on the file it would commit', () => {
+test('an uncommitted doc blocks a push whose commits change code', () => {
+  trackedBranch();
+  commit('src/b.cs');
+  write('docs/new.md');
+  const result = runHook();
+  assert.equal(result.status, BLOCKED);
+  assert.match(result.stderr, /uncommitted files/);
+});
+
+test('an uncommitted doc does not block a docs-only push', () => {
+  trackedBranch();
+  commit('docs/x.md');
+  write('notes/new.md');
+  const result = runHook();
+  assert.equal(result.status, ALLOWED, result.stderr);
+});
+
+test('git commit && git push in one command is blocked on the code file it would commit', () => {
   trackedBranch();
   write('src/b.cs');
   git('add', '-A');

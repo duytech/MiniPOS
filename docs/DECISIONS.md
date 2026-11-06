@@ -10,8 +10,9 @@ Important design decisions: what, why, when. Newest first.
   remembered them, or in CI after the push.
 - **Choices not in the issue:**
   - The hook stops at the first failed check, because a later check says little after an earlier one fails.
-  - Uncommitted files block the push before the code check, also for a docs-only push. Otherwise
-    `git commit && git push` passes: the hook runs before the commit, so the new commit is not yet in the diff.
+  - Uncommitted files count as changes when the hook decides whether code is pushed (the user's decision). The hook runs
+    once, before the whole command, so in `git commit -a && git push` the code is not yet in a commit. An uncommitted doc
+    does not block a docs-only push.
   - The hook has its own limit of 30 minutes on the checks (`VERIFY_CHECKS_LIMIT_MS`), and blocks when it is reached.
 - **Timeout, measured:** a `PreToolUse` hook that passes its timeout does not block: in a temp repo with `claude -p`
   (2.1.312), a hook that exits 2 after 30 s with `timeout: 3` let the push through, and the same hook exiting 2 before its
@@ -24,6 +25,8 @@ Important design decisions: what, why, when. Newest first.
   - The hook checks the current `HEAD`, even when the command pushes another branch. `git push --delete` also runs the
     checks when the current branch has unpushed code.
   - Commands that `gitCommands` misses (`bash -c "git push"`, see #100) are not checked.
+  - A command that brings in commits and pushes in one call passes unchecked when the tree is clean and the commits so
+    far change only docs: `git merge other && git push`, `git pull && git push`, `git cherry-pick x && git push`.
   - If the hook is killed from outside (the user interrupts it), services it started keep running. At its own limit,
     the child processes of the running check finish on their own.
 
