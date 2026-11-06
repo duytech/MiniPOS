@@ -71,7 +71,8 @@ only the CI checks block a merge.
 
 The agent is not done until these pass. Most of them run without being asked.
 
-**Hooks** (in [`.claude/hooks/`](.claude/hooks), run by Claude Code itself):
+**Hooks** (in [`.claude/hooks/`](.claude/hooks), run by Claude Code itself; [`docs/hooks.md`](docs/hooks.md) has what
+each one checks):
 
 | Hook | When | What |
 | --- | --- | --- |

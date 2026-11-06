@@ -87,6 +87,8 @@ jobs:
             tests/e2e/package-lock.json
       - name: Verifier script tests
         run: node --test scripts/services.test.mjs
+      - name: Hook tests
+        run: node --test .claude/hooks/block-main-branch.test.mjs .claude/hooks/block-claude-coauthor.test.mjs
       - uses: ./.github/actions/postgres
         with:
           database: pos_e2e

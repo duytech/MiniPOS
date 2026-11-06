@@ -28,7 +28,9 @@
   </Folder>
   <Folder Name="/.claude/hooks/">
     <File Path=".claude/hooks/block-claude-coauthor.mjs" />
+    <File Path=".claude/hooks/block-claude-coauthor.test.mjs" />
     <File Path=".claude/hooks/block-main-branch.mjs" />
+    <File Path=".claude/hooks/block-main-branch.test.mjs" />
     <File Path=".claude/hooks/check-utf8.mjs" />
     <File Path=".claude/hooks/git-changes.mjs" />
     <File Path=".claude/hooks/protect-feature-state.mjs" />

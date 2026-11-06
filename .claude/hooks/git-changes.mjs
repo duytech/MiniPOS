@@ -4,14 +4,17 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
+// Git options before the subcommand whose value is the next word (-C and --git-dir are read on their own).
+const OPTIONS_WITH_VALUE = /^(-c|--work-tree|--namespace|--config-env|--attr-source)$/;
+
 /** The hook input JSON from stdin (a BOM is dropped: Windows PowerShell may add one). */
 export function readHookInput() {
   return JSON.parse(readFileSync(0, 'utf8').replace(/^﻿/, '') || '{}');
 }
 
 /**
- * The git commands in a shell command, in order: `{ repo, sub, args }` per command. `cd` and `git -C` set `repo`.
- * Heredoc and here-string bodies are dropped and quoted strings stay one word, so a commit message or an echo that
+ * The git commands in a shell command, in order: `{ repo, gitDir, sub, args }` per command. `cd` and `git -C` set `repo`;
+ * `gitDir` is the `--git-dir` value, when there is one. Heredoc and here-string bodies are dropped and quoted strings stay one word, so a commit message or an echo that
  * mentions "git commit" does not count. Pass `subshells: false` for PowerShell, where brackets do not scope a cd.
  */
 export function gitCommands(command, cwd = process.cwd(), { subshells = true } = {}) {
@@ -40,6 +43,11 @@ export function gitCommands(command, cwd = process.cwd(), { subshells = true } =
       .split(/\s+/)
       .filter(Boolean)
       .map((word) => word.replace(/\u0001(\d+)\u0001/g, (_, i) => quoted[Number(i)]));
+  // A line continuation runs as one line: \ in a POSIX shell, a backtick in PowerShell. An escaped one (\\) ends the line.
+  // Read after the masking above, so quoted text and heredocs stay as they are.
+  const joined = subshells
+    ? masked.replace(/(?<!\\)((?:\\\\)*)\\\r?\n/g, '$1')
+    : masked.replace(/(?<!`)((?:``)*)`\r?\n/g, '$1 ');
   // Git Bash writes D:\x as /d/x; path.resolve would read that as a folder on the current drive.
   const fromShell = (dir) => (process.platform === 'win32' ? dir.replace(/^\/([a-zA-Z])(?=\/|$)/, '$1:') : dir);
 
@@ -48,7 +56,7 @@ export function gitCommands(command, cwd = process.cwd(), { subshells = true } =
   // `x`, ${x}, PowerShell's -C (x) and brackets that touch a word ($(x), x=(y), D:\foo(1), foo{1}) stay one word. A brace
   // with a space or after a bracket is a block: else{git push}, if(x){git push}. Repeated, so an outer bracket is seen
   // once its inner one is a word: $(dirname $(pwd)).
-  let unwrapped = subshells ? masked.replace(/`([^`]*)`/g, (text, inner) => keepWord(text, [inner])) : masked;
+  let unwrapped = subshells ? joined.replace(/`([^`]*)`/g, (text, inner) => keepWord(text, [inner])) : joined;
   for (let previous; previous !== unwrapped; ) {
     previous = unwrapped;
     unwrapped = unwrapped.replace(
@@ -78,14 +86,18 @@ export function gitCommands(command, cwd = process.cwd(), { subshells = true } =
       if (at < 0) continue;
       const rest = all.slice(at + 1);
       let repo = dir;
+      let gitDir;
       let i = 0;
       while (rest[i]?.startsWith('-')) {
         if (rest[i] === '-C') repo = path.resolve(repo, fromShell(rest[++i] ?? '.'));
-        else if (rest[i] === '-c') i++;
+        else if (rest[i] === '--git-dir') gitDir = rest[++i];
+        else if (rest[i].startsWith('--git-dir=')) gitDir = rest[i].slice('--git-dir='.length);
+        else if (OPTIONS_WITH_VALUE.test(rest[i])) i++;
         i++;
       }
       const [sub, ...args] = rest.slice(i);
-      if (sub) commands.push({ repo, sub, args });
+      // Git reads a relative --git-dir after every -C, so it resolves against the final repo.
+      if (sub) commands.push({ repo, gitDir: gitDir && path.resolve(repo, fromShell(gitDir)), sub, args });
     }
   };
   walk(unwrapped);
