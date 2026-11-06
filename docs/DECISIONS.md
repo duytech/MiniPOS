@@ -2,6 +2,25 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-06: block-main-branch uses gitCommands; two hooks have tests (#100)
+- **What:** `block-main-branch.mjs` drops its own parser and reads `gitCommands` from `git-changes.mjs`. `gitCommands` now
+  joins a line continuation (`\` in a POSIX shell, a backtick in PowerShell), skips the value of `--git-dir`,
+  `--work-tree`, `--namespace`, `--config-env` and `--attr-source`, and returns `gitDir`. The hook reads the branch of the
+  repository `--git-dir` names. `block-claude-coauthor.mjs` also checks `git merge`, `gh pr|issue merge|close|reopen` and a
+  line continuation. `block-main-branch.test.mjs` and `block-claude-coauthor.test.mjs` run each hook on sample commands,
+  and the `e2e` job runs them next to the verifier script tests.
+- **Why:** the forms in #98 exited 0, and nothing tested a hook. Two parsers meant a fix reached only one of them. On 44
+  sample commands, `gitCommands` found every git command the old hook blocked. Commit detection in `verify-on-edit.mjs`
+  and `check-utf8.mjs` gets the two parser fixes too.
+- **The user's choice, not in the issue:** `git \<newline> commit`, `gh pr|issue reopen --comment` and the branch of the
+  repository `--git-dir` names.
+- **Limits, accepted by the user on this task:** `block-main-branch.mjs` now has the parser limits of #82 and #91 below.
+  It missed these forms before this change too: `bash -c "git push origin main"`, `/usr/bin/git push`, `$GIT push`, nested
+  `$(...)` in double quotes. `cd other & git commit` reads the wrong folder in a POSIX shell, because a backgrounded `cd`
+  does not stay. `GIT_DIR=x git push` still reads the current folder. `block-claude-coauthor.mjs` misses a flag before the
+  verb (`gh pr --repo x merge`). False blocks: `echo git push origin main` on the main-branch hook, and an `echo` that
+  has a publishing command name and a trailer on the co-author hook.
+
 ## 2026-11-05: The reviewer runs only when asked (#98)
 - **What:** the rule to run the `reviewer` agent before every push and `.claude/hooks/require-review-before-push.mjs`
   are removed. `.claude/agents/reviewer.md` stays, and the agent runs when the user asks. This replaces the push gate of
@@ -18,6 +37,7 @@ Important design decisions: what, why, when. Newest first.
 - **Limits, accepted by the user on this PR until a separate task fixes them:** both exit 0 instead of 2, and both were
   there before this PR. `block-main-branch.mjs` does not see `(git push origin main)`, because `git` must be a separate
   word. `block-claude-coauthor.mjs` does not check `gh pr merge --body`, and that body becomes a commit on `main`.
+  Closed by #100.
 
 ## 2026-11-04: The verifier refuses a running API (#84)
 - **What:** when something already answers on `E2E_API_URL`, `scripts/services.mjs` refuses it and starts nothing;
@@ -89,6 +109,7 @@ Important design decisions: what, why, when. Newest first.
 - **Not done:** the reviewer stays read-only, so its cases stay traced. The hook still compares only SHAs, so the
   full-range rule is one the main session follows. The 96 sample hook inputs from PR #85 are in a scratch script and not
   committed, so the next change starts without them. Committing them as tests that CI runs needs its own decision.
+  #100 added tests for two other hooks; these inputs stay uncommitted.
 
 ## 2026-11-04: Claude's pushes need a reviewer run first (#82)
 - **What:** `.claude/hooks/require-review-before-push.mjs` blocks a `git push` when `HEAD` has no review stamp. The
@@ -115,8 +136,8 @@ Important design decisions: what, why, when. Newest first.
   same misses. Examples per group, not a full list:
   - Command text the parser does not open: `bash -c "git push"`, `eval "git push"`, `Start-Process git "push origin x"`,
     `${x:-$(git push)}`, `x="$(git commit -m "m")"`, and apostrophes that pair across commands (`# don't`).
-  - Subcommand lost: `git --git-dir x push`, `git --work-tree x push`, `git -C (Split-Path (Get-Location)) push`, `git -C {a} commit`, and
-    a line continuation between `git` and `push`.
+  - Subcommand lost: `git -C (Split-Path (Get-Location)) push`, `git -C {a} commit`. `git --git-dir x push`,
+    `git --work-tree x push` and a line continuation between `git` and `push` are closed by #100.
   - Other command names: `/usr/bin/git push`, `git.cmd push`, `$GIT push`, an alias such as `git p`,
     `git subtree push`, `hub push`.
   - `HEAD` moved by something not on the list: `git ci`, `gh pr checkout 5`, `npm version patch`,
@@ -140,8 +161,8 @@ Important design decisions: what, why, when. Newest first.
 - **Brackets depend on the shell:** a `cd` inside `(x)` or `$(x)` ends with the bracket in a POSIX shell and stays in
   PowerShell, so the hook reads `tool_name`. The docs show `tool_name` only for `Bash`; `PowerShell` follows from the
   `Bash|PowerShell` matcher and was not seen in a real input.
-- **No test file:** the other hooks have none and CI runs none for hooks. It was checked with sample inputs and a real
-  push, as the PR describes.
+- **No test file:** the other hooks had none and CI ran none for hooks. It was checked with sample inputs and a real
+  push, as the PR describes. Since #100, `block-main-branch.mjs` and `block-claude-coauthor.mjs` have tests in CI.
 
 ## 2026-11-03: README is in English; the journal and roadmap stay in Vietnamese (#80)
 - **What:** `README.md` explains the harness in English and links to `docs/journal.md` and `roadmap.md` (Vietnamese)
