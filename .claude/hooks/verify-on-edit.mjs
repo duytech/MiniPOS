@@ -30,8 +30,9 @@ const uncommitted = (git('status', '--porcelain', '-z', '--no-renames', '--untra
 
 /** Whether the commits to push change a file other than *.md and docs/. A base that cannot be read counts as a change. */
 function commitsChangeCode() {
-  const base = ['@{u}', 'origin/main'].find((ref) => git('rev-parse', '--verify', '--quiet', ref).status === 0);
-  if (!base) return true;
+  const branch = git('branch', '--show-current').stdout?.trim();
+  const base = git('config', '--get', `branch.${branch}.merge`).status === 0 ? '@{u}' : 'origin/main';
+  if (git('rev-parse', '--verify', '--quiet', base).status !== 0) return true;
   const diff = git('diff', '--name-only', '--no-renames', '-z', `${base}...HEAD`);
   return diff.status !== 0 || diff.stdout.split('\0').some((file) => file && isCode(file));
 }
@@ -135,6 +136,9 @@ async function firstFailure() {
 let failure;
 try {
   failure = await firstFailure();
+} catch (error) {
+  // Only exit 2 blocks: a crash would let the push through.
+  failure = [`✗ the checks could not run: ${error.message}`];
 } finally {
   stopStarted();
 }

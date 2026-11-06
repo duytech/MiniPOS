@@ -140,6 +140,26 @@ for (const [name, change] of [
   });
 }
 
+test('runs the checks when the configured upstream cannot be resolved, without falling back to origin/main', () => {
+  git('switch', '-q', '-c', 'work');
+  git('config', 'branch.work.remote', 'origin');
+  git('config', 'branch.work.merge', 'refs/heads/work');
+  commit('docs/x.md');
+  const result = runHook();
+  assert.equal(result.status, BLOCKED);
+  assert.match(result.stderr, CHECKS_RAN);
+});
+
+for (const limit of ['abc', '1500.5']) {
+  test(`blocks when a check throws (time limit ${limit})`, () => {
+    trackedBranch();
+    commit('src/b.cs');
+    const result = runHook('git push', { VERIFY_CHECKS_LIMIT_MS: limit });
+    assert.equal(result.status, BLOCKED);
+    assert.match(result.stderr, /the checks could not run/);
+  });
+}
+
 test('an uncommitted doc next to commits that change code runs the checks', () => {
   trackedBranch();
   commit('src/b.cs');
