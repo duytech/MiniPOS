@@ -74,7 +74,7 @@ first failure: later ones are often fallout (`http.verify()` in `afterEach`).
 ## 5. Verify
 
 - In `web/`: `npm run build`, `npm run lint`, `npx ng test --watch=false`.
-- The `PreToolUse` hook runs eslint + `ngc` before `git commit`; Vitest and the build are yours to run.
+- The `PreToolUse` hook runs every check only before `git push`; while you work, lint, build and Vitest are yours to run.
 - Open the page against the real API and try each action once with the `verify-ui` skill (Playwright MCP:
   snapshot, screenshot, console, network, phone width). Unit tests mock HTTP: they do not prove the URLs, bodies or
   error shapes match the API. If you could not run it, say so in the summary.

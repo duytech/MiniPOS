@@ -2,6 +2,31 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-06: verify-on-edit runs every check, only before git push (#103)
+- **What:** `verify-on-edit.mjs` no longer runs on `Stop` or before `git commit`. Before `git push` it runs build, all
+  .NET tests, verifier script tests, web lint, build and Vitest, then E2E types and Playwright, and starts the services
+  they need. `check-utf8.mjs` stays on `Stop` and before `git commit`.
+- **Why:** the old hook ran only the no-DB tests, so integration, concurrency, Vitest and E2E tests ran only when someone
+  remembered them, or in CI after the push.
+- **Choices not in the issue:**
+  - The hook stops at the first failed check, because a later check says little after an earlier one fails.
+  - Uncommitted files block the push before the code check, also for a docs-only push. Otherwise
+    `git commit && git push` passes: the hook runs before the commit, so the new commit is not yet in the diff.
+  - The hook has its own limit of 30 minutes on the checks (`VERIFY_CHECKS_LIMIT_MS`), and blocks when it is reached.
+- **Timeout, measured:** a `PreToolUse` hook that passes its timeout does not block: in a temp repo with `claude -p`
+  (2.1.312), a hook that exits 2 after 30 s with `timeout: 3` let the push through, and the same hook exiting 2 before its
+  timeout blocked it. So the timeout must never be what ends the hook. A full passing run took 222 s, with Docker Desktop
+  and all services started cold. The timeout in `.claude/settings.json` is 2760 s: the 30-minute limit, up to 15 minutes
+  of service starts (Docker, Postgres, API and web app at 5 minutes each) and 1 minute to stop them.
+- **Limits:**
+  - Build, analyzers and tests no longer run automatically during a turn or at commit, so an error can first show at push.
+  - Only pushes made through Claude Code are checked. CI stays the final gate.
+  - The hook checks the current `HEAD`, even when the command pushes another branch. `git push --delete` also runs the
+    checks when the current branch has unpushed code.
+  - Commands that `gitCommands` misses (`bash -c "git push"`, see #100) are not checked.
+  - If the hook is killed from outside (the user interrupts it), services it started keep running. At its own limit,
+    the child processes of the running check finish on their own.
+
 ## 2026-11-06: block-main-branch uses gitCommands; two hooks have tests (#100)
 - **What:** `block-main-branch.mjs` drops its own parser and reads `gitCommands` from `git-changes.mjs`. `gitCommands` now
   joins a line continuation (`\` in a POSIX shell, a backtick in PowerShell), skips the value of `--git-dir`,
