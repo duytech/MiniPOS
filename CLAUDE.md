@@ -104,8 +104,11 @@ Run what the change touches, in this order; CI runs all of it on every PR.
 - A plan has a `## Execution Steps` section: the numbered task list you will track while building it, same steps in
   the same order (branch, each piece of work, verification, PR). Each step names the plan section it comes from. Once
   the plan is approved, the task list is exactly that list.
-- A plan ends with `## New files` and `## Changed files`, in that order after `## Execution Steps`: file paths only.
-  Write `None` when a list is empty.
+- A plan has a `## Implementation Steps` section right below `## Execution Steps`: the concrete actions, short, in the
+  order they are done (file or command and what changes). The detail stays in the plan's own sections, and the task
+  list stays the Execution Steps.
+- A plan ends with `## New files` and `## Changed files`, in that order after `## Implementation Steps`: file paths
+  only. Write `None` when a list is empty.
 - Git commits as checkpoints. Commit after completing each atomic unit of work. Commit messages should explain what was done and why, Must start with a task id like: 13245 | Do something.
 - Branch name must start with a task id.
 - Run the `reviewer` agent only when the user asks for it, on `git diff origin/main...HEAD`. A finding the user
