@@ -29,9 +29,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\""
@@ -56,9 +56,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.GetMenuItemHandlerTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.MenuItemsApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.\""
@@ -83,9 +83,9 @@
       ],
       "rules": "business-rules.md#order-status",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrderConcurrencyTests.\""
@@ -110,9 +110,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ListOrdersHandlerTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersListApiTests.\""
@@ -134,9 +134,9 @@
       ],
       "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrderPricingPersistenceTests.\""
         ],
@@ -163,9 +163,9 @@
       ],
       "rules": "business-rules.md#lines",
       "state": "passing",
-      "testedAt": "2026-11-07T07:53:21Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "26948f8",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\"",
           "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.AddOrderItemHandlerTests.\"",
@@ -191,9 +191,9 @@
       ],
       "rules": "business-rules.md#lines",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.|FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.ChangeOrderLineQuantityApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\""
@@ -218,9 +218,9 @@
       ],
       "rules": "business-rules.md#lines",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.|FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.RemoveOrderLineApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\""
@@ -248,9 +248,9 @@
       ],
       "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
       "state": "passing",
-      "testedAt": "2026-11-07T07:53:21Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "26948f8",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
           "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",
@@ -276,9 +276,9 @@
       ],
       "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.\""
@@ -306,9 +306,9 @@
       ],
       "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
           "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",
@@ -334,9 +334,9 @@
       ],
       "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.\""
@@ -364,9 +364,9 @@
       ],
       "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSurchargeTests.\"",
           "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",
@@ -392,9 +392,9 @@
       ],
       "rules": "business-rules.md#order-status",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.CloseOrderApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\""
@@ -419,9 +419,9 @@
       ],
       "rules": "business-rules.md#order-status",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.CloseOrderApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\""
@@ -449,9 +449,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitEvenTests.\"",
           "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",
@@ -477,9 +477,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.\""
@@ -504,9 +504,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentSplitTests.\""
@@ -531,9 +531,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.\""
@@ -558,9 +558,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentSplitTests.\""
@@ -579,9 +579,9 @@
       ],
       "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSurchargeTests.|FullyQualifiedName~Pos.Domain.Tests.MoneyTests.|FullyQualifiedName~Pos.Domain.Tests.PercentageTests.\""
         ],
@@ -607,9 +607,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-07T08:09:02Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "e8303eb",
+        "commit": "4262535",
         "passed": [
           "npx ng test --watch=false --include src/app/orders/orders-list/orders-list.spec.ts --include src/app/orders/orders-api.spec.ts",
           "npx playwright test specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts"
@@ -636,9 +636,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-07T08:57:34Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "ae4df24",
+        "commit": "4262535",
         "passed": [
           "npx ng test --watch=false --include src/app/orders/order-detail/order-detail.spec.ts",
           "npx playwright test specs/smoke.spec.ts specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts"
@@ -665,9 +665,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-07T08:57:34Z",
+      "testedAt": "2026-11-07T14:30:59Z",
       "evidence": {
-        "commit": "ae4df24",
+        "commit": "4262535",
         "passed": [
           "npx ng test --watch=false --include src/app/orders/order-split/order-split.spec.ts",
           "npx playwright test specs/split-bill.spec.ts"
@@ -689,9 +689,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-07T05:04:56Z",
+      "testedAt": "2026-11-07T14:42:26Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "4262535",
         "passed": [
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.UnexpectedErrorTests.\""
         ],
@@ -717,9 +717,17 @@
         }
       ],
       "rules": null,
-      "state": "not_started",
-      "testedAt": null,
-      "evidence": null
+      "state": "passing",
+      "testedAt": "2026-11-07T14:42:26Z",
+      "evidence": {
+        "commit": "4262535",
+        "passed": [
+          "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.ResultTests.\"",
+          "dotnet test tests/Pos.ArchitectureTests --no-build --filter \"FullyQualifiedName~Pos.ArchitectureTests.ResultUsageTests.\"",
+          "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.EnvelopeContractTests.\""
+        ],
+        "skipped": []
+      }
     }
   ]
 }
