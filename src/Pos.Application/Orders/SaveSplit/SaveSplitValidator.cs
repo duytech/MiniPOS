@@ -7,7 +7,6 @@ internal sealed class SaveSplitValidator : AbstractValidator<SaveSplitCommand>
 {
     public SaveSplitValidator()
     {
-        RuleFor(c => c.OrderId).NotEmpty();
         RuleFor(c => c.Parts).NotNull();
         RuleForEach(c => c.Parts).NotNull()
             .ForEach(lineId => lineId.NotEmpty());

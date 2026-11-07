@@ -10,7 +10,7 @@ Read the file, copy its shape, rename. They follow every rule in CLAUDE.md and p
 | Paged list query | `src/Pos.Application/Orders/ListOrders/` |
 | Domain change with a 422 | `Order.ApplyDiscount` in `src/Pos.Domain/Orders/Order.cs` |
 | Controller actions | `SetTip`, `RemoveTip`, `SplitEvenly` in `src/Pos.Api/Controllers/OrdersController.cs` |
-| Validator tests | `Tip_rate_must_fit_the_percentage_column`, `Order_changes_require_the_order_id` in `tests/Pos.Application.Tests/ValidatorTests.cs` |
+| Validator tests | `Tip_rate_must_fit_the_percentage_column`, `Add_item_requires_the_menu_item_id` in `tests/Pos.Application.Tests/ValidatorTests.cs` |
 | Integration tests | `tests/Pos.Api.IntegrationTests/OrderAdjustmentsApiTests.cs` (money strings, 404/422, closed order via `PayOrderAsync`/`CancelOrderAsync` in `ApiClient.cs`) |
 | Concurrency tests | `tests/Pos.Api.IntegrationTests/ConcurrentOrderAdjustmentTests.cs` (`ConcurrentlyAsync`, `AssertOnlyOkOrConflict`, `StoredAsync`) |
 | Domain money tests | `tests/Pos.Domain.Tests/OrderPricingTests.cs` |
@@ -38,7 +38,6 @@ public sealed class RemoveTipHandler(IOrderRepository orders, IUnitOfWork unitOf
 ```csharp
 [HttpDelete("{id:guid}/tip")]
 [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]
-[ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
 [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]

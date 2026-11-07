@@ -76,7 +76,6 @@ public sealed class OrdersController : ControllerBase
     /// <summary>The saved split by item, priced with the current order; works in any status. No saved split → 404.</summary>
     [HttpGet("{id:guid}/split")]
     [ProducesResponseType<OrderSplitDto>(StatusCodes.Status200OK)]
-    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     public Task<OrderSplitDto> GetSplit(
         Guid id,
@@ -117,7 +116,6 @@ public sealed class OrdersController : ControllerBase
     /// <summary>Removes the saved split: missing order → 404, no saved split → 404, order not open → 422.</summary>
     [HttpDelete("{id:guid}/split")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
@@ -148,7 +146,6 @@ public sealed class OrdersController : ControllerBase
     /// <summary>Removes a line. A fixed discount larger than the new subtotal makes this a 422.</summary>
     [HttpDelete("{id:guid}/lines/{lineId:guid}")]
     [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]
-    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
@@ -241,7 +238,6 @@ public sealed class OrdersController : ControllerBase
 
     [HttpPost("{id:guid}/pay")]
     [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]
-    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]
@@ -253,7 +249,6 @@ public sealed class OrdersController : ControllerBase
 
     [HttpPost("{id:guid}/cancel")]
     [ProducesResponseType<OrderDto>(StatusCodes.Status200OK)]
-    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status422UnprocessableEntity)]

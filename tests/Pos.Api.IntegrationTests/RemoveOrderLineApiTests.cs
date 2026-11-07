@@ -120,13 +120,13 @@ public class RemoveOrderLineApiTests(PosApiFactory factory) : IClassFixture<PosA
     }
 
     [Fact]
-    public async Task Empty_line_id_is_400()
+    public async Task Empty_line_id_is_404()
     {
         var (orderId, _, _) = await OrderWithPhoAndTeaAsync(10.00m, 2.00m);
 
         var response = await _client.RemoveLineAsync(orderId, Guid.Empty);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Theory]

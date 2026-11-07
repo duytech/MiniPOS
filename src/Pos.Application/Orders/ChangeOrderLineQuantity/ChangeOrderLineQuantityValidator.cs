@@ -6,8 +6,6 @@ internal sealed class ChangeOrderLineQuantityValidator : AbstractValidator<Chang
 {
     public ChangeOrderLineQuantityValidator()
     {
-        RuleFor(c => c.OrderId).NotEmpty();
-        RuleFor(c => c.LineId).NotEmpty();
         RuleFor(c => c.Quantity).GreaterThan(0);
     }
 }

@@ -7,7 +7,6 @@ internal sealed class SetTipValidator : AbstractValidator<SetTipCommand>
 {
     public SetTipValidator()
     {
-        RuleFor(c => c.OrderId).NotEmpty();
         RuleFor(c => c.Rate.Value).LessThanOrEqualTo(PercentageLimits.MaxRate)
             .OverridePropertyName(nameof(SetTipCommand.Rate));
     }

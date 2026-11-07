@@ -284,3 +284,11 @@ Important design decisions: what, why, when. Newest first.
   (learn-harness-engineering, lecture 08).
 - **Requires per step, not per feature:** a web feature runs its Vitest specs even when the E2E stack is down; it is
   `blocked`, not `passing`, until its E2E specs also ran.
+
+## 2026-11-07: An empty GUID on a route is 404 (#109)
+- **What:** route ids are not validated. The all-zero GUID on a route is 404, like any other unknown id. The 7 validators
+  that only checked a route id are deleted, and a use case has a validator only when its request has shape to check.
+  Empty ids in the request body stay 400.
+- **Why:** the same id got 400 on routes with a validator and 404 on `GET /api/orders/{id}`. No order or line has that
+  id, so 404 is correct and the rule added nothing. A missing body field arrives as an empty GUID, so that is a bad
+  request.

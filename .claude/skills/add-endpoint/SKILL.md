@@ -33,8 +33,8 @@ Do not pick a limit, default or merge behavior yourself. Not-found ids are 404 a
   (`Money`, `Percentage`), never raw `decimal`.
 - `<UseCase>Handler` (`ICommandHandler<,>` / `IQueryHandler<,>`): load through the repository, `?? throw new
   NotFoundException(...)`, call Domain, `unitOfWork.SaveChangesAsync` for commands, return a DTO built by `XxxDto.From`.
-- `<UseCase>Validator` (`internal sealed`, FluentValidation): shape only: ids not empty, ranges, formats. No rule the
-  Domain already enforces.
+- `<UseCase>Validator` (`internal sealed`, FluentValidation), when the request has shape to check: ids in the body not
+  empty, ranges, formats. No rule the Domain already enforces. A route id is not validated: the handler answers 404.
 - Register in `src/Pos.Application/DependencyInjection.cs` with `AddCommandHandler<,,>` / `AddQueryHandler<,,>` (these
   wrap the handler with the validators).
 
@@ -44,8 +44,7 @@ In the area's controller (`src/Pos.Api/Controllers/`):
 - Route under `api/<area>`, ids as `{id:guid}`. Body → a `sealed record XxxRequest` at the bottom of the file, with
   `[Required]` on nullable value types that must be sent. Required query params: `[FromQuery, BindRequired]`.
 - `[ProducesResponseType]` for 200/201 and each error it can return: 400 whenever the command/query has a validator
-  (`{id:guid}` accepts `00000000-…`, which `NotEmpty` rejects) or a body/query to bind, 404, 409 (any order change:
-  concurrency token), 422 (Domain rule). Some older actions (`RemoveTip`, `RemoveDiscount`) miss the 400: don't copy that.
+  or a body/query to bind, 404, 409 (any order change: concurrency token), 422 (Domain rule).
 - Inject the handler with `[FromServices]`. No logic in the controller. Errors are mapped by
   `src/Pos.Api/Errors/ApiExceptionHandler.cs`; a 500 is always a bug.
 
@@ -53,7 +52,7 @@ In the area's controller (`src/Pos.Api/Controllers/`):
 
 | Endpoint | Tests |
 |---|---|
-| Any | Validator theory in `tests/Pos.Application.Tests/ValidatorTests.cs` |
+| Has a validator | Validator theory in `tests/Pos.Application.Tests/ValidatorTests.cs` |
 | Any | Integration tests in `tests/Pos.Api.IntegrationTests`: happy path, each 4xx it declares |
 | Returns money | Assert raw JSON strings with exactly 2 decimals (`order.Money("total") == "15.40"`); a midpoint (x.xx5) case; list total == `GET /api/orders/{id}` total |
 | Changes Domain money | Domain unit test with exact cents and a midpoint case (`tests/Pos.Domain.Tests`) |
