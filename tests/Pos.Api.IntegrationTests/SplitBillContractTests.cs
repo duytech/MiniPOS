@@ -77,7 +77,8 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
         var response = await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id]);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var parts = AssertSplitShape(await response.ReadJsonAsync());
+        var body = await response.ReadJsonAsync();
+        var parts = AssertSplitShape(body);
         AssertMoney(parts, "subtotal", "6.00", "4.00");
         AssertMoney(parts, "discount", "0.90", "0.60");
         AssertMoney(parts, "surcharge", "0.16", "0.10");
@@ -85,6 +86,7 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
         AssertMoney(parts, "tip", "0.92", "0.61");
         AssertMoney(parts, "total", "6.65", "4.42");
         await AssertPartTotalsAddUpToOrderTotalAsync(orderId, parts);
+        Assert.Equal(Normalize(body), Normalize(await (await GetSplitAsync(orderId)).ReadJsonAsync()));
     }
 
     [Fact]
@@ -151,6 +153,19 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
         var got = await response.ReadJsonAsync();
         AssertSplitShape(got);
         Assert.Equal(Normalize(saved), Normalize(got));
+    }
+
+    [Fact]
+    public async Task Get_keeps_the_line_order_the_put_sent_within_a_part()
+    {
+        var (orderId, lines) = await OrderWithLinesAsync(1.00m, 2.00m, 3.00m, 4.00m);
+        // Reverse of the order the lines were added in, so database row order would not give it back by chance.
+        Guid[] sent = [lines[3].Id, lines[1].Id, lines[0].Id];
+        (await PutSplitAsync(orderId, sent, [lines[2].Id])).EnsureSuccessStatusCode();
+
+        var parts = AssertSplitShape(await (await GetSplitAsync(orderId)).ReadJsonAsync());
+
+        Assert.Equal(sent, parts[0].GetProperty("lineIds").EnumerateArray().Select(id => id.GetGuid()));
     }
 
     [Theory]
@@ -234,6 +249,16 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
         await AssertProblemAsync(response, HttpStatusCode.NotFound, $"Order '{orderId}' was not found.");
     }
 
+    [Theory]
+    [InlineData("put")]
+    [InlineData("preview")]
+    public async Task Put_or_preview_with_an_empty_guid_order_id_is_400(string route)
+    {
+        var response = await SendSplitAsync(route, Guid.Empty, [[Guid.NewGuid()], [Guid.NewGuid()]]);
+
+        await AssertProblemAsync(response, HttpStatusCode.BadRequest);
+    }
+
     public static TheoryData<string, string> BadBodies => new()
     {
         { "put", "" },
@@ -241,12 +266,14 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
         { "put", """{ "parts": null }""" },
         { "put", """{ "parts": [ { "lineIds": null }, { "lineIds": ["{b}"] } ] }""" },
         { "put", """{ "parts": [ {}, { "lineIds": ["{b}"] } ] }""" },
+        { "put", """{ "parts": [ { "lineIds": ["{a}"] }, null ] }""" },
         { "put", $$"""{ "parts": [ { "lineIds": ["{a}", "{{EmptyGuid}}"] }, { "lineIds": ["{b}"] } ] }""" },
         { "preview", "" },
         { "preview", "{}" },
         { "preview", """{ "parts": null }""" },
         { "preview", """{ "parts": [ { "lineIds": null }, { "lineIds": ["{b}"] } ] }""" },
         { "preview", """{ "parts": [ {}, { "lineIds": ["{b}"] } ] }""" },
+        { "preview", """{ "parts": [ { "lineIds": ["{a}"] }, null ] }""" },
         { "preview", $$"""{ "parts": [ { "lineIds": ["{a}", "{{EmptyGuid}}"] }, { "lineIds": ["{b}"] } ] }""" },
     };
 
@@ -720,7 +747,7 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
     private static void AssertMoney(JsonElement[] parts, string property, params string[] expected) =>
         Assert.Equal(expected, parts.Select(p => p.Money(property)));
 
-    /// <summary>The order of ids inside a part is not in the contract, so they are compared as a set.</summary>
+    /// <summary>Compares the ids of a part as a set; <see cref="Get_keeps_the_line_order_the_put_sent_within_a_part"/> checks their order.</summary>
     private static void AssertLineIds(JsonElement part, params Guid[] expected) =>
         Assert.Equal(
             expected.Order(),
