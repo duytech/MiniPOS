@@ -3,7 +3,8 @@ import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@a
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Order, OrderLine, OrderSplit, SplitPart } from '../order.models';
-import { CLEARED_MESSAGE, OrderSplitSection, SPLIT_GENERIC_ERROR, TOO_FEW_LINES_MESSAGE } from './order-split';
+import { GENERIC_ERROR } from '../problem-detail';
+import { CLEARED_MESSAGE, OrderSplitSection, TOO_FEW_LINES_MESSAGE } from './order-split';
 
 describe('OrderSplitSection', () => {
   let fixture: ComponentFixture<OrderSplitSection>;
@@ -412,7 +413,7 @@ describe('OrderSplitSection', () => {
     click('split-save');
     fail(expectSave(), 500);
 
-    expect(text('split-error')).toBe(SPLIT_GENERIC_ERROR);
+    expect(text('split-error')).toBe(GENERIC_ERROR);
     expect(texts('split-part-total')).toEqual(['$108.87', '$3.27']);
   });
 
@@ -425,7 +426,7 @@ describe('OrderSplitSection', () => {
     expectPreview().error(new ProgressEvent('error'));
     fixture.detectChanges();
 
-    expect(text('split-error')).toBe(SPLIT_GENERIC_ERROR);
+    expect(text('split-error')).toBe(GENERIC_ERROR);
     expect(texts('split-part-total')).toEqual(['$108.87', '$3.27']);
     expect(el('split-loading')).toBeNull();
   });
@@ -436,7 +437,7 @@ describe('OrderSplitSection', () => {
 
     fail(expectPreview(), 409, { status: 409, detail: 'Conflict' });
 
-    expect(text('split-error')).toBe(SPLIT_GENERIC_ERROR);
+    expect(text('split-error')).toBe(GENERIC_ERROR);
     expect(changedCount).toBe(0);
   });
 
@@ -489,7 +490,7 @@ describe('OrderSplitSection', () => {
     show(order());
     fail(expectGet(), 500);
 
-    expect(text('split-error')).toBe(SPLIT_GENERIC_ERROR);
+    expect(text('split-error')).toBe(GENERIC_ERROR);
     expect(assignments()).toEqual(['', '', '']);
   });
 });
