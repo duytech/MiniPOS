@@ -37,6 +37,7 @@
     <File Path=".claude/hooks/tests-only.mjs" />
     <File Path=".claude/hooks/verify-on-edit.mjs" />
   </Folder>
+  <Folder Name="/.claude/skills/" />
   <Folder Name="/.claude/skills/add-angular-feature/">
     <File Path=".claude/skills/add-angular-feature/SKILL.md" />
   </Folder>
@@ -52,6 +53,8 @@
   <Folder Name="/.claude/skills/verify-ui/">
     <File Path=".claude/skills/verify-ui/SKILL.md" />
   </Folder>
+  <Folder Name="/.github/" />
+  <Folder Name="/.github/actions/" />
   <Folder Name="/.github/actions/postgres/">
     <File Path=".github/actions/postgres/action.yml" />
   </Folder>
@@ -119,6 +122,9 @@
     <File Path="tests/e2e/support/split.ts" />
   </Folder>
   <Folder Name="/web/">
-    <Project Path="web/Pos.Web.esproj" />
+    <Project Path="web/Pos.Web.esproj">
+      <Build />
+      <Deploy />
+    </Project>
   </Folder>
 </Solution>
