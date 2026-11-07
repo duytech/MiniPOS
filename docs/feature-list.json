@@ -607,9 +607,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T08:09:02Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "e8303eb",
         "passed": [
           "npx ng test --watch=false --include src/app/orders/orders-list/orders-list.spec.ts --include src/app/orders/orders-api.spec.ts",
           "npx playwright test specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts"
@@ -636,9 +636,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T08:09:02Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "e8303eb",
         "passed": [
           "npx ng test --watch=false --include src/app/orders/order-detail/order-detail.spec.ts",
           "npx playwright test specs/smoke.spec.ts specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts"
