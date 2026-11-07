@@ -42,6 +42,18 @@ public class EnvelopeContractTests(PosApiFactory factory) : IClassFixture<PosApi
     }
 
     [Fact]
+    public async Task Failed_split_removal_has_null_data()
+    {
+        var orderId = await _client.CreateOrderAsync();
+
+        var response = await _client.RemoveSplitAsync(orderId);
+
+        Assert.Equal(
+            $$$"""{"isSuccess":false,"data":null,"error":{"code":"SplitNotFound","message":"Split '{{{orderId}}}' was not found."}}""",
+            await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
     public async Task Broken_rule_has_the_code_and_message_and_no_fields()
     {
         var orderId = await _client.CreateOrderAsync();

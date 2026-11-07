@@ -339,6 +339,14 @@ describe('OrderDetail', () => {
     expect(el('totals')).toBeNull();
   });
 
+  it('shows Order not found when the id is not a GUID and the framework answers 404', () => {
+    fixture.componentRef.setInput('id', 'abc');
+    fixture.detectChanges();
+    failHttp(http.expectOne('/api/orders/abc'), 404);
+
+    expect(el('not-found')?.textContent).toContain('Order not found.');
+  });
+
   it('shows the generic message when the order cannot be loaded for another reason', () => {
     fixture.componentRef.setInput('id', 'o1');
     fixture.detectChanges();

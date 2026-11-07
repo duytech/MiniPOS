@@ -5,6 +5,7 @@ using Pos.Domain.Common;
 namespace Pos.Api.Contracts;
 
 /// <summary>The body of every expected answer, success or failure; all of them are HTTP 200.</summary>
+// T? does not make a value type nullable: use a nullable T (bool?) so a failure answers data: null.
 public sealed record ApiResponse<T>(bool IsSuccess, T? Data, ApiError? Error);
 
 public sealed record ApiError(

@@ -45,6 +45,8 @@ describe('api-error', () => {
   it('tells not found and conflict apart', () => {
     expect(isNotFound(new ApiError('SplitNotFound', ''))).toBe(true);
     expect(isNotFound(new ApiError('ConcurrentChange', ''))).toBe(false);
+    expect(isNotFound(new HttpErrorResponse({ status: 404 }))).toBe(true);
+    expect(isNotFound(new HttpErrorResponse({ status: 500 }))).toBe(false);
     expect(isConflict(new ApiError('ConcurrentChange', ''))).toBe(true);
     expect(isConflict(new ApiError('DataConflict', ''))).toBe(true);
     expect(isConflict(new HttpErrorResponse({ status: 409 }))).toBe(false);

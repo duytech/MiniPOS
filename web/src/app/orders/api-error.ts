@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { OperatorFunction, map } from 'rxjs';
 
 export const GENERIC_ERROR = 'Something went wrong. Try again.';
@@ -33,7 +34,9 @@ const RULE_CODES = ['OrderNotOpen', 'LineNotOnOrder', 'DiscountExceedsSubtotal',
 const hasCode = (error: unknown, codes: string[]): error is ApiError =>
   error instanceof ApiError && codes.includes(error.code);
 
-export const isNotFound = (error: unknown): boolean => hasCode(error, NOT_FOUND_CODES);
+/** Also the framework's own 404, e.g. an id that is not a GUID never reaches the API's handlers. */
+export const isNotFound = (error: unknown): boolean =>
+  hasCode(error, NOT_FOUND_CODES) || (error instanceof HttpErrorResponse && error.status === 404);
 
 export const isConflict = (error: unknown): boolean => hasCode(error, CONFLICT_CODES);
 

@@ -54,7 +54,7 @@ public static class DependencyInjection
         services.AddQueryHandler<GetSplitQuery, OrderSplitDto, GetSplitHandler>();
         services.AddQueryHandler<PreviewSplitQuery, OrderSplitDto, PreviewSplitHandler>();
         services.AddCommandHandler<SaveSplitCommand, OrderSplitDto, SaveSplitHandler>();
-        services.AddCommandHandler<RemoveSplitCommand, bool, RemoveSplitHandler>();
+        services.AddCommandHandler<RemoveSplitCommand, bool?, RemoveSplitHandler>();
 
         return services;
     }

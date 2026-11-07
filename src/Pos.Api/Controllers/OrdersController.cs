@@ -94,9 +94,9 @@ public sealed class OrdersController : ControllerBase
 
     /// <summary>Removes the saved split: fails on a missing order, no saved split, or an order that is not open.</summary>
     [HttpDelete("{id:guid}/split")]
-    public async Task<ApiResponse<bool>> RemoveSplit(
+    public async Task<ApiResponse<bool?>> RemoveSplit(
         Guid id,
-        [FromServices] ICommandHandler<RemoveSplitCommand, bool> handler,
+        [FromServices] ICommandHandler<RemoveSplitCommand, bool?> handler,
         CancellationToken cancellationToken) =>
         (await handler.HandleAsync(new RemoveSplitCommand(id), cancellationToken)).ToResponse();
 
