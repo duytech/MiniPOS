@@ -2,6 +2,7 @@ using Pos.Application.Common;
 using Pos.Application.MenuItems;
 using Pos.Application.Orders;
 using Pos.Application.Orders.ListOrders;
+using Pos.Domain.Common;
 using Pos.Domain.MenuItems;
 using Pos.Domain.Orders;
 
@@ -42,9 +43,9 @@ internal sealed class FakeUnitOfWork : IUnitOfWork
 {
     public int SaveCount { get; private set; }
 
-    public Task SaveChangesAsync(CancellationToken cancellationToken)
+    public Task<Result> SaveChangesAsync(CancellationToken cancellationToken)
     {
         SaveCount++;
-        return Task.CompletedTask;
+        return Task.FromResult(Result.Ok());
     }
 }

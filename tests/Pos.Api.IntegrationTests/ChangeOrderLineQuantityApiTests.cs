@@ -1,6 +1,6 @@
-using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Pos.Domain.Common;
 
 namespace Pos.Api.IntegrationTests;
 
@@ -16,8 +16,8 @@ public class ChangeOrderLineQuantityApiTests(PosApiFactory factory) : IClassFixt
 
         var response = await _client.ChangeLineQuantityAsync(orderId, teaLine, 3);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var order = await response.ReadJsonAsync();
+        await response.AssertSuccessAsync();
+        var order = await response.ReadDataAsync();
         Assert.Equal(3, QuantityOf(order, teaLine));
         Assert.Equal(1, QuantityOf(order, phoLine));
         Assert.Equal("16.00", order.Money("subtotal"));
@@ -31,9 +31,9 @@ public class ChangeOrderLineQuantityApiTests(PosApiFactory factory) : IClassFixt
     public async Task Percent_discount_follows_the_new_subtotal_and_midpoint_rounds_away_from_zero()
     {
         var (orderId, phoLine, _) = await OrderWithPhoAndTeaAsync(0.35m, 1, 2.00m);
-        (await _client.ApplyDiscountAsync(orderId, new { rate = 15 })).EnsureSuccessStatusCode();
+        await (await _client.ApplyDiscountAsync(orderId, new { rate = 15 })).AssertSuccessAsync();
 
-        var order = await (await _client.ChangeLineQuantityAsync(orderId, phoLine, 2)).ReadJsonAsync();
+        var order = await (await _client.ChangeLineQuantityAsync(orderId, phoLine, 2)).ReadDataAsync();
 
         Assert.Equal("2.70", order.Money("subtotal"));
         Assert.Equal("0.41", order.Money("discount")); // 15% of 2.70 = 0.405
@@ -43,15 +43,14 @@ public class ChangeOrderLineQuantityApiTests(PosApiFactory factory) : IClassFixt
     }
 
     [Fact]
-    public async Task Fixed_discount_more_than_the_new_subtotal_is_422_and_leaves_the_order_unchanged()
+    public async Task Fixed_discount_more_than_the_new_subtotal_is_rejected_and_leaves_the_order_unchanged()
     {
         var (orderId, phoLine, _) = await OrderWithPhoAndTeaAsync(3.85m, 3, 2.00m);
-        (await _client.ApplyDiscountAsync(orderId, new { amount = 9.71m })).EnsureSuccessStatusCode();
+        await (await _client.ApplyDiscountAsync(orderId, new { amount = 9.71m })).AssertSuccessAsync();
 
         var response = await _client.ChangeLineQuantityAsync(orderId, phoLine, 2); // subtotal would be 9.70
 
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        await response.AssertErrorAsync(ErrorCode.DiscountExceedsSubtotal);
         var order = await _client.GetOrderAsync(orderId);
         Assert.Equal(3, QuantityOf(order, phoLine));
         Assert.Equal("13.55", order.Money("subtotal"));
@@ -62,27 +61,27 @@ public class ChangeOrderLineQuantityApiTests(PosApiFactory factory) : IClassFixt
     public async Task Fixed_discount_equal_to_the_new_subtotal_allows_the_change()
     {
         var (orderId, phoLine, _) = await OrderWithPhoAndTeaAsync(3.85m, 3, 2.00m);
-        (await _client.ApplyDiscountAsync(orderId, new { amount = 9.70m })).EnsureSuccessStatusCode();
+        await (await _client.ApplyDiscountAsync(orderId, new { amount = 9.70m })).AssertSuccessAsync();
 
         var response = await _client.ChangeLineQuantityAsync(orderId, phoLine, 2);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var order = await response.ReadJsonAsync();
+        await response.AssertSuccessAsync();
+        var order = await response.ReadDataAsync();
         Assert.Equal("9.70", order.Money("subtotal"));
         Assert.Equal("9.70", order.Money("discount"));
         Assert.Equal("0.00", order.Money("total"));
     }
 
     [Fact]
-    public async Task The_current_quantity_is_200_and_leaves_the_order_unchanged()
+    public async Task The_current_quantity_succeeds_and_leaves_the_order_unchanged()
     {
         var (orderId, phoLine, _) = await OrderWithPhoAndTeaAsync(10.00m, 2, 2.00m);
         var before = await _client.GetOrderAsync(orderId);
 
         var response = await _client.ChangeLineQuantityAsync(orderId, phoLine, 2);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var order = await response.ReadJsonAsync();
+        await response.AssertSuccessAsync();
+        var order = await response.ReadDataAsync();
         Assert.Equal(2, QuantityOf(order, phoLine));
         Assert.Equal(before.Money("total"), order.Money("total"));
         Assert.Equal("23.95", order.Money("total")); // 22.00 + tax 1.9525
@@ -95,72 +94,70 @@ public class ChangeOrderLineQuantityApiTests(PosApiFactory factory) : IClassFixt
 
         var response = await _client.ChangeLineQuantityAsync(orderId, teaLine, int.MaxValue);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await response.AssertSuccessAsync();
         Assert.Equal(int.MaxValue, QuantityOf(await _client.GetOrderAsync(orderId), teaLine));
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public async Task Quantity_below_one_is_400_and_leaves_the_line_unchanged(int quantity)
+    public async Task Quantity_below_one_is_invalid_and_leaves_the_line_unchanged(int quantity)
     {
         var (orderId, _, teaLine) = await OrderWithPhoAndTeaAsync(10.00m, 1, 2.00m);
 
         var response = await _client.ChangeLineQuantityAsync(orderId, teaLine, quantity);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        await response.AssertErrorAsync(ErrorCode.ValidationFailed);
         Assert.Equal(1, QuantityOf(await _client.GetOrderAsync(orderId), teaLine));
     }
 
     [Fact]
-    public async Task Missing_quantity_is_400()
+    public async Task Missing_quantity_is_invalid()
     {
         var (orderId, _, teaLine) = await OrderWithPhoAndTeaAsync(10.00m, 1, 2.00m);
 
         var response = await _client.PutAsJsonAsync($"/api/orders/{orderId}/lines/{teaLine}/quantity", new { });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await response.AssertErrorAsync(ErrorCode.ValidationFailed);
     }
 
     [Fact]
-    public async Task Empty_line_id_is_404()
+    public async Task Empty_line_id_is_not_found()
     {
         var (orderId, _, _) = await OrderWithPhoAndTeaAsync(10.00m, 1, 2.00m);
 
         var response = await _client.ChangeLineQuantityAsync(orderId, Guid.Empty, 2);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        await response.AssertErrorAsync(ErrorCode.OrderLineNotFound);
     }
 
     [Fact]
-    public async Task Unknown_order_is_404()
+    public async Task Unknown_order_is_not_found()
     {
         var response = await _client.ChangeLineQuantityAsync(Guid.NewGuid(), Guid.NewGuid(), 2);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        await response.AssertErrorAsync(ErrorCode.OrderNotFound);
     }
 
     [Fact]
-    public async Task Unknown_or_removed_line_is_404()
+    public async Task Unknown_or_removed_line_is_not_found()
     {
         var (orderId, _, teaLine) = await OrderWithPhoAndTeaAsync(10.00m, 1, 2.00m);
-        (await _client.RemoveLineAsync(orderId, teaLine)).EnsureSuccessStatusCode();
+        await (await _client.RemoveLineAsync(orderId, teaLine)).AssertSuccessAsync();
 
-        Assert.Equal(HttpStatusCode.NotFound, (await _client.ChangeLineQuantityAsync(orderId, teaLine, 2)).StatusCode);
-        Assert.Equal(HttpStatusCode.NotFound, (await _client.ChangeLineQuantityAsync(orderId, Guid.NewGuid(), 2)).StatusCode);
+        await (await _client.ChangeLineQuantityAsync(orderId, teaLine, 2)).AssertErrorAsync(ErrorCode.OrderLineNotFound);
+        await (await _client.ChangeLineQuantityAsync(orderId, Guid.NewGuid(), 2)).AssertErrorAsync(ErrorCode.OrderLineNotFound);
     }
 
     [Fact]
-    public async Task Line_of_another_order_is_404_and_leaves_both_orders_unchanged()
+    public async Task Line_of_another_order_is_not_found_and_leaves_both_orders_unchanged()
     {
         var (orderId, _, _) = await OrderWithPhoAndTeaAsync(10.00m, 1, 2.00m);
         var (otherOrderId, _, otherTeaLine) = await OrderWithPhoAndTeaAsync(10.00m, 1, 2.00m);
 
         var response = await _client.ChangeLineQuantityAsync(orderId, otherTeaLine, 5);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        await response.AssertErrorAsync(ErrorCode.OrderLineNotFound);
         Assert.Equal("12.00", (await _client.GetOrderAsync(orderId)).Money("subtotal"));
         Assert.Equal(1, QuantityOf(await _client.GetOrderAsync(otherOrderId), otherTeaLine));
     }
@@ -168,14 +165,14 @@ public class ChangeOrderLineQuantityApiTests(PosApiFactory factory) : IClassFixt
     [Theory]
     [InlineData("Paid")]
     [InlineData("Cancelled")]
-    public async Task Changing_a_quantity_on_a_closed_order_is_422_and_leaves_it_unchanged(string status)
+    public async Task Changing_a_quantity_on_a_closed_order_is_rejected_and_leaves_it_unchanged(string status)
     {
         var (orderId, _, teaLine) = await OrderWithPhoAndTeaAsync(10.00m, 1, 2.00m);
         await _client.CloseOrderAsync(orderId, status);
 
         var response = await _client.ChangeLineQuantityAsync(orderId, teaLine, 3);
 
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
+        await response.AssertErrorAsync(ErrorCode.OrderNotOpen);
         var order = await _client.GetOrderAsync(orderId);
         Assert.Equal(1, QuantityOf(order, teaLine));
         Assert.Equal("13.07", order.Money("total")); // 12.00 + tax 1.065
@@ -190,10 +187,10 @@ public class ChangeOrderLineQuantityApiTests(PosApiFactory factory) : IClassFixt
         var phoItem = await _client.CreateMenuItemAsync("Pho", pho);
         var teaItem = await _client.CreateMenuItemAsync("Tea", tea);
         var orderId = await _client.CreateOrderAsync();
-        (await _client.AddItemAsync(orderId, phoItem, phoQuantity)).EnsureSuccessStatusCode();
+        await (await _client.AddItemAsync(orderId, phoItem, phoQuantity)).AssertSuccessAsync();
         var response = await _client.AddItemAsync(orderId, teaItem, 1);
-        response.EnsureSuccessStatusCode();
-        var lines = (await response.ReadJsonAsync()).GetProperty("lines").EnumerateArray().ToList();
+        await response.AssertSuccessAsync();
+        var lines = (await response.ReadDataAsync()).GetProperty("lines").EnumerateArray().ToList();
         Guid LineOf(Guid menuItemId) =>
             lines.Single(l => l.GetProperty("menuItemId").GetGuid() == menuItemId).GetProperty("id").GetGuid();
         return (orderId, LineOf(phoItem), LineOf(teaItem));
@@ -203,7 +200,7 @@ public class ChangeOrderLineQuantityApiTests(PosApiFactory factory) : IClassFixt
     {
         var order = await _client.GetOrderAsync(orderId);
         var number = order.GetProperty("number").GetInt32();
-        var list = await _client.GetFromJsonAsync<JsonElement>($"/api/orders?search={number}&pageSize=100");
+        var list = await (await _client.GetAsync($"/api/orders?search={number}&pageSize=100")).ReadDataAsync();
         var listed = list.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("id").GetGuid() == orderId);
         Assert.Equal(order.Money("total"), listed.Money("total"));
     }

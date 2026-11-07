@@ -1,7 +1,7 @@
-using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using Pos.Domain.Common;
 using Pos.Infrastructure.Persistence;
 
 namespace Pos.Api.IntegrationTests;
@@ -28,23 +28,23 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
         ];
 
         var results = await OrderRace.RunAsync(factory.ConnectionString, orderId, groupings.Select(grouping =>
-            (Func<Task<(HttpStatusCode, string)>>)(async () =>
+            (Func<Task<(ErrorCode?, string)>>)(async () =>
         {
             var parts = grouping.Select(part => part.Select(i => l[i])).ToArray();
             using var response = await _client.SaveSplitAsync(orderId, ApiClient.SplitBody(parts));
-            return (response.StatusCode, Describe(parts));
+            return (await response.OutcomeAsync(), Describe(parts));
         })));
 
-        var accepted = AssertOnly(results, HttpStatusCode.OK, HttpStatusCode.Conflict);
+        var accepted = AssertOnly(results, null, ErrorCode.ConcurrentChange, ErrorCode.DataConflict);
         Assert.Single(accepted);
         Assert.Contains(await StoredSplitAsync(orderId), accepted);
     }
 
     /// <summary>
     /// Every PUT names the first four lines only. All requests load the order before any commits
-    /// (<see cref="OrderRace"/>), so a PUT whose split an add would make stale must lose on the token (409). Whatever
+    /// (<see cref="OrderRace"/>), so a PUT whose split an add would make stale must lose on the token. Whatever
     /// wins, no add is lost and a stored split covers exactly the stored lines. A PUT that loads the order after an add
-    /// committed (422, a line left out) is covered by the split contract tests.
+    /// committed (a line left out) is covered by the split contract tests.
     /// </summary>
     [Fact]
     public async Task Puts_racing_add_items_lose_no_line_and_never_store_a_stale_split()
@@ -58,23 +58,23 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
 
         object[] bodies = [ApiClient.SplitBody([l[0], l[1]], [l[2], l[3]]), ApiClient.SplitBody([l[0]], [l[1], l[2], l[3]])];
 
-        var requests = newMenuItemIds.SelectMany((menuItemId, i) => new Func<Task<(HttpStatusCode, string)>>[]
+        var requests = newMenuItemIds.SelectMany((menuItemId, i) => new Func<Task<(ErrorCode?, string)>>[]
         {
             async () =>
             {
                 using var response = await _client.AddItemAsync(orderId, menuItemId, 1);
-                return (response.StatusCode, "add");
+                return (await response.OutcomeAsync(), "add");
             },
             async () =>
             {
                 using var response = await _client.SaveSplitAsync(orderId, bodies[i % 2]);
-                return (response.StatusCode, "put");
+                return (await response.OutcomeAsync(), "put");
             },
         });
         var results = await OrderRace.RunAsync(factory.ConnectionString, orderId, requests);
 
-        Assert.Single(AssertOnly(results, HttpStatusCode.OK, HttpStatusCode.Conflict));
-        var acceptedAdds = results.Count(r => r is (HttpStatusCode.OK, "add"));
+        Assert.Single(AssertOnly(results, null, ErrorCode.ConcurrentChange, ErrorCode.DataConflict));
+        var acceptedAdds = results.Count(r => r is (null, "add"));
         Assert.Equal(4 + acceptedAdds, await StoredAsync<int>(
             orderId, "(SELECT COUNT(*)::int FROM order_lines WHERE order_id = o.id)"));
         var storedSplitLines = await StoredAsync<string>(orderId,
@@ -90,42 +90,41 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
 
     /// <summary>
     /// The order starts with a saved split; DELETEs race PUTs of a different split. All of them load the order before
-    /// any commits (<see cref="OrderRace"/>), so exactly one is accepted and the others are 409. The stored split is the
+    /// any commits (<see cref="OrderRace"/>), so exactly one is accepted and the others conflict. The stored split is the
     /// PUT's or none, matching who was accepted.
     /// </summary>
     [Fact]
     public async Task Parallel_deletes_and_puts_leave_a_consistent_split()
     {
         var (orderId, l) = await OrderWithLinesAsync(3);
-        (await _client.SaveSplitAsync(orderId, ApiClient.SplitBody([l[0]], [l[1], l[2]]))).EnsureSuccessStatusCode();
+        await (await _client.SaveSplitAsync(orderId, ApiClient.SplitBody([l[0]], [l[1], l[2]]))).AssertSuccessAsync();
         IEnumerable<Guid>[] putParts = [[l[2]], [l[0], l[1]]];
 
-        var requests = Enumerable.Range(0, ConcurrentRequests / 2).SelectMany(_ => new Func<Task<(HttpStatusCode, string)>>[]
+        var requests = Enumerable.Range(0, ConcurrentRequests / 2).SelectMany(_ => new Func<Task<(ErrorCode?, string)>>[]
         {
             async () =>
             {
                 using var response = await _client.RemoveSplitAsync(orderId);
-                return (response.StatusCode, "delete");
+                return (await response.OutcomeAsync(), "delete");
             },
             async () =>
             {
                 using var response = await _client.SaveSplitAsync(orderId, ApiClient.SplitBody(putParts));
-                return (response.StatusCode, "put");
+                return (await response.OutcomeAsync(), "put");
             },
         });
         var results = await OrderRace.RunAsync(factory.ConnectionString, orderId, requests);
 
-        Assert.Single(AssertOnly(results, HttpStatusCode.OK, HttpStatusCode.NoContent, HttpStatusCode.Conflict));
-        Assert.All(results.Where(r => r.Item2 == "delete"), r => Assert.NotEqual(HttpStatusCode.OK, r.Item1));
+        Assert.Single(AssertOnly(results, null, ErrorCode.ConcurrentChange, ErrorCode.DataConflict));
         var stored = await StoredSplitAsync(orderId);
         if (stored.Length == 0)
         {
-            Assert.Contains(results, r => r is (HttpStatusCode.NoContent, "delete"));
+            Assert.Contains(results, r => r is (null, "delete"));
         }
         else
         {
             Assert.Equal(Describe(putParts), stored);
-            Assert.Contains(results, r => r is (HttpStatusCode.OK, "put"));
+            Assert.Contains(results, r => r is (null, "put"));
         }
     }
 
@@ -148,8 +147,8 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
         {
             var menuItemId = await _client.CreateMenuItemAsync($"Side {i}", 1.25m);
             var response = await _client.AddItemAsync(orderId, menuItemId, 1);
-            response.EnsureSuccessStatusCode();
-            lineIds.Add((await response.ReadJsonAsync()).GetProperty("lines").EnumerateArray()
+            await response.AssertSuccessAsync();
+            lineIds.Add((await response.ReadDataAsync()).GetProperty("lines").EnumerateArray()
                 .Single(line => line.GetProperty("menuItemId").GetGuid() == menuItemId).GetProperty("id").GetGuid());
         }
 
@@ -158,17 +157,17 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
 
     /// <summary>Fails on any status not listed; returns the label of every accepted (2xx) request.</summary>
     private static List<string> AssertOnly(
-        IReadOnlyList<(HttpStatusCode Status, string Label)> results, params HttpStatusCode[] allowed)
+        IReadOnlyList<(ErrorCode? Status, string Label)> results, params ErrorCode?[] allowed)
     {
         var unexpected = results
             .Where(r => !allowed.Contains(r.Status))
             .GroupBy(r => r.Status)
-            .Select(g => $"{(int)g.Key} x{g.Count()}")
+            .Select(g => $"{g.Key} x{g.Count()}")
             .ToList();
         Assert.True(unexpected.Count == 0,
-            $"Expected only {string.Join("/", allowed.Select(s => (int)s))}, got: {string.Join(", ", unexpected)}");
+            $"Expected only {string.Join("/", allowed.Select(s => s?.ToString() ?? "success"))}, got: {string.Join(", ", unexpected)}");
 
-        var accepted = results.Where(r => (int)r.Status is >= 200 and < 300).Select(r => r.Label).ToList();
+        var accepted = results.Where(r => r.Status is null).Select(r => r.Label).ToList();
         Assert.NotEmpty(accepted);
         return accepted;
     }

@@ -1,16 +1,16 @@
 using System.Globalization;
-using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using Pos.Domain.Common;
 using Pos.Infrastructure.Persistence;
 
 namespace Pos.Api.IntegrationTests;
 
 /// <summary>
 /// Discount, tip, payment method, pay and cancel requests racing each other and add-item requests on the same order.
-/// The invariant: no 5xx, every rejected request is a 409 (or a 422 once a racing request closed the order), and the
-/// stored row shows exactly the accepted changes.
+/// The invariant: no 5xx, every rejected request is a conflict (or a broken rule once a racing request closed the
+/// order), and the stored row shows exactly the accepted changes.
 /// </summary>
 public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixture<PosApiFactory>
 {
@@ -24,10 +24,10 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         var (orderId, _) = await OrderWithOneItemAsync();
 
         var results = await ConcurrentlyAsync(Enumerable.Range(1, ConcurrentRequests)
-            .Select(rate => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+            .Select(rate => (Func<Task<(ErrorCode?, string)>>)(async () =>
             {
                 using var response = await _client.SetTipAsync(orderId, rate);
-                return (response.StatusCode, rate.ToString(CultureInfo.InvariantCulture));
+                return (await response.OutcomeAsync(), rate.ToString(CultureInfo.InvariantCulture));
             })));
 
         var accepted = AssertOnlyOkOrConflict(results);
@@ -40,10 +40,10 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         var (orderId, _) = await OrderWithOneItemAsync();
 
         var results = await ConcurrentlyAsync(Enumerable.Range(1, ConcurrentRequests)
-            .Select(rate => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+            .Select(rate => (Func<Task<(ErrorCode?, string)>>)(async () =>
             {
                 using var response = await _client.ApplyDiscountAsync(orderId, new { rate });
-                return (response.StatusCode, rate.ToString(CultureInfo.InvariantCulture));
+                return (await response.OutcomeAsync(), rate.ToString(CultureInfo.InvariantCulture));
             })));
 
         var accepted = AssertOnlyOkOrConflict(results);
@@ -58,20 +58,28 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
     public async Task Parallel_changes_and_add_items_lose_neither(string change)
     {
         var (orderId, menuItemId) = await OrderWithOneItemAsync();
-        if (change == "remove-discount") (await _client.ApplyDiscountAsync(orderId, new { rate = 10 })).EnsureSuccessStatusCode();
-        if (change == "remove-tip") (await _client.SetTipAsync(orderId, 15m)).EnsureSuccessStatusCode();
+        if (change == "remove-discount")
+        {
+            await (await _client.ApplyDiscountAsync(orderId, new { rate = 10 })).AssertSuccessAsync();
+        }
 
-        var requests = Enumerable.Range(0, ConcurrentRequests).SelectMany(_ => new Func<Task<(HttpStatusCode, string)>>[]
+        if (change == "remove-tip")
+        {
+            await (await _client.SetTipAsync(orderId, 15m)).AssertSuccessAsync();
+        }
+
+
+        var requests = Enumerable.Range(0, ConcurrentRequests).SelectMany(_ => new Func<Task<(ErrorCode?, string)>>[]
         {
             async () =>
             {
                 using var response = await _client.AddItemAsync(orderId, menuItemId, 1);
-                return (response.StatusCode, "add");
+                return (await response.OutcomeAsync(), "add");
             },
             async () =>
             {
                 using var response = await SendChangeAsync(change, orderId);
-                return (response.StatusCode, change);
+                return (await response.OutcomeAsync(), change);
             },
         });
         var results = await ConcurrentlyAsync(requests);
@@ -99,10 +107,10 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         var orderId = await _client.CreateOrderAsync();
         var lineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
 
-        var results = await ConcurrentlyAsync(lineIds.Select(lineId => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+        var results = await ConcurrentlyAsync(lineIds.Select(lineId => (Func<Task<(ErrorCode?, string)>>)(async () =>
         {
             using var response = await _client.RemoveLineAsync(orderId, lineId);
-            return (response.StatusCode, lineId.ToString());
+            return (await response.OutcomeAsync(), lineId.ToString());
         })));
 
         var accepted = AssertOnlyOkOrConflict(results);
@@ -116,17 +124,17 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         var (orderId, menuItemId) = await OrderWithOneItemAsync();
         var removableLineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
 
-        var requests = removableLineIds.SelectMany(lineId => new Func<Task<(HttpStatusCode, string)>>[]
+        var requests = removableLineIds.SelectMany(lineId => new Func<Task<(ErrorCode?, string)>>[]
         {
             async () =>
             {
                 using var response = await _client.AddItemAsync(orderId, menuItemId, 1);
-                return (response.StatusCode, "add");
+                return (await response.OutcomeAsync(), "add");
             },
             async () =>
             {
                 using var response = await _client.RemoveLineAsync(orderId, lineId);
-                return (response.StatusCode, lineId.ToString());
+                return (await response.OutcomeAsync(), lineId.ToString());
             },
         });
         var results = await ConcurrentlyAsync(requests);
@@ -149,28 +157,27 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
     public async Task Line_removal_racing_a_fixed_discount_never_leaves_the_discount_above_the_subtotal()
     {
         var (orderId, _) = await OrderWithOneItemAsync();
-        (await _client.AddItemAsync(orderId, await _client.CreateMenuItemAsync("Tea", 2.00m), 1)).EnsureSuccessStatusCode();
+        await (await _client.AddItemAsync(orderId, await _client.CreateMenuItemAsync("Tea", 2.00m), 1)).AssertSuccessAsync();
         var phoLineId = Guid.Parse(await StoredAsync<string>(
             orderId, "(SELECT id::text FROM order_lines WHERE order_id = o.id AND unit_price = 9.50)"));
 
-        var requests = Enumerable.Range(0, ConcurrentRequests).Select(_ => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+        var requests = Enumerable.Range(0, ConcurrentRequests).Select(_ => (Func<Task<(ErrorCode?, string)>>)(async () =>
             {
                 using var response = await _client.ApplyDiscountAsync(orderId, new { amount = 5.00m });
-                return (response.StatusCode, "discount");
+                return (await response.OutcomeAsync(), "discount");
             }))
             .Append(async () =>
             {
                 using var response = await _client.RemoveLineAsync(orderId, phoLineId);
-                return (response.StatusCode, "remove");
+                return (await response.OutcomeAsync(), "remove");
             });
         var results = await ConcurrentlyAsync(requests);
 
-        var unexpected = results.Where(r => r.Item1 is not (HttpStatusCode.OK or HttpStatusCode.Conflict
-            or HttpStatusCode.UnprocessableEntity)).ToList();
+        var unexpected = results.Where(r => r.Item1 is not (null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict or ErrorCode.OrderNotOpen or ErrorCode.DiscountExceedsSubtotal)).ToList();
         Assert.Empty(unexpected);
         var order = await _client.GetOrderAsync(orderId);
-        var removedPho = results.Any(r => r is (HttpStatusCode.OK, "remove"));
-        var discounted = results.Any(r => r is (HttpStatusCode.OK, "discount"));
+        var removedPho = results.Any(r => r is (null, "remove"));
+        var discounted = results.Any(r => r is (null, "discount"));
         Assert.Equal(!removedPho, discounted);
         Assert.Equal(removedPho ? "2.00" : "11.50", order.Money("subtotal"));
         Assert.Equal(discounted ? "5.00" : "0.00", order.Money("discount"));
@@ -182,10 +189,10 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         var orderId = await _client.CreateOrderAsync();
         var lineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
 
-        var results = await ConcurrentlyAsync(lineIds.Select(lineId => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+        var results = await ConcurrentlyAsync(lineIds.Select(lineId => (Func<Task<(ErrorCode?, string)>>)(async () =>
         {
             using var response = await _client.ChangeLineQuantityAsync(orderId, lineId, 5);
-            return (response.StatusCode, lineId.ToString());
+            return (await response.OutcomeAsync(), lineId.ToString());
         })));
 
         var accepted = AssertOnlyOkOrConflict(results);
@@ -201,17 +208,17 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         var (orderId, menuItemId) = await OrderWithOneItemAsync();
         var changedLineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
 
-        var requests = changedLineIds.SelectMany(lineId => new Func<Task<(HttpStatusCode, string)>>[]
+        var requests = changedLineIds.SelectMany(lineId => new Func<Task<(ErrorCode?, string)>>[]
         {
             async () =>
             {
                 using var response = await _client.AddItemAsync(orderId, menuItemId, 1);
-                return (response.StatusCode, "add");
+                return (await response.OutcomeAsync(), "add");
             },
             async () =>
             {
                 using var response = await _client.ChangeLineQuantityAsync(orderId, lineId, 4);
-                return (response.StatusCode, lineId.ToString());
+                return (await response.OutcomeAsync(), lineId.ToString());
             },
         });
         var results = await ConcurrentlyAsync(requests);
@@ -235,28 +242,27 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
     public async Task Quantity_decrease_racing_a_fixed_discount_never_leaves_the_discount_above_the_subtotal()
     {
         var (orderId, menuItemId) = await OrderWithOneItemAsync();
-        (await _client.AddItemAsync(orderId, menuItemId, 1)).EnsureSuccessStatusCode();
+        await (await _client.AddItemAsync(orderId, menuItemId, 1)).AssertSuccessAsync();
         var lineId = Guid.Parse(await StoredAsync<string>(
             orderId, "(SELECT id::text FROM order_lines WHERE order_id = o.id)"));
 
-        var requests = Enumerable.Range(0, ConcurrentRequests).Select(_ => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+        var requests = Enumerable.Range(0, ConcurrentRequests).Select(_ => (Func<Task<(ErrorCode?, string)>>)(async () =>
             {
                 using var response = await _client.ApplyDiscountAsync(orderId, new { amount = 10.00m });
-                return (response.StatusCode, "discount");
+                return (await response.OutcomeAsync(), "discount");
             }))
             .Append(async () =>
             {
                 using var response = await _client.ChangeLineQuantityAsync(orderId, lineId, 1);
-                return (response.StatusCode, "decrease");
+                return (await response.OutcomeAsync(), "decrease");
             });
         var results = await ConcurrentlyAsync(requests);
 
-        var unexpected = results.Where(r => r.Item1 is not (HttpStatusCode.OK or HttpStatusCode.Conflict
-            or HttpStatusCode.UnprocessableEntity)).ToList();
+        var unexpected = results.Where(r => r.Item1 is not (null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict or ErrorCode.OrderNotOpen or ErrorCode.DiscountExceedsSubtotal)).ToList();
         Assert.Empty(unexpected);
         var order = await _client.GetOrderAsync(orderId);
-        var decreased = results.Any(r => r is (HttpStatusCode.OK, "decrease"));
-        var discounted = results.Any(r => r is (HttpStatusCode.OK, "discount"));
+        var decreased = results.Any(r => r is (null, "decrease"));
+        var discounted = results.Any(r => r is (null, "discount"));
         Assert.Equal(!decreased, discounted);
         Assert.Equal(decreased ? "9.50" : "19.00", order.Money("subtotal"));
         Assert.Equal(discounted ? "10.00" : "0.00", order.Money("discount"));
@@ -264,7 +270,7 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
 
     /// <summary>
     /// Every pay would succeed alone; together exactly one wins. All of them load the open order before any commits
-    /// (<see cref="OrderRace"/>), so every other one loses the race on the concurrency token (409).
+    /// (<see cref="OrderRace"/>), so every other one loses the race on the concurrency token.
     /// </summary>
     [Fact]
     public async Task Parallel_pays_accept_exactly_one()
@@ -273,10 +279,10 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
 
         var results = await OrderRace.RunAsync(factory.ConnectionString, orderId,
             Enumerable.Range(0, ConcurrentRequests)
-            .Select(_ => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+            .Select(_ => (Func<Task<(ErrorCode?, string)>>)(async () =>
             {
                 using var response = await _client.PayOrderAsync(orderId);
-                return (response.StatusCode, "pay");
+                return (await response.OutcomeAsync(), "pay");
             })));
 
         var accepted = AssertOnlyOkOrConflict(results);
@@ -292,17 +298,17 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         var (orderId, _) = await OrderWithOneItemAsync();
 
         var results = await ConcurrentlyAsync(Enumerable.Range(0, ConcurrentRequests / 2)
-            .SelectMany(_ => new Func<Task<(HttpStatusCode, string)>>[]
+            .SelectMany(_ => new Func<Task<(ErrorCode?, string)>>[]
             {
                 async () =>
                 {
                     using var response = await _client.PayOrderAsync(orderId);
-                    return (response.StatusCode, "Paid");
+                    return (await response.OutcomeAsync(), "Paid");
                 },
                 async () =>
                 {
                     using var response = await _client.CancelOrderAsync(orderId);
-                    return (response.StatusCode, "Cancelled");
+                    return (await response.OutcomeAsync(), "Cancelled");
                 },
             }));
 
@@ -312,22 +318,22 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         Assert.Equal(winner == "Cancelled", await StoredAsync<bool>(orderId, "cancelled_at IS NOT NULL"));
     }
 
-    /// <summary>Adds that commit before the pay are kept; adds that load the paid order are 422; nothing is lost.</summary>
+    /// <summary>Adds that commit before the pay are kept; adds that load the paid order are OrderNotOpen; nothing is lost.</summary>
     [Fact]
     public async Task Pay_racing_add_items_keeps_exactly_the_accepted_adds()
     {
         var (orderId, menuItemId) = await OrderWithOneItemAsync();
 
         var requests = Enumerable.Range(0, ConcurrentRequests)
-            .Select(_ => (Func<Task<(HttpStatusCode, string)>>)(async () =>
+            .Select(_ => (Func<Task<(ErrorCode?, string)>>)(async () =>
             {
                 using var response = await _client.AddItemAsync(orderId, menuItemId, 1);
-                return (response.StatusCode, "add");
+                return (await response.OutcomeAsync(), "add");
             }))
             .Append(async () =>
             {
                 using var response = await _client.PayOrderAsync(orderId);
-                return (response.StatusCode, "pay");
+                return (await response.OutcomeAsync(), "pay");
             });
         var results = await ConcurrentlyAsync(requests);
 
@@ -349,8 +355,8 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         {
             var menuItemId = await _client.CreateMenuItemAsync($"Side {i}", 1.25m);
             var response = await _client.AddItemAsync(orderId, menuItemId, 1);
-            response.EnsureSuccessStatusCode();
-            lineIds.Add((await response.ReadJsonAsync()).GetProperty("lines").EnumerateArray()
+            await response.AssertSuccessAsync();
+            lineIds.Add((await response.ReadDataAsync()).GetProperty("lines").EnumerateArray()
                 .Single(l => l.GetProperty("menuItemId").GetGuid() == menuItemId).GetProperty("id").GetGuid());
         }
 
@@ -373,47 +379,47 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
     {
         var menuItemId = await _client.CreateMenuItemAsync("Bun cha", 9.50m);
         var orderId = await _client.CreateOrderAsync();
-        (await _client.AddItemAsync(orderId, menuItemId, 1)).EnsureSuccessStatusCode();
+        await (await _client.AddItemAsync(orderId, menuItemId, 1)).AssertSuccessAsync();
         return (orderId, menuItemId);
     }
 
-    /// <summary>Returns the label of every accepted (200) request.</summary>
-    private static List<string> AssertOnlyOkOrConflict(IReadOnlyList<(HttpStatusCode Status, string Label)> results)
+    /// <summary>Returns the label of every accepted request.</summary>
+    private static List<string> AssertOnlyOkOrConflict(IReadOnlyList<(ErrorCode? Status, string Label)> results)
     {
         var unexpected = results
-            .Where(r => r.Status is not (HttpStatusCode.OK or HttpStatusCode.Conflict))
+            .Where(r => r.Status is not (null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict))
             .GroupBy(r => r.Status)
-            .Select(g => $"{(int)g.Key} x{g.Count()}")
+            .Select(g => $"{g.Key} x{g.Count()}")
             .ToList();
-        Assert.True(unexpected.Count == 0, $"Expected only 200 or 409, got: {string.Join(", ", unexpected)}");
+        Assert.True(unexpected.Count == 0, $"Expected only success or a conflict, got: {string.Join(", ", unexpected)}");
 
-        var accepted = results.Where(r => r.Status == HttpStatusCode.OK).Select(r => r.Label).ToList();
+        var accepted = results.Where(r => r.Status is null).Select(r => r.Label).ToList();
         Assert.NotEmpty(accepted);
         return accepted;
     }
 
     /// <summary>
-    /// For races where a request can legitimately find the order already closed (422). Returns the label of every
-    /// accepted (200) request.
+    /// For races where a request can legitimately find the order already closed. Returns the label of every accepted
+    /// request.
     /// </summary>
     private static List<string> AssertOnlyOkConflictOrUnprocessable(
-        IReadOnlyList<(HttpStatusCode Status, string Label)> results)
+        IReadOnlyList<(ErrorCode? Status, string Label)> results)
     {
         var unexpected = results
-            .Where(r => r.Status is not (HttpStatusCode.OK or HttpStatusCode.Conflict or HttpStatusCode.UnprocessableEntity))
+            .Where(r => r.Status is not (null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict or ErrorCode.OrderNotOpen or ErrorCode.DiscountExceedsSubtotal))
             .GroupBy(r => r.Status)
-            .Select(g => $"{(int)g.Key} x{g.Count()}")
+            .Select(g => $"{g.Key} x{g.Count()}")
             .ToList();
-        Assert.True(unexpected.Count == 0, $"Expected only 200, 409 or 422, got: {string.Join(", ", unexpected)}");
+        Assert.True(unexpected.Count == 0, $"Expected only success, a conflict or a broken rule, got: {string.Join(", ", unexpected)}");
 
-        var accepted = results.Where(r => r.Status == HttpStatusCode.OK).Select(r => r.Label).ToList();
+        var accepted = results.Where(r => r.Status is null).Select(r => r.Label).ToList();
         Assert.NotEmpty(accepted);
         return accepted;
     }
 
     /// <summary>Releases all requests at once so they hit the same order row together.</summary>
-    private static async Task<IReadOnlyList<(HttpStatusCode, string)>> ConcurrentlyAsync(
-        IEnumerable<Func<Task<(HttpStatusCode, string)>>> requests)
+    private static async Task<IReadOnlyList<(ErrorCode?, string)>> ConcurrentlyAsync(
+        IEnumerable<Func<Task<(ErrorCode?, string)>>> requests)
     {
         var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var running = requests

@@ -1,19 +1,15 @@
 using FluentValidation;
+using Pos.Domain.Common;
 
 namespace Pos.Application.Common;
 
-/// <summary>Runs the command's validators before the handler; throws <see cref="ValidationException"/> on failure.</summary>
+/// <summary>Runs the command's validators before the handler; fails with a <see cref="ValidationError"/>.</summary>
 internal sealed class ValidatingCommandHandler<TCommand, TResult>(
     ICommandHandler<TCommand, TResult> inner,
     IEnumerable<IValidator<TCommand>> validators) : ICommandHandler<TCommand, TResult>
 {
-    public async Task<TResult> HandleAsync(TCommand command, CancellationToken cancellationToken)
-    {
-        foreach (var validator in validators)
-        {
-            await validator.ValidateAndThrowAsync(command, cancellationToken);
-        }
-
-        return await inner.HandleAsync(command, cancellationToken);
-    }
+    public async Task<Result<TResult>> HandleAsync(TCommand command, CancellationToken cancellationToken) =>
+        await validators.FirstErrorAsync(command, cancellationToken) is { } error
+            ? Result.Fail<TResult>(error)
+            : await inner.HandleAsync(command, cancellationToken);
 }

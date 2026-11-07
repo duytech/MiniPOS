@@ -1,6 +1,6 @@
 using System.Globalization;
-using System.Net;
 using System.Text.Json;
+using Pos.Domain.Common;
 
 namespace Pos.Api.IntegrationTests;
 
@@ -51,13 +51,13 @@ public class SplitEvenApiTests(PosApiFactory factory) : IClassFixture<PosApiFact
     [InlineData("21")]
     [InlineData("2000000000")]
     [InlineData("abc")]
-    public async Task Parts_outside_1_to_20_or_not_a_number_is_400(string parts)
+    public async Task Parts_outside_1_to_20_or_not_a_number_is_invalid(string parts)
     {
         var orderId = await OrderWithSubtotalAsync(10.00m);
 
         var response = await _client.GetAsync($"/api/orders/{orderId}/split-even?parts={parts}");
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await response.AssertErrorAsync(ErrorCode.ValidationFailed);
     }
 
     [Fact]
@@ -72,35 +72,35 @@ public class SplitEvenApiTests(PosApiFactory factory) : IClassFixture<PosApiFact
     }
 
     [Fact]
-    public async Task Missing_parts_is_400()
+    public async Task Missing_parts_is_invalid()
     {
         var orderId = await OrderWithSubtotalAsync(10.00m);
 
         var response = await _client.GetAsync($"/api/orders/{orderId}/split-even");
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await response.AssertErrorAsync(ErrorCode.ValidationFailed);
     }
 
     [Fact]
-    public async Task Unknown_order_is_404()
+    public async Task Unknown_order_is_not_found()
     {
         var response = await _client.GetAsync($"/api/orders/{Guid.NewGuid()}/split-even?parts=2");
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        await response.AssertErrorAsync(ErrorCode.OrderNotFound);
     }
 
     private async Task<JsonElement[]> SplitAsync(Guid orderId, int parts)
     {
         var response = await _client.GetAsync($"/api/orders/{orderId}/split-even?parts={parts}");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return [.. (await response.ReadJsonAsync()).EnumerateArray()];
+        await response.AssertSuccessAsync();
+        return [.. (await response.ReadDataAsync()).EnumerateArray()];
     }
 
     private async Task<Guid> OrderWithSubtotalAsync(decimal price)
     {
         var menuItem = await _client.CreateMenuItemAsync("Pho", price);
         var orderId = await _client.CreateOrderAsync();
-        (await _client.AddItemAsync(orderId, menuItem, 1)).EnsureSuccessStatusCode();
+        await (await _client.AddItemAsync(orderId, menuItem, 1)).AssertSuccessAsync();
         return orderId;
     }
 

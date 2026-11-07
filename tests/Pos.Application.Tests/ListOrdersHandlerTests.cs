@@ -21,7 +21,7 @@ public class ListOrdersHandlerTests
         order.AddItem(new MenuItem("Pho", Money.Usd(7.70m)), 1, "no onions"); // 7.70
         _orders.Add(order);
 
-        var result = await _handler.HandleAsync(new ListOrdersQuery(null, null, 1, 20), CancellationToken.None);
+        var result = (await _handler.HandleAsync(new ListOrdersQuery(null, null, 1, 20), CancellationToken.None)).Data;
 
         var summary = Assert.Single(result.Items);
         Assert.Equal(Money.Usd(26.55m), summary.Total);
@@ -34,8 +34,8 @@ public class ListOrdersHandlerTests
     [Fact]
     public async Task Passes_status_parsed_search_and_paging_to_the_repository()
     {
-        var result = await _handler.HandleAsync(
-            new ListOrdersQuery("  #12 ", OrderStatus.Paid, 3, 10), CancellationToken.None);
+        var result = (await _handler.HandleAsync(
+            new ListOrdersQuery("  #12 ", OrderStatus.Paid, 3, 10), CancellationToken.None)).Data;
 
         Assert.Equal((OrderStatus.Paid, new OrderSearch("#12", 12), 3, 10), _orders.LastList);
         Assert.Equal(3, result.Page);

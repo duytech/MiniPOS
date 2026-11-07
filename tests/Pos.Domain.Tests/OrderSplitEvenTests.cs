@@ -32,7 +32,7 @@ public class OrderSplitEvenTests
     {
         var order = OrderWithLines(Percentage.Zero, 100.00m);
 
-        var parts = order.SplitEvenly(3);
+        var parts = order.SplitEvenly(3).Data;
 
         // 100.00 / 3 = 33.333… → 33.33 each, leftover 0.01 to the first part.
         Assert.Equal(Usd(33.34m, 33.33m, 33.33m), parts.Select(p => p.Subtotal));
@@ -45,7 +45,7 @@ public class OrderSplitEvenTests
     {
         var order = OrderWithLines(Percentage.Zero, 0.05m);
 
-        var parts = order.SplitEvenly(10);
+        var parts = order.SplitEvenly(10).Data;
 
         Assert.Equal([Money.Usd(0.05m), .. Enumerable.Repeat(Money.Usd(0.00m), 9)], parts.Select(p => p.Total));
     }
@@ -55,7 +55,7 @@ public class OrderSplitEvenTests
     {
         var order = OrderWithLines(NycTax, 0.24m); // tax 8.875% of 0.24 = 0.0213 → 0.02
 
-        var parts = order.SplitEvenly(4);
+        var parts = order.SplitEvenly(4).Data;
 
         // 0.02 / 4 = 0.005 → 0.00 each, leftover 0.02 to the first part. Rounding half up would give 0.01 each and
         // leave the first part −0.01.
@@ -71,7 +71,7 @@ public class OrderSplitEvenTests
         order.SetTip(new Percentage(18m));
         var totals = order.CalculateTotals();
 
-        var part = Assert.Single(order.SplitEvenly(1));
+        var part = Assert.Single(order.SplitEvenly(1).Data);
 
         Assert.Equal(
             (totals.Subtotal, totals.Discount, totals.Surcharge, totals.Tax, totals.Tip, totals.Total),
@@ -87,7 +87,7 @@ public class OrderSplitEvenTests
         order.SetTip(new Percentage(18m));
         // Order: subtotal 9.99, discount 1.50, surcharge 0.25, tax 0.78, tip 1.53, total 11.05.
 
-        var parts = order.SplitEvenly(4);
+        var parts = order.SplitEvenly(4).Data;
 
         Assert.Equal(Usd(2.52m, 2.49m, 2.49m, 2.49m), parts.Select(p => p.Subtotal)); // 9.99 / 4 = 2.4975
         Assert.Equal(Usd(0.39m, 0.37m, 0.37m, 0.37m), parts.Select(p => p.Discount)); // 1.50 / 4 = 0.375
@@ -112,7 +112,7 @@ public class OrderSplitEvenTests
         order.SetTip(new Percentage(20m));
         var totals = order.CalculateTotals();
 
-        var parts = order.SplitEvenly(partCount);
+        var parts = order.SplitEvenly(partCount).Data;
 
         Assert.Equal(partCount, parts.Count);
         Assert.Equal(totals.Subtotal, Sum(parts.Select(p => p.Subtotal)));
@@ -150,7 +150,7 @@ public class OrderSplitEvenTests
     {
         var order = OrderWithLines(NycTax, 10.00m);
 
-        Assert.Throws<DomainException>(() => order.SplitEvenly(partCount));
+        Assert.Equal(ErrorCode.InvalidSplit, order.SplitEvenly(partCount).Error.Code);
     }
 
     private static Money Sum(IEnumerable<Money> amounts) =>

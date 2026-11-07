@@ -71,9 +71,13 @@ public class Order
     /// Adds the menu item at its current price. A line with the same menu item, snapshotted unit price and notes
     /// gets its quantity increased; anything different becomes a new line.
     /// </summary>
-    public OrderLine AddItem(MenuItem menuItem, int quantity, string? notes)
+    public Result<OrderLine> AddItem(MenuItem menuItem, int quantity, string? notes)
     {
-        EnsureOpen();
+        if (OpenError() is { } notOpen)
+        {
+            return Result.Fail<OrderLine>(notOpen);
+        }
+
         var normalizedNotes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
         var line = _lines.FirstOrDefault(l => l.IsSameAs(menuItem.Id, menuItem.Price, normalizedNotes));
         if (line is null)
@@ -83,11 +87,15 @@ public class Order
         }
         else
         {
-            line.IncreaseQuantity(quantity);
+            var increased = line.IncreaseQuantity(quantity);
+            if (!increased.IsSuccess)
+            {
+                return Result.Fail<OrderLine>(increased.Error);
+            }
         }
 
         ClearSplit();
-        return line;
+        return Result.Ok(line);
     }
 
     /// <summary>
@@ -95,17 +103,26 @@ public class Order
     /// follows the new subtotal. A fixed discount must not be more than the new subtotal: the removal is rejected and
     /// the discount has to be changed or removed first.
     /// </summary>
-    public void RemoveLine(OrderLine line)
+    public Result RemoveLine(OrderLine line)
     {
-        EnsureOpen();
-        if (!_lines.Contains(line))
+        if (OpenError() is { } notOpen)
         {
-            throw new DomainException($"Line {line.Id} is not on this order.");
+            return Result.Fail(notOpen);
         }
 
-        EnsureFixedDiscountFits(DiscountAmount, CalculateSubtotal() - line.LineTotal, "Removing the line");
+        if (!_lines.Contains(line))
+        {
+            return Result.Fail(new Error(ErrorCode.LineNotOnOrder, $"Line {line.Id} is not on this order."));
+        }
+
+        if (FixedDiscountError(DiscountAmount, CalculateSubtotal() - line.LineTotal, "Removing the line") is { } tooLarge)
+        {
+            return Result.Fail(tooLarge);
+        }
+
         _lines.Remove(line);
         ClearSplit();
+        return Result.Ok();
     }
 
     /// <summary>
@@ -113,132 +130,174 @@ public class Order
     /// A percent discount and the tip follow the new subtotal. A fixed discount must not be more than the new
     /// subtotal: the change is rejected and the discount has to be changed or removed first.
     /// </summary>
-    public void ChangeLineQuantity(OrderLine line, int quantity)
+    public Result ChangeLineQuantity(OrderLine line, int quantity)
     {
-        EnsureOpen();
+        if (OpenError() is { } notOpen)
+        {
+            return Result.Fail(notOpen);
+        }
+
         if (!_lines.Contains(line))
         {
-            throw new DomainException($"Line {line.Id} is not on this order.");
+            return Result.Fail(new Error(ErrorCode.LineNotOnOrder, $"Line {line.Id} is not on this order."));
         }
 
         if (quantity == line.Quantity)
         {
-            return;
+            return Result.Ok();
         }
 
-        EnsureFixedDiscountFits(
-            DiscountAmount,
-            CalculateSubtotal() - line.LineTotal + line.UnitPrice * quantity,
-            $"A quantity of {quantity}");
+        var newSubtotal = CalculateSubtotal() - line.LineTotal + line.UnitPrice * quantity;
+        if (FixedDiscountError(DiscountAmount, newSubtotal, $"A quantity of {quantity}") is { } tooLarge)
+        {
+            return Result.Fail(tooLarge);
+        }
+
         line.ChangeQuantity(quantity);
         ClearSplit();
+        return Result.Ok();
     }
 
     /// <summary>
     /// Replaces any existing discount. The discount cannot exceed the subtotal at the time it is applied.
     /// </summary>
-    public void ApplyDiscount(OrderDiscount discount)
+    public Result ApplyDiscount(OrderDiscount discount)
     {
-        EnsureOpen();
-        if (discount.Rate is { Value: > 100m } rate)
+        if (OpenError() is { } notOpen)
         {
-            throw new DomainException($"A discount of {rate} is more than the subtotal.");
+            return Result.Fail(notOpen);
         }
 
-        EnsureFixedDiscountFits(discount.Amount, CalculateSubtotal(), change: null);
+        if (discount.Rate is { Value: > 100m } rate)
+        {
+            return Result.Fail(new Error(
+                ErrorCode.DiscountExceedsSubtotal, $"A discount of {rate} is more than the subtotal."));
+        }
+
+        if (FixedDiscountError(discount.Amount, CalculateSubtotal(), change: null) is { } tooLarge)
+        {
+            return Result.Fail(tooLarge);
+        }
 
         if (DiscountRate == discount.Rate && DiscountAmount == discount.Amount)
         {
-            return;
+            return Result.Ok();
         }
 
         DiscountRate = discount.Rate;
         DiscountAmount = discount.Amount;
         ClearSplit();
+        return Result.Ok();
     }
 
-    public void RemoveDiscount()
+    public Result RemoveDiscount()
     {
-        EnsureOpen();
+        if (OpenError() is { } notOpen)
+        {
+            return Result.Fail(notOpen);
+        }
+
         if (Discount is null)
         {
-            return;
+            return Result.Ok();
         }
 
         DiscountRate = null;
         DiscountAmount = null;
         ClearSplit();
+        return Result.Ok();
     }
 
-    public void SetTip(Percentage tipRate)
+    public Result SetTip(Percentage tipRate)
     {
-        EnsureOpen();
+        if (OpenError() is { } notOpen)
+        {
+            return Result.Fail(notOpen);
+        }
+
         if (TipRate == tipRate)
         {
-            return;
+            return Result.Ok();
         }
 
         TipRate = tipRate;
         ClearSplit();
+        return Result.Ok();
     }
 
-    public void RemoveTip()
+    public Result RemoveTip()
     {
-        EnsureOpen();
+        if (OpenError() is { } notOpen)
+        {
+            return Result.Fail(notOpen);
+        }
+
         if (TipRate is null)
         {
-            return;
+            return Result.Ok();
         }
 
         TipRate = null;
         ClearSplit();
+        return Result.Ok();
     }
 
-    public void SetPaymentMethod(PaymentMethod paymentMethod)
+    public Result SetPaymentMethod(PaymentMethod paymentMethod)
     {
-        EnsureOpen();
+        if (OpenError() is { } notOpen)
+        {
+            return Result.Fail(notOpen);
+        }
+
         if (PaymentMethod == paymentMethod)
         {
-            return;
+            return Result.Ok();
         }
 
         PaymentMethod = paymentMethod;
         ClearSplit();
+        return Result.Ok();
     }
 
     /// <summary>
     /// Closes the order as paid, with the stored payment method, for the whole order. Only an open order can be paid
     /// (an empty one too); Paid is final. The totals are not changed, and a saved split is kept (display only).
     /// </summary>
-    public void Pay(DateTimeOffset paidAt)
+    public Result Pay(DateTimeOffset paidAt)
     {
-        EnsureOpen();
+        if (OpenError() is { } notOpen)
+        {
+            return Result.Fail(notOpen);
+        }
+
         Status = OrderStatus.Paid;
         PaidAt = paidAt.ToUniversalTime();
+        return Result.Ok();
     }
 
     /// <summary>
     /// Closes the order as cancelled. Only an open order can be cancelled (an empty one too); Cancelled is final.
     /// A saved split is kept.
     /// </summary>
-    public void Cancel(DateTimeOffset cancelledAt)
+    public Result Cancel(DateTimeOffset cancelledAt)
     {
-        EnsureOpen();
+        if (OpenError() is { } notOpen)
+        {
+            return Result.Fail(notOpen);
+        }
+
         Status = OrderStatus.Cancelled;
         CancelledAt = cancelledAt.ToUniversalTime();
+        return Result.Ok();
     }
 
     /// <summary>
     /// Items, discount, tip and payment method can only change while the order is open, and only an open order can be
     /// paid or cancelled: Paid and Cancelled are final.
     /// </summary>
-    private void EnsureOpen()
-    {
-        if (Status != OrderStatus.Open)
-        {
-            throw new DomainException($"The order is {Status}; only an open order can be changed.");
-        }
-    }
+    private Error? OpenError() => Status == OrderStatus.Open
+        ? null
+        : new Error(ErrorCode.OrderNotOpen, $"The order is {Status}; only an open order can be changed.");
 
     /// <summary>
     /// The only place order totals are calculated. Each step is rounded to cents (MidpointRounding.AwayFromZero)
@@ -286,11 +345,11 @@ public class Order
     /// A split needs at least two parts. Nothing is stored and any status is allowed (see <see cref="PreviewSplit"/>
     /// and <see cref="SaveSplit"/> for the open-only versions).
     /// </summary>
-    public IReadOnlyList<SplitPart> Split(IReadOnlyList<IReadOnlyCollection<Guid>> lineIdsPerPart)
+    public Result<IReadOnlyList<SplitPart>> Split(IReadOnlyList<IReadOnlyCollection<Guid>> lineIdsPerPart)
     {
         if (lineIdsPerPart.Count < 2)
         {
-            throw new DomainException("A split needs at least two parts.");
+            return InvalidSplit("A split needs at least two parts.");
         }
 
         var linesById = _lines.ToDictionary(l => l.Id);
@@ -300,7 +359,7 @@ public class Order
         {
             if (lineIds.Count == 0)
             {
-                throw new DomainException("Every part of a split needs at least one line.");
+                return InvalidSplit("Every part of a split needs at least one line.");
             }
 
             var partSubtotal = Money.Zero(Currency);
@@ -308,12 +367,13 @@ public class Order
             {
                 if (!linesById.TryGetValue(lineId, out var line))
                 {
-                    throw new DomainException($"Line {lineId} is not on this order.");
+                    return Result.Fail<IReadOnlyList<SplitPart>>(
+                        new Error(ErrorCode.LineNotOnOrder, $"Line {lineId} is not on this order."));
                 }
 
                 if (!assignedLineIds.Add(lineId))
                 {
-                    throw new DomainException($"Line {lineId} is in more than one part.");
+                    return InvalidSplit($"Line {lineId} is in more than one part.");
                 }
 
                 partSubtotal += line.LineTotal;
@@ -324,7 +384,7 @@ public class Order
 
         if (assignedLineIds.Count != _lines.Count)
         {
-            throw new DomainException("Every line of the order must be in a part of the split.");
+            return InvalidSplit("Every line of the order must be in a part of the split.");
         }
 
         var totals = CalculateTotals();
@@ -333,7 +393,7 @@ public class Order
         var taxes = Allocate(totals.Tax, partSubtotals, totals.Subtotal);
         var tips = Allocate(totals.Tip, partSubtotals, totals.Subtotal);
 
-        return lineIdsPerPart.Select((lineIds, i) => new SplitPart(
+        return Result.Ok<IReadOnlyList<SplitPart>>(lineIdsPerPart.Select((lineIds, i) => new SplitPart(
                 lineIds.ToList(),
                 partSubtotals[i],
                 discounts[i],
@@ -341,44 +401,53 @@ public class Order
                 taxes[i],
                 tips[i],
                 Total: partSubtotals[i] - discounts[i] + surcharges[i] + taxes[i] + tips[i]))
-            .ToList();
+            .ToList());
     }
 
     /// <summary>Prices a split by item (see <see cref="Split"/>) without saving it. Only an open order.</summary>
-    public IReadOnlyList<SplitPart> PreviewSplit(IReadOnlyList<IReadOnlyCollection<Guid>> lineIdsPerPart)
-    {
-        EnsureOpen();
-        return Split(lineIdsPerPart);
-    }
+    public Result<IReadOnlyList<SplitPart>> PreviewSplit(IReadOnlyList<IReadOnlyCollection<Guid>> lineIdsPerPart) =>
+        OpenError() is { } notOpen ? Result.Fail<IReadOnlyList<SplitPart>>(notOpen) : Split(lineIdsPerPart);
 
     /// <summary>
     /// Saves the split by item (see <see cref="Split"/>), replacing any saved one. Only the line assignment is stored;
     /// its amounts are recomputed on every read. Only an open order. A real change to the order's lines, discount, tip
     /// or payment method clears it.
     /// </summary>
-    public IReadOnlyList<SplitPart> SaveSplit(IReadOnlyList<IReadOnlyCollection<Guid>> lineIdsPerPart)
+    public Result<IReadOnlyList<SplitPart>> SaveSplit(IReadOnlyList<IReadOnlyCollection<Guid>> lineIdsPerPart)
     {
-        EnsureOpen();
+        if (OpenError() is { } notOpen)
+        {
+            return Result.Fail<IReadOnlyList<SplitPart>>(notOpen);
+        }
+
         var parts = Split(lineIdsPerPart);
+        if (!parts.IsSuccess)
+        {
+            return parts;
+        }
+
         _savedSplitParts.Clear();
         _savedSplitParts.AddRange(lineIdsPerPart.Select((lineIds, position) => new SavedSplitPart(position, lineIds)));
         return parts;
     }
 
     /// <summary>Removes the saved split. Only an open order.</summary>
-    public void RemoveSplit()
+    public Result RemoveSplit()
     {
-        EnsureOpen();
+        if (OpenError() is { } notOpen)
+        {
+            return Result.Fail(notOpen);
+        }
+
         ClearSplit();
+        return Result.Ok();
     }
 
-    /// <summary>The saved split priced with the current order, in any status; null when there is no saved split.</summary>
-    public IReadOnlyList<SplitPart>? GetSavedSplit() => HasSavedSplit
-        ? Split(_savedSplitParts
-            .OrderBy(p => p.Position)
-            .Select(p => (IReadOnlyCollection<Guid>)p.Lines.OrderBy(l => l.Position).Select(l => l.LineId).ToList())
-            .ToList())
-        : null;
+    /// <summary>The saved split priced with the current order, in any status. Check <see cref="HasSavedSplit"/> first.</summary>
+    public Result<IReadOnlyList<SplitPart>> GetSavedSplit() => Split(_savedSplitParts
+        .OrderBy(p => p.Position)
+        .Select(p => (IReadOnlyCollection<Guid>)p.Lines.OrderBy(l => l.Position).Select(l => l.LineId).ToList())
+        .ToList());
 
     /// <summary>
     /// Splits the bill evenly between <paramref name="parts"/> people. The order is priced first; then its subtotal,
@@ -386,11 +455,11 @@ public class Order
     /// leftover cents of each amount go to the first part. So every amount of the parts adds up exactly to the order's
     /// amount, and the part totals to the order total. Parts hold no lines.
     /// </summary>
-    public IReadOnlyList<SplitPart> SplitEvenly(int parts)
+    public Result<IReadOnlyList<SplitPart>> SplitEvenly(int parts)
     {
         if (parts < 1)
         {
-            throw new DomainException("An even split needs at least one part.");
+            return InvalidSplit("An even split needs at least one part.");
         }
 
         var totals = CalculateTotals();
@@ -400,7 +469,7 @@ public class Order
         var taxes = AllocateEvenly(totals.Tax, parts);
         var tips = AllocateEvenly(totals.Tip, parts);
 
-        return Enumerable.Range(0, parts)
+        return Result.Ok<IReadOnlyList<SplitPart>>(Enumerable.Range(0, parts)
             .Select(i => new SplitPart(
                 [],
                 subtotals[i],
@@ -409,8 +478,11 @@ public class Order
                 taxes[i],
                 tips[i],
                 Total: subtotals[i] - discounts[i] + surcharges[i] + taxes[i] + tips[i]))
-            .ToList();
+            .ToList());
     }
+
+    private static Result<IReadOnlyList<SplitPart>> InvalidSplit(string message) =>
+        Result.Fail<IReadOnlyList<SplitPart>>(new Error(ErrorCode.InvalidSplit, message));
 
     /// <summary>A saved split only fits the order it was made for: every real change of the order clears it.</summary>
     private void ClearSplit() => _savedSplitParts.Clear();
@@ -464,14 +536,14 @@ public class Order
     /// A fixed discount can never be more than the subtotal. <paramref name="change"/> names the line change that would
     /// leave <paramref name="subtotal"/>, or is null when the discount itself is being applied.
     /// </summary>
-    private static void EnsureFixedDiscountFits(Money? fixedDiscount, Money subtotal, string? change)
+    private static Error? FixedDiscountError(Money? fixedDiscount, Money subtotal, string? change)
     {
         if (fixedDiscount is not { } discount || discount.Amount <= subtotal.Amount)
         {
-            return;
+            return null;
         }
 
-        throw new DomainException(change is null
+        return new Error(ErrorCode.DiscountExceedsSubtotal, change is null
             ? $"A discount of {discount} is more than the subtotal of {subtotal}."
             : $"{change} would leave a subtotal of {subtotal}, less than the discount of {discount}. " +
               "Change or remove the discount first.");

@@ -36,7 +36,7 @@ public class OrderTests
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
 
-        var line = order.AddItem(Fries, 3, notes: null);
+        var line = order.AddItem(Fries, 3, notes: null).Data;
 
         Assert.Equal(Money.Usd(10.05m), line.LineTotal);
     }
@@ -119,7 +119,7 @@ public class OrderTests
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         order.AddItem(Burger, int.MaxValue, null);
 
-        Assert.Throws<DomainException>(() => order.AddItem(Burger, 1, null));
+        Assert.Equal(ErrorCode.LineQuantityTooLarge, order.AddItem(Burger, 1, null).Error.Code);
         Assert.Equal(int.MaxValue, Assert.Single(order.Lines).Quantity);
     }
 
@@ -127,8 +127,8 @@ public class OrderTests
     public void Removing_a_line_keeps_the_other_lines()
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
-        var burger = order.AddItem(Burger, 2, null);
-        var fries = order.AddItem(Fries, 1, null);
+        var burger = order.AddItem(Burger, 2, null).Data;
+        var fries = order.AddItem(Fries, 1, null).Data;
 
         order.RemoveLine(burger);
 
@@ -140,7 +140,7 @@ public class OrderTests
     public void Removing_the_last_line_leaves_the_order_open_and_empty()
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
-        var burger = order.AddItem(Burger, 1, null);
+        var burger = order.AddItem(Burger, 1, null).Data;
 
         order.RemoveLine(burger);
 
@@ -155,9 +155,9 @@ public class OrderTests
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         order.AddItem(Burger, 1, null);
         var other = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
-        var otherLine = other.AddItem(Burger, 1, null);
+        var otherLine = other.AddItem(Burger, 1, null).Data;
 
-        Assert.Throws<DomainException>(() => order.RemoveLine(otherLine));
+        Assert.Equal(ErrorCode.LineNotOnOrder, order.RemoveLine(otherLine).Error.Code);
         Assert.Single(order.Lines);
     }
 
@@ -165,8 +165,8 @@ public class OrderTests
     public void Changing_a_line_quantity_replaces_it_and_keeps_the_other_lines()
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
-        var burger = order.AddItem(Burger, 2, null);
-        var fries = order.AddItem(Fries, 1, null);
+        var burger = order.AddItem(Burger, 2, null).Data;
+        var fries = order.AddItem(Fries, 1, null).Data;
 
         order.ChangeLineQuantity(burger, 5);
 
@@ -185,7 +185,7 @@ public class OrderTests
     public void Changing_a_line_to_its_current_quantity_leaves_the_order_unchanged()
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
-        var burger = order.AddItem(Burger, 2, null);
+        var burger = order.AddItem(Burger, 2, null).Data;
 
         order.ChangeLineQuantity(burger, 2);
 
@@ -199,45 +199,45 @@ public class OrderTests
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         order.AddItem(Burger, 1, null);
         var other = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
-        var otherLine = other.AddItem(Burger, 1, null);
+        var otherLine = other.AddItem(Burger, 1, null).Data;
 
-        Assert.Throws<DomainException>(() => order.ChangeLineQuantity(otherLine, 3));
+        Assert.Equal(ErrorCode.LineNotOnOrder, order.ChangeLineQuantity(otherLine, 3).Error.Code);
         Assert.Equal(1, Assert.Single(order.Lines).Quantity);
         Assert.Equal(1, otherLine.Quantity);
     }
 
-        public static TheoryData<OrderStatus, Action<Order>> ClosedOrderChanges => new()
+        public static TheoryData<OrderStatus, Func<Order, Error>> ClosedOrderChanges => new()
     {
-        { OrderStatus.Paid, o => o.RemoveLine(o.Lines[0]) },
-        { OrderStatus.Cancelled, o => o.RemoveLine(o.Lines[0]) },
-        { OrderStatus.Paid, o => o.ChangeLineQuantity(o.Lines[0], 3) },
-        { OrderStatus.Cancelled, o => o.ChangeLineQuantity(o.Lines[0], 3) },
-        { OrderStatus.Paid, o => o.AddItem(Burger, 1, null) },
-        { OrderStatus.Paid, o => o.AddItem(Fries, 1, null) },
-        { OrderStatus.Cancelled, o => o.AddItem(Burger, 1, null) },
-        { OrderStatus.Paid, o => o.ApplyDiscount(OrderDiscount.PercentOfSubtotal(new Percentage(10m))) },
-        { OrderStatus.Paid, o => o.RemoveDiscount() },
-        { OrderStatus.Paid, o => o.SetTip(new Percentage(15m)) },
-        { OrderStatus.Paid, o => o.RemoveTip() },
-        { OrderStatus.Paid, o => o.SetPaymentMethod(PaymentMethod.Card) },
-        { OrderStatus.Cancelled, o => o.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(1.00m))) },
-        { OrderStatus.Cancelled, o => o.RemoveDiscount() },
-        { OrderStatus.Cancelled, o => o.SetTip(new Percentage(15m)) },
-        { OrderStatus.Cancelled, o => o.RemoveTip() },
-        { OrderStatus.Cancelled, o => o.SetPaymentMethod(PaymentMethod.Card) },
+        { OrderStatus.Paid, o => o.RemoveLine(o.Lines[0]).Error },
+        { OrderStatus.Cancelled, o => o.RemoveLine(o.Lines[0]).Error },
+        { OrderStatus.Paid, o => o.ChangeLineQuantity(o.Lines[0], 3).Error },
+        { OrderStatus.Cancelled, o => o.ChangeLineQuantity(o.Lines[0], 3).Error },
+        { OrderStatus.Paid, o => o.AddItem(Burger, 1, null).Error },
+        { OrderStatus.Paid, o => o.AddItem(Fries, 1, null).Error },
+        { OrderStatus.Cancelled, o => o.AddItem(Burger, 1, null).Error },
+        { OrderStatus.Paid, o => o.ApplyDiscount(OrderDiscount.PercentOfSubtotal(new Percentage(10m))).Error },
+        { OrderStatus.Paid, o => o.RemoveDiscount().Error },
+        { OrderStatus.Paid, o => o.SetTip(new Percentage(15m)).Error },
+        { OrderStatus.Paid, o => o.RemoveTip().Error },
+        { OrderStatus.Paid, o => o.SetPaymentMethod(PaymentMethod.Card).Error },
+        { OrderStatus.Cancelled, o => o.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(1.00m))).Error },
+        { OrderStatus.Cancelled, o => o.RemoveDiscount().Error },
+        { OrderStatus.Cancelled, o => o.SetTip(new Percentage(15m)).Error },
+        { OrderStatus.Cancelled, o => o.RemoveTip().Error },
+        { OrderStatus.Cancelled, o => o.SetPaymentMethod(PaymentMethod.Card).Error },
     };
 
     [Theory]
     [MemberData(nameof(ClosedOrderChanges))]
     public void Items_discount_tip_and_payment_method_cannot_change_once_the_order_is_closed(
-        OrderStatus status, Action<Order> change)
+        OrderStatus status, Func<Order, Error> change)
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         order.AddItem(Burger, 1, null);
         var totalsBefore = order.CalculateTotals();
         Close(order, status);
 
-        Assert.Throws<DomainException>(() => change(order));
+        Assert.Equal(ErrorCode.OrderNotOpen, change(order).Code);
         Assert.Equal(1, Assert.Single(order.Lines).Quantity);
         Assert.Equal(totalsBefore, order.CalculateTotals());
         Assert.Equal(PaymentMethod.Cash, order.PaymentMethod);
@@ -296,7 +296,7 @@ public class OrderTests
         Close(order, first);
         var (paidAt, cancelledAt) = (order.PaidAt, order.CancelledAt);
 
-        Assert.Throws<DomainException>(() => Close(order, second, ClosedAt.AddMinutes(5)));
+        Assert.Equal(ErrorCode.OrderNotOpen, Close(order, second, ClosedAt.AddMinutes(5)).Error.Code);
         Assert.Equal(first, order.Status);
         Assert.Equal(paidAt, order.PaidAt);
         Assert.Equal(cancelledAt, order.CancelledAt);
@@ -318,16 +318,14 @@ public class OrderTests
         Assert.Equal(TimeSpan.Zero, stored!.Value.Offset);
     }
 
-    private static void Close(Order order, OrderStatus status, DateTimeOffset? at = null)
+    private static Result Close(Order order, OrderStatus status, DateTimeOffset? at = null)
     {
         switch (status)
         {
             case OrderStatus.Paid:
-                order.Pay(at ?? ClosedAt);
-                break;
+                return order.Pay(at ?? ClosedAt);
             case OrderStatus.Cancelled:
-                order.Cancel(at ?? ClosedAt);
-                break;
+                return order.Cancel(at ?? ClosedAt);
             default:
                 throw new ArgumentOutOfRangeException(nameof(status), status, "Paid or Cancelled");
         }

@@ -1,7 +1,7 @@
-using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
+using Pos.Domain.Common;
 using Pos.Infrastructure.Persistence;
 
 namespace Pos.Api.IntegrationTests;
@@ -9,8 +9,8 @@ namespace Pos.Api.IntegrationTests;
 /// <summary>
 /// Hidden verifier from Day 3, adapted to the Day 6 API (menu items created via the API, table <c>order_lines</c>).
 /// Two terminals (or a double-tap) adding to the same order at the same time.
-/// The invariant, whatever the fix (retry or 409): no 5xx, every rejected request
-/// is a 409, and the stored quantity equals exactly the number of accepted requests.
+/// The invariant, whatever the fix (retry or conflict): no 5xx, every rejected request
+/// is a conflict, and the stored quantity equals exactly the number of accepted requests.
 /// </summary>
 public class ConcurrentAddItemTests(PosApiFactory factory) : IClassFixture<PosApiFactory>
 {
@@ -23,12 +23,12 @@ public class ConcurrentAddItemTests(PosApiFactory factory) : IClassFixture<PosAp
     {
         var cappuccino = await _client.CreateMenuItemAsync("Cappuccino", 4.50m);
         var orderId = await _client.CreateOrderAsync();
-        (await _client.AddItemAsync(orderId, cappuccino, 1)).EnsureSuccessStatusCode();
+        await (await _client.AddItemAsync(orderId, cappuccino, 1)).AssertSuccessAsync();
 
         var statuses = await AddItemConcurrentlyAsync(orderId, cappuccino);
 
         AssertNoServerErrorsAndOnlyConflicts(statuses);
-        var accepted = statuses.Count(s => s == HttpStatusCode.OK);
+        var accepted = statuses.Count(s => s is null);
         Assert.Equal(1 + accepted, await StoredQuantityAsync(orderId, cappuccino));
     }
 
@@ -41,23 +41,23 @@ public class ConcurrentAddItemTests(PosApiFactory factory) : IClassFixture<PosAp
         var statuses = await AddItemConcurrentlyAsync(orderId, espresso);
 
         AssertNoServerErrorsAndOnlyConflicts(statuses);
-        var accepted = statuses.Count(s => s == HttpStatusCode.OK);
+        var accepted = statuses.Count(s => s is null);
         Assert.True(accepted >= 1, "At least one of the concurrent adds must succeed.");
         Assert.Equal(accepted, await StoredQuantityAsync(orderId, espresso));
     }
 
-    private static void AssertNoServerErrorsAndOnlyConflicts(IReadOnlyList<HttpStatusCode> statuses)
+    private static void AssertNoServerErrorsAndOnlyConflicts(IReadOnlyList<ErrorCode?> statuses)
     {
         var unexpected = statuses
-            .Where(s => s is not (HttpStatusCode.OK or HttpStatusCode.Conflict))
+            .Where(s => s is not (null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict))
             .GroupBy(s => s)
-            .Select(g => $"{(int)g.Key} x{g.Count()}")
+            .Select(g => $"{g.Key} x{g.Count()}")
             .ToList();
-        Assert.True(unexpected.Count == 0, $"Expected only 200 or 409, got: {string.Join(", ", unexpected)}");
+        Assert.True(unexpected.Count == 0, $"Expected only success or a conflict, got: {string.Join(", ", unexpected)}");
     }
 
     /// <summary>Releases all requests at once so they hit the same order row together.</summary>
-    private async Task<IReadOnlyList<HttpStatusCode>> AddItemConcurrentlyAsync(Guid orderId, Guid menuItemId)
+    private async Task<IReadOnlyList<ErrorCode?>> AddItemConcurrentlyAsync(Guid orderId, Guid menuItemId)
     {
         var start = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var requests = Enumerable.Range(0, ConcurrentRequests)
@@ -65,7 +65,7 @@ public class ConcurrentAddItemTests(PosApiFactory factory) : IClassFixture<PosAp
             {
                 await start.Task;
                 using var response = await _client.AddItemAsync(orderId, menuItemId, 1);
-                return response.StatusCode;
+                return await response.OutcomeAsync();
             })
             .ToList();
 

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Pos.Application.Common;
+using Pos.Domain.Common;
 
 namespace Pos.Infrastructure.Persistence;
 
@@ -8,28 +9,29 @@ internal sealed class UnitOfWork(PosDbContext db) : IUnitOfWork
 {
     private const string ChangedByAnotherRequest = "The data was changed by another request. Reload and try again.";
 
-    public async Task SaveChangesAsync(CancellationToken cancellationToken)
+    public async Task<Result> SaveChangesAsync(CancellationToken cancellationToken)
     {
         try
         {
             await db.SaveChangesAsync(cancellationToken);
+            return Result.Ok();
         }
-        catch (DbUpdateConcurrencyException ex)
+        catch (DbUpdateConcurrencyException)
         {
-            throw new ConflictException(ChangedByAnotherRequest, ex);
+            return Result.Fail(new Error(ErrorCode.ConcurrentChange, ChangedByAnotherRequest));
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException
         {
             SqlState: PostgresErrorCodes.UniqueViolation or PostgresErrorCodes.ForeignKeyViolation
         })
         {
-            throw new ConflictException("The change conflicts with existing data.", ex);
+            return Result.Fail(new Error(ErrorCode.DataConflict, "The change conflicts with existing data."));
         }
         catch (Exception ex) when (IsDeadlock(ex))
         {
             // Two requests changing the same order took row or index locks in a different order (e.g. inserting the
             // parts of a saved split); Postgres aborts one of them. It lost the race, like a concurrency-token conflict.
-            throw new ConflictException(ChangedByAnotherRequest, ex);
+            return Result.Fail(new Error(ErrorCode.ConcurrentChange, ChangedByAnotherRequest));
         }
     }
 

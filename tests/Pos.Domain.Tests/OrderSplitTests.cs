@@ -18,7 +18,7 @@ public class OrderSplitTests
     {
         var order = Order.Create(DateTimeOffset.UtcNow, taxRate, CardSurcharge);
         var lineIds = prices
-            .Select((price, i) => order.AddItem(new MenuItem($"Item {i}", Money.Usd(price)), 1, notes: null).Id)
+            .Select((price, i) => order.AddItem(new MenuItem($"Item {i}", Money.Usd(price)), 1, notes: null).Data.Id)
             .ToArray();
         return (order, lineIds);
     }
@@ -30,7 +30,7 @@ public class OrderSplitTests
     {
         var (order, l) = OrderWithLines(NycTax, 3.33m, 3.33m, 3.33m); // tax 8.875% of 9.99 = 0.8866 → 0.89
 
-        var parts = order.Split([Part(l[0]), Part(l[1]), Part(l[2])]);
+        var parts = order.Split([Part(l[0]), Part(l[1]), Part(l[2])]).Data;
 
         // 0.89 / 3 = 0.2966 → 0.29 each, leftover 0.02.
         Assert.Equal([Money.Usd(0.31m), Money.Usd(0.29m), Money.Usd(0.29m)], parts.Select(p => p.Tax));
@@ -42,7 +42,7 @@ public class OrderSplitTests
     {
         var (order, l) = OrderWithLines(NycTax, 1.00m, 2.33m); // tax 8.875% of 3.33 = 0.2955 → 0.30
 
-        var parts = order.Split([Part(l[0]), Part(l[1])]);
+        var parts = order.Split([Part(l[0]), Part(l[1])]).Data;
 
         // 0.30 × 1.00/3.33 = 0.0900 → 0.09; 0.30 × 2.33/3.33 = 0.2099 → 0.20; leftover 0.01 to the 2.33 part.
         Assert.Equal([Money.Usd(0.09m), Money.Usd(0.21m)], parts.Select(p => p.Tax));
@@ -54,7 +54,7 @@ public class OrderSplitTests
     {
         var (order, l) = OrderWithLines(NycTax, 0.06m, 0.06m, 0.06m, 0.06m); // tax 8.875% of 0.24 = 0.0213 → 0.02
 
-        var parts = order.Split([Part(l[0]), Part(l[1]), Part(l[2]), Part(l[3])]);
+        var parts = order.Split([Part(l[0]), Part(l[1]), Part(l[2]), Part(l[3])]).Data;
 
         // 0.02 / 4 = 0.005 → 0.00 each, leftover 0.02 to the first part (tie). Rounding half up would give 0.01 each
         // and a leftover of −0.01: taxes [−0.01, 0.01, 0.01, 0.01].
@@ -68,7 +68,7 @@ public class OrderSplitTests
     {
         var (order, l) = OrderWithLines(NycTax, 0.05m, 0.05m, 0.05m, 0.05m); // tax 8.875% of 0.20 = 0.01775 → 0.02
 
-        var parts = order.Split([Part(l[0]), Part(l[1]), Part(l[2]), Part(l[3])]);
+        var parts = order.Split([Part(l[0]), Part(l[1]), Part(l[2]), Part(l[3])]).Data;
 
         // 0.02 / 4 = 0.005 → 0.00 each, leftover 0.02 to the first part; half up would leave the first part −0.01.
         Assert.Equal([Money.Usd(0.02m), Money.Usd(0.00m), Money.Usd(0.00m), Money.Usd(0.00m)], parts.Select(p => p.Tax));
@@ -85,7 +85,7 @@ public class OrderSplitTests
         order.SetTip(new Percentage(18m));
         // Order: subtotal 9.99, discount 1.50, surcharge 0.25, tax 0.78, tip 1.53, total 11.05.
 
-        var parts = order.Split([Part(l[0]), Part(l[1]), Part(l[2])]);
+        var parts = order.Split([Part(l[0]), Part(l[1]), Part(l[2])]).Data;
 
         Assert.All(parts, p => Assert.Equal(Money.Usd(0.50m), p.Discount));
         Assert.Equal([Money.Usd(0.09m), Money.Usd(0.08m), Money.Usd(0.08m)], parts.Select(p => p.Surcharge));
@@ -135,7 +135,7 @@ public class OrderSplitTests
             order.SetTip(new Percentage(18m));
         }
 
-        var parts = order.Split([Part(l[0], l[2]), Part(l[1]), Part(l[3], l[4])]);
+        var parts = order.Split([Part(l[0], l[2]), Part(l[1]), Part(l[3], l[4])]).Data;
 
         var totals = order.CalculateTotals();
         Money Sum(Func<SplitPart, Money> amount) => parts.Aggregate(Money.Usd(0m), (sum, p) => sum + amount(p));
@@ -158,7 +158,7 @@ public class OrderSplitTests
     {
         var (order, l) = OrderWithLines(NycTax, 3.33m, 4.17m);
 
-        var error = Assert.Throws<DomainException>(() => order.Split([Part(l[0], l[1])]));
+        var error = order.Split([Part(l[0], l[1])]).Error;
 
         Assert.Equal("A split needs at least two parts.", error.Message);
     }
@@ -168,7 +168,7 @@ public class OrderSplitTests
     {
         var (order, l) = OrderWithLines(NycTax, 3.33m, 4.17m, 2.51m);
 
-        var error = Assert.Throws<DomainException>(() => order.Split([Part(l[0]), Part(l[1])]));
+        var error = order.Split([Part(l[0]), Part(l[1])]).Error;
 
         Assert.Equal("Every line of the order must be in a part of the split.", error.Message);
     }
@@ -178,7 +178,7 @@ public class OrderSplitTests
     {
         var (order, l) = OrderWithLines(NycTax, 3.33m, 4.17m);
 
-        Assert.Throws<DomainException>(() => order.Split([Part(l[0], l[1]), Part(l[1])]));
+        Assert.Equal(ErrorCode.InvalidSplit, order.Split([Part(l[0], l[1]), Part(l[1])]).Error.Code);
     }
 
     [Fact]
@@ -186,7 +186,7 @@ public class OrderSplitTests
     {
         var (order, l) = OrderWithLines(NycTax, 3.33m);
 
-        Assert.Throws<DomainException>(() => order.Split([Part(l[0]), Part(Guid.NewGuid())]));
+        Assert.Equal(ErrorCode.LineNotOnOrder, order.Split([Part(l[0]), Part(Guid.NewGuid())]).Error.Code);
     }
 
     [Fact]
@@ -194,7 +194,7 @@ public class OrderSplitTests
     {
         var (order, l) = OrderWithLines(NycTax, 3.33m);
 
-        Assert.Throws<DomainException>(() => order.Split([Part(l[0]), Part()]));
+        Assert.Equal(ErrorCode.InvalidSplit, order.Split([Part(l[0]), Part()]).Error.Code);
     }
 
     [Fact]
@@ -202,7 +202,7 @@ public class OrderSplitTests
     {
         var (order, _) = OrderWithLines(NycTax, 3.33m);
 
-        var error = Assert.Throws<DomainException>(() => order.Split([]));
+        var error = order.Split([]).Error;
 
         Assert.Equal("A split needs at least two parts.", error.Message);
     }
