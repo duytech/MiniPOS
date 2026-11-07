@@ -186,6 +186,15 @@ test('git commit && git push in one command runs the checks on the code file it 
   assert.match(result.stderr, CHECKS_RAN);
 });
 
+test('a git status that fails next to a docs-only push runs the checks', () => {
+  trackedBranch();
+  commit('docs/x.md');
+  write('.git/index', 'not an index');
+  const result = runHook();
+  assert.equal(result.status, BLOCKED);
+  assert.match(result.stderr, CHECKS_RAN);
+});
+
 test('blocks when the checks reach their time limit', () => {
   trackedBranch();
   commit('src/b.cs');

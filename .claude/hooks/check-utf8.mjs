@@ -16,7 +16,16 @@ const beforeCommit = process.argv.includes('--before-commit');
 
 if (beforeCommit && !runsGit(input, 'commit')) process.exit(0);
 
-const notUtf8 = changedFiles(root).filter((file) => {
+let files;
+try {
+  files = changedFiles(root);
+} catch (error) {
+  // Only exit 2 blocks: a crash would let the commit through.
+  process.stderr.write(`The UTF-8 check could not list the changed files: ${error.message}\n`);
+  process.exit(2);
+}
+
+const notUtf8 = files.filter((file) => {
   if (!TEXT_EXTENSIONS.includes(path.extname(file).toLowerCase())) return false;
   try {
     new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(path.join(root, file)));

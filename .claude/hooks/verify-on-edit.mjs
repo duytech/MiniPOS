@@ -6,7 +6,7 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { ensure, stopStarted } from '../../scripts/services.mjs';
-import { readHookInput, runsGit } from './git-changes.mjs';
+import { changedFiles, readHookInput, runsGit } from './git-changes.mjs';
 
 const MAX_ERROR_LINES = 40;
 // Claude Code runs the command when a hook passes its timeout (tested on #103), so the hook blocks by itself first. The
@@ -23,10 +23,15 @@ const started = Date.now();
 const git = (...args) => spawnSync('git', args, { cwd: root, encoding: 'utf8' });
 
 const isCode = (file) => !NOT_CODE.test(file);
-const uncommitted = (git('status', '--porcelain', '-z', '--no-renames', '--untracked-files=all').stdout ?? '')
-  .split('\0')
-  .filter(Boolean)
-  .map((entry) => entry.slice(3));
+
+/** Whether an uncommitted file is not *.md or docs/. A status that cannot be read counts as a change. */
+function uncommittedChangesCode() {
+  try {
+    return changedFiles(root, { deleted: true }).some(isCode);
+  } catch {
+    return true;
+  }
+}
 
 /** Whether the commits to push change a file other than *.md and docs/. A base that cannot be read counts as a change. */
 function commitsChangeCode() {
@@ -38,7 +43,7 @@ function commitsChangeCode() {
 }
 
 // Uncommitted files count too: in `git commit -a && git push` the commit has not run yet when this hook reads the repo.
-if (!uncommitted.some(isCode) && !commitsChangeCode()) process.exit(0);
+if (!uncommittedChangesCode() && !commitsChangeCode()) process.exit(0);
 
 /** Keeps the distinct lines that match (compilers repeat the same error per target). */
 const matching = (pattern) => (lines) => [...new Set(lines.filter((line) => pattern.test(line)).map((l) => l.trim()))];
