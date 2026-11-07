@@ -37,6 +37,7 @@
     <File Path=".claude/hooks/protect-feature-state.mjs" />
     <File Path=".claude/hooks/tests-only.mjs" />
     <File Path=".claude/hooks/verify-on-edit.mjs" />
+    <File Path=".claude/hooks/verify-on-edit.test.mjs" />
   </Folder>
   <Folder Name="/.claude/skills/" />
   <Folder Name="/.claude/skills/add-angular-feature/">
