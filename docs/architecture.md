@@ -4,7 +4,8 @@ Rules for the .NET Clean Architecture API (`src/`). `dotnet test tests/Pos.Archi
 lists each offending member.
 
 - One use case = one folder in Application with `XxxCommand`/`XxxQuery` (record), `XxxHandler`
-  (`ICommandHandler<TCommand, TResult>` / `IQueryHandler<TQuery, TResult>`), and `XxxValidator` (FluentValidation).
+  (`ICommandHandler<TCommand, TResult>` / `IQueryHandler<TQuery, TResult>`), and `XxxValidator` (FluentValidation) when
+  the request has shape to check.
   No service classes, no MediatR.
 - Validators check request shape (required, ranges, formats). Domain entities enforce invariants (status transitions,
   totals). Don't duplicate one in the other.

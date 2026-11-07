@@ -33,8 +33,8 @@ Do not pick a limit, default or merge behavior yourself. Not-found ids are 404 a
   (`Money`, `Percentage`), never raw `decimal`.
 - `<UseCase>Handler` (`ICommandHandler<,>` / `IQueryHandler<,>`): load through the repository, `?? throw new
   NotFoundException(...)`, call Domain, `unitOfWork.SaveChangesAsync` for commands, return a DTO built by `XxxDto.From`.
-- `<UseCase>Validator` (`internal sealed`, FluentValidation): shape only: ids not empty, ranges, formats. No rule the
-  Domain already enforces.
+- `<UseCase>Validator` (`internal sealed`, FluentValidation), when the request has shape to check: ids in the body not
+  empty, ranges, formats. No rule the Domain already enforces. A route id is not validated: the handler answers 404.
 - Register in `src/Pos.Application/DependencyInjection.cs` with `AddCommandHandler<,,>` / `AddQueryHandler<,,>` (these
   wrap the handler with the validators).
 
@@ -53,7 +53,7 @@ In the area's controller (`src/Pos.Api/Controllers/`):
 
 | Endpoint | Tests |
 |---|---|
-| Any | Validator theory in `tests/Pos.Application.Tests/ValidatorTests.cs` |
+| Has a validator | Validator theory in `tests/Pos.Application.Tests/ValidatorTests.cs` |
 | Any | Integration tests in `tests/Pos.Api.IntegrationTests`: happy path, each 4xx it declares |
 | Returns money | Assert raw JSON strings with exactly 2 decimals (`order.Money("total") == "15.40"`); a midpoint (x.xx5) case; list total == `GET /api/orders/{id}` total |
 | Changes Domain money | Domain unit test with exact cents and a midpoint case (`tests/Pos.Domain.Tests`) |
