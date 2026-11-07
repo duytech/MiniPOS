@@ -24,8 +24,25 @@ internal static class CallScanner
     public static bool IsMoneyArithmetic(MethodReference called) =>
         called.DeclaringType.FullName == typeof(Pos.Domain.Common.Money).FullName && MoneyOperators.Contains(called.Name);
 
+    /// <summary>A call whose value is a Result: the method's return value, or the awaited value of a Task of Result.</summary>
+    public static bool ReturnsResult(MethodReference called) =>
+        IsResult(called.ReturnType)
+        || (called.Name == "GetResult" && called.DeclaringType is GenericInstanceType awaiter
+            && awaiter.GenericArguments.Any(IsResult));
+
     /// <summary>Each matching call as (<c>Type.FullName.Method</c> of the caller in source, called method).</summary>
-    public static IEnumerable<(string Caller, string Call)> Scan(Assembly assembly, Func<MethodReference, bool> matches)
+    public static IEnumerable<(string Caller, string Call)> Scan(Assembly assembly, Func<MethodReference, bool> matches) =>
+        Scan(assembly, (called, _) => matches(called));
+
+    /// <summary>
+    /// Each call to a method returning a Result whose value is thrown away straight after the call.
+    /// shortcut: a Result stored in a variable that is never read is not found, move to a Roslyn analyzer if that bites.
+    /// </summary>
+    public static IEnumerable<(string Caller, string Call)> ScanDiscardedResults(Assembly assembly) =>
+        Scan(assembly, (called, instruction) => ReturnsResult(called) && NextReal(instruction)?.OpCode.Code == Code.Pop);
+
+    private static IEnumerable<(string Caller, string Call)> Scan(
+        Assembly assembly, Func<MethodReference, Instruction, bool> matches)
     {
         using var module = ModuleDefinition.ReadModule(assembly.Location);
 
@@ -35,11 +52,22 @@ internal static class CallScanner
         {
             if (instruction.OpCode.Code is Code.Call or Code.Callvirt or Code.Ldftn
                 && instruction.Operand is MethodReference called
-                && matches(called))
+                && matches(called, instruction))
             {
                 yield return ($"{SourceType(type).FullName}.{SourceMethodName(type, method)}", called.FullName);
             }
         }
+    }
+
+    private static bool IsResult(TypeReference type) =>
+        type.GetElementType().FullName is "Pos.Domain.Common.Result" or "Pos.Domain.Common.Result`1";
+
+    /// <summary>Debug builds put nops between instructions.</summary>
+    private static Instruction? NextReal(Instruction instruction)
+    {
+        var next = instruction.Next;
+        while (next?.OpCode.Code == Code.Nop) next = next.Next;
+        return next;
     }
 
     /// <summary>The type written in source: lambdas and async state machines are nested compiler-generated types.</summary>
