@@ -211,6 +211,18 @@ also runs the .NET tests against Postgres).
 - End to end: setup and run in [`tests/e2e/README.md`](tests/e2e/README.md), or
   `node scripts/verify-features.mjs` to verify every feature and start what is missing
 
+Test cases on 2026-11-07, counting each row of a theory as one case:
+
+| Group | Project | Test cases |
+| --- | --- | ---: |
+| Backend unit | `tests/Pos.Domain.Tests` | 147 |
+| Backend unit | `tests/Pos.Application.Tests` | 72 |
+| Architecture | `tests/Pos.ArchitectureTests` | 8 |
+| Frontend unit | Vitest in `web/` | 76 |
+| Integration | `tests/Pos.Api.IntegrationTests` | 236 |
+| End to end | Playwright in `tests/e2e` (21 tests, on desktop and phone width) | 42 |
+| **Total** | | **581** |
+
 ## Repository layout
 
 ```text
