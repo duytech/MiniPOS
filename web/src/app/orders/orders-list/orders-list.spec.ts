@@ -54,7 +54,7 @@ describe('OrdersList', () => {
 
   const loadFirstPage = (result = page([order()])) => {
     fixture.detectChanges();
-    expectList().flush(result);
+    expectList().flush({ isSuccess: true, data: result, error: null });
     fixture.detectChanges();
   };
 
@@ -79,7 +79,7 @@ describe('OrdersList', () => {
     const req = expectList();
 
     expect(params(req)).toEqual({ search: null, status: null, page: '1', pageSize: String(PAGE_SIZE) });
-    req.flush(page([order({ number: 12, total: 18.85, status: 'Paid' })]));
+    req.flush({ isSuccess: true, data: page([order({ number: 12, total: 18.85, status: 'Paid' })]), error: null });
     fixture.detectChanges();
 
     expect(rows().length).toBe(1);
@@ -132,7 +132,7 @@ describe('OrdersList', () => {
 
     expect(stale.cancelled).toBe(true);
     expect(params(latest).search).toBe('coffee');
-    latest.flush(page([order({ number: 99, itemNames: ['Coffee'] })]));
+    latest.flush({ isSuccess: true, data: page([order({ number: 99, itemNames: ['Coffee'] })]), error: null });
     fixture.detectChanges();
     expect(rows().map((r) => r.textContent)).toEqual([expect.stringContaining('#99')]);
   });
@@ -142,7 +142,7 @@ describe('OrdersList', () => {
 
     typeSearch('pho');
     vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
-    expectList().flush(page([order()]));
+    expectList().flush({ isSuccess: true, data: page([order()]), error: null });
     selectStatus('Paid');
 
     expect(params(expectList())).toEqual({ search: 'pho', status: 'Paid', page: '1', pageSize: String(PAGE_SIZE) });
@@ -171,7 +171,7 @@ describe('OrdersList', () => {
     (el('next') as HTMLButtonElement).click();
     const second = expectList();
     expect(params(second).page).toBe('2');
-    second.flush(page([order({ number: 3 })], 45, 2));
+    second.flush({ isSuccess: true, data: page([order({ number: 3 })], 45, 2), error: null });
     fixture.detectChanges();
     expect(el('range')?.textContent).toContain('Showing 21–21 of 45');
     expect((el('previous') as HTMLButtonElement).disabled).toBe(false);
@@ -191,7 +191,7 @@ describe('OrdersList', () => {
     expect(rows()[0].textContent).toContain('#12');
     expect(el('loading')).not.toBeNull();
 
-    expectList().flush(page([order({ number: 7 })]));
+    expectList().flush({ isSuccess: true, data: page([order({ number: 7 })]), error: null });
     fixture.detectChanges();
     expect(rows()[0].textContent).toContain('#7');
     expect(el('loading')).toBeNull();
@@ -210,7 +210,7 @@ describe('OrdersList', () => {
 
     typeSearch('coffee');
     vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS);
-    expectList().flush(page([order({ number: 5 })]));
+    expectList().flush({ isSuccess: true, data: page([order({ number: 5 })]), error: null });
     fixture.detectChanges();
     expect(el('error')).toBeNull();
     expect(rows()[0].textContent).toContain('#5');

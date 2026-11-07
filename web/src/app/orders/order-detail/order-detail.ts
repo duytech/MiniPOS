@@ -1,5 +1,4 @@
 import { CurrencyPipe } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, Signal, computed, inject, input } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -8,7 +7,7 @@ import { EMPTY, Observable, Subject, catchError, concatMap, defer, map, merge, o
 import { Order, OrderLine, statusClass } from '../order.models';
 import { OrderSplitSection } from '../order-split/order-split';
 import { OrdersApi } from '../orders-api';
-import { GENERIC_ERROR, problemDetail } from '../problem-detail';
+import { GENERIC_ERROR, errorMessage, isConflict, isNotFound } from '../api-error';
 
 export const CHANGED_MESSAGE = 'The order changed. Showing the latest version.';
 
@@ -82,7 +81,7 @@ export class OrderDetail {
     this.writes.next({ kind: 'step', lineId: line.id, step: -1 });
   }
 
-  /** The split section saw a 409 (or its split vanished): show the latest order and say why. */
+  /** The split section saw a conflict (or its split vanished): show the latest order and say why. */
   protected splitChanged(): void {
     this.reloads.next();
   }
@@ -90,8 +89,8 @@ export class OrderDetail {
   private load(id: string): Observable<Patch> {
     return this.api.get(id).pipe(
       map((order): Patch => ({ order, loading: false })),
-      catchError((error: HttpErrorResponse) =>
-        of<Patch>(error.status === 404 ? { loading: false, notFound: true } : { loading: false, error: GENERIC_ERROR }),
+      catchError((error: unknown) =>
+        of<Patch>(isNotFound(error) ? { loading: false, notFound: true } : { loading: false, error: GENERIC_ERROR }),
       ),
       // A different order: start from an empty screen, not the previous order's lines.
       startWith<Patch>(INITIAL_STATE),
@@ -128,17 +127,17 @@ export class OrderDetail {
 
       return request.pipe(
         map((updated): Patch => ({ order: updated, loading: false, error: null })),
-        catchError((error: HttpErrorResponse) => this.writeFailed(id, error)),
+        catchError((error: unknown) => this.writeFailed(id, error)),
         startWith<Patch>({ loading: true }), // keeps `order`: the previous data stays on screen
       );
     });
   }
 
-  private writeFailed(id: string, error: HttpErrorResponse): Observable<Patch> {
-    if (error.status === 409 || error.status === 404) {
+  private writeFailed(id: string, error: unknown): Observable<Patch> {
+    if (isConflict(error) || isNotFound(error)) {
       // Someone else changed the order (or removed the line): show the latest version.
       return this.reload(id);
     }
-    return of<Patch>({ loading: false, error: problemDetail(error) });
+    return of<Patch>({ loading: false, error: errorMessage(error) });
   }
 }

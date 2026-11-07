@@ -25,6 +25,8 @@ describe('OrdersApi', () => {
     http = TestBed.inject(HttpTestingController);
   });
 
+  const ok = <T>(data: T) => ({ isSuccess: true, data, error: null });
+
   afterEach(() => http.verify());
 
   it('sends only paging when there is no search or status', () => {
@@ -35,7 +37,7 @@ describe('OrdersApi', () => {
     expect(req.request.params.keys().sort()).toEqual(['page', 'pageSize']);
     expect(req.request.params.get('page')).toBe('3');
     expect(req.request.params.get('pageSize')).toBe('50');
-    req.flush({ items: [], page: 3, pageSize: 50, totalCount: 0 });
+    req.flush(ok({ items: [], page: 3, pageSize: 50, totalCount: 0 }));
   });
 
   it('sends search and status when they are set', () => {
@@ -44,7 +46,7 @@ describe('OrdersApi', () => {
     const req = http.expectOne((r) => r.url === '/api/orders');
     expect(req.request.params.get('search')).toBe('pho');
     expect(req.request.params.get('status')).toBe('Paid');
-    req.flush({ items: [], page: 1, pageSize: 20, totalCount: 0 });
+    req.flush(ok({ items: [], page: 1, pageSize: 20, totalCount: 0 }));
   });
 
   it('returns the page exactly as the API sent it', () => {
@@ -66,7 +68,7 @@ describe('OrdersApi', () => {
     let received: unknown;
     api.list(query()).subscribe((result) => (received = result));
 
-    http.expectOne((r) => r.url === '/api/orders').flush(body);
+    http.expectOne((r) => r.url === '/api/orders').flush(ok(body));
 
     expect(received).toEqual(body);
   });
@@ -94,7 +96,7 @@ describe('OrdersApi', () => {
 
     const req = http.expectOne('/api/orders/o1');
     expect(req.request.method).toBe('GET');
-    req.flush(order);
+    req.flush(ok(order));
 
     expect(received).toEqual(order);
   });
@@ -105,7 +107,7 @@ describe('OrdersApi', () => {
 
     const req = http.expectOne('/api/orders/o1/lines/l1');
     expect(req.request.method).toBe('DELETE');
-    req.flush(order);
+    req.flush(ok(order));
 
     expect(received).toEqual(order);
   });
@@ -117,7 +119,7 @@ describe('OrdersApi', () => {
     const req = http.expectOne('/api/orders/o1/lines/l1/quantity');
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({ quantity: 3 });
-    req.flush(order);
+    req.flush(ok(order));
 
     expect(received).toEqual(order);
   });
@@ -137,7 +139,7 @@ describe('OrdersApi', () => {
     const req = http.expectOne('/api/orders/o1/split');
     expect(req.request.method).toBe('GET');
     expect(req.request.body).toBeNull();
-    req.flush(split);
+    req.flush(ok(split));
 
     expect(received).toEqual(split);
   });
@@ -149,7 +151,7 @@ describe('OrdersApi', () => {
     const req = http.expectOne('/api/orders/o1/split/preview');
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual({ parts: [{ lineIds: ['l1'] }, { lineIds: ['l2', 'l3'] }] });
-    req.flush(split);
+    req.flush(ok(split));
 
     expect(received).toEqual(split);
   });
@@ -161,18 +163,18 @@ describe('OrdersApi', () => {
     const req = http.expectOne('/api/orders/o1/split');
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({ parts: [{ lineIds: ['l1'] }, { lineIds: ['l2', 'l3'] }] });
-    req.flush(split);
+    req.flush(ok(split));
 
     expect(received).toEqual(split);
   });
 
-  it('removes the saved split with DELETE and completes on 204', () => {
+  it('removes the saved split with DELETE and completes', () => {
     let completed = false;
     api.removeSplit('o1').subscribe({ complete: () => (completed = true) });
 
     const req = http.expectOne('/api/orders/o1/split');
     expect(req.request.method).toBe('DELETE');
-    req.flush(null, { status: 204, statusText: 'No Content' });
+    req.flush(ok(true));
 
     expect(completed).toBe(true);
   });
