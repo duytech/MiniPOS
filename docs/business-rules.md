@@ -8,6 +8,9 @@ is the source of truth; when this file and the code disagree, fix this file.
 All routes are under `/api`. Errors are ProblemDetails: 400 validation, 404 not found, 409 concurrency conflict
 (Postgres `xmin`), 422 domain rule broken. Money is returned as numbers with exactly 2 decimals, USD only.
 
+A route id is not validated: an unknown id, including the all-zero GUID, is 404. An empty id in the request body is
+400: `menuItemId`, and each line id in `parts` of save split and preview split.
+
 ## Order status
 - `Open` → `Paid` or `Cancelled`. Paid and Cancelled are final; `PaidAt` / `CancelledAt` record when.
 - Items, discount, tip, payment method and the saved split change only while the order is open (else 422).
