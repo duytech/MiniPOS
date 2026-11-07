@@ -2,6 +2,11 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-07: No OpenAPI endpoint (#119)
+- **What:** removed `AddOpenApi`, `MapOpenApi` and the `Microsoft.AspNetCore.OpenApi` package.
+- **Why:** no test, client or launch profile used the endpoint, and `src/Pos.Api/Pos.Api.http` covers calling the API by
+  hand.
+
 ## 2026-11-07: Pos.slnx keeps its hand-kept file lists (#117)
 - **What:** `Pos.slnx` keeps every `<File>` entry that #96 added, and gains the missing
   `.claude/hooks/verify-on-edit.test.mjs`.
@@ -235,7 +240,7 @@ Important design decisions: what, why, when. Newest first.
 - **Profile, not a second compose file:** plain `docker compose up -d` (CLAUDE.md, `init.sh`,
   `scripts/services.mjs`) still starts only `db`.
 - **Migrations:** `Database:MigrateOnStartup` (default false) makes a non-Development host migrate on startup. The
-  container sets it and runs as Production, so OpenAPI and developer error pages stay off.
+  container sets it and runs as Production, so developer error pages stay off.
 
 ## 2026-11-03: A spec, not a lint rule, catches money arithmetic in the frontend (#70)
 - **What:** a page that shows money has a Vitest spec that collects every `$x.xx` on screen and checks each one is a

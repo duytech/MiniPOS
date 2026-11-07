@@ -17,7 +17,6 @@ public static class ApiDependencyInjection
             });
         services.AddProblemDetails();
         services.AddExceptionHandler<ApiExceptionHandler>();
-        services.AddOpenApi();
         return services;
     }
 }
