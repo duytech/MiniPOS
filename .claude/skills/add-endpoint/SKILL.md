@@ -56,7 +56,7 @@ In the area's controller (`src/Pos.Api/Controllers/`):
 | Returns money | Assert raw JSON strings with exactly 2 decimals (`order.Money("total") == "15.40"`); a midpoint (x.xx5) case; list total == `GET /api/orders/{id}` total |
 | Changes Domain money | Domain unit test with exact cents and a midpoint case (`tests/Pos.Domain.Tests`) |
 | Changes an order | Concurrency test: N parallel requests that would each succeed alone (e.g. removing *different* lines), then the same racing add-item; only successes and conflicts, and the stored rows show exactly the accepted requests. When a race can legitimately break a Domain rule (a removal racing a fixed discount), allow that code too and assert the rule holds in the stored rows |
-| Moves the order to another status (pay, cancel) | Only one request can ever win, so the "each would succeed alone" pattern does not fit: N parallel requests → exactly one success, the rest `ConcurrentChange`/`OrderNotOpen`, at least one `ConcurrentChange`; competing transitions (pay vs cancel) → the stored status is the winner's; the transition racing add-item → stored quantity = the accepted adds |
+| Moves the order to another status (pay, cancel) | Only one request can ever win, so the "each would succeed alone" pattern does not fit: N parallel requests through `OrderRace.RunAsync` (so every request loads the order before any commits) → exactly one success, the rest `ConcurrentChange`, at least one; without it a loser can load the closed order and answer `OrderNotOpen`; competing transitions (pay vs cancel) → the stored status is the winner's; the transition racing add-item → stored quantity = the accepted adds |
 
 Copy helpers from the existing test classes (see templates); add new HTTP helpers to `ApiClient.cs`.
 Tests check money against what the API returns (`GET /api/orders/{id}`), never against a total summed in SQL or LINQ:
@@ -65,6 +65,7 @@ that would be a second total implementation. SQL in tests reads stored columns (
 ## 5. Verify
 
 - `dotnet build Pos.slnx` (0 warnings), `docker compose up -d`, `dotnet test Pos.slnx` (integration tests need the DB).
-- Check the concurrency test really races: at least one `ConcurrentChange` in a run, not N sequential successes.
+- Check the concurrency test really races: at least one `ConcurrentChange` in a run, not N sequential successes; use
+  `OrderRace.RunAsync` when the test asserts one.
 - The `PreToolUse` hook runs every check only before `git push`; while you work, build and tests are yours to run.
-- Summary: endpoint, status codes, the business rules you were given, anything still open.
+- Summary: endpoint, error codes, the business rules you were given, anything still open.

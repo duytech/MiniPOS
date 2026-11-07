@@ -19,9 +19,10 @@ interface ScreenState {
   data: Thing | null;
   loading: boolean;
   error: string | null;
+  notFound: boolean;
 }
 
-const INITIAL_STATE: ScreenState = { data: null, loading: true, error: null };
+const INITIAL_STATE: ScreenState = { data: null, loading: true, error: null, notFound: false };
 
 protected readonly state = toSignal(
   request$.pipe(
@@ -29,7 +30,7 @@ protected readonly state = toSignal(
       this.api.load(query).pipe(
         map((data): Partial<ScreenState> => ({ data, loading: false, error: null })),
         catchError(() => of<Partial<ScreenState>>({ loading: false, error: 'Could not load.' })),
-        startWith<Partial<ScreenState>>({ loading: true, error: null }), // keeps `data`: previous data stays
+        startWith<Partial<ScreenState>>({ loading: true, error: null, notFound: false }), // keeps `data`: previous data stays
       ),
     ),
     scan((state: ScreenState, patch: Partial<ScreenState>) => ({ ...state, ...patch }), INITIAL_STATE),

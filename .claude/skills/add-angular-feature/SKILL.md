@@ -61,7 +61,7 @@ from `src/Pos.Api/Controllers` and the DTOs in `src/Pos.Application`.
 
 | What | Test |
 |---|---|
-| Each new service method | method, URL, params/body; returns the body unchanged (`orders-api.spec.ts`) |
+| Each new service method | method, URL, params/body; a success envelope returns its `data`, a failure envelope throws `ApiError` (`orders-api.spec.ts`, `api-error.spec.ts`) |
 | Money on screen | the exact string from the API value (`15.4` → `$15.40`, `0` → `$0.00`) |
 | No derived money | every `$x.xx` on the page is a value the API sent; pick amounts so no sum or difference of two is another (`order-detail.spec.ts`, "shows no money value the API did not send") |
 | Each write | request sent; screen shows the returned order; the chosen operator's behavior on a second click |

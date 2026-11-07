@@ -73,7 +73,9 @@ vs domain, repositories).
 ## API
 - Every expected answer is HTTP 200 with `{ isSuccess, data, error: { code, message, fields? } }`, including requests
   rejected before the handler (malformed JSON, wrong type, missing required field). `code` is an `ErrorCode`, never an
-  HTTP status. Only an unexpected error (a bug) is different: 500 ProblemDetails with no details.
+  HTTP status. Different: an unexpected error (a bug) is a 500 ProblemDetails with no details, and a request that never
+  reaches a controller (unknown route or an id that is not a GUID, wrong method, wrong Content-Type) gets the framework's
+  404, 405 or 415.
 - HTTP 200 does not mean success: a test checks `isSuccess` or the error code, not the status.
 - List endpoints are paged (`page`, `pageSize`, response includes `totalCount`). Never silently cap results.
 
