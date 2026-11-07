@@ -32,6 +32,7 @@
     <File Path=".claude/hooks/block-main-branch.mjs" />
     <File Path=".claude/hooks/block-main-branch.test.mjs" />
     <File Path=".claude/hooks/check-utf8.mjs" />
+    <File Path=".claude/hooks/check-utf8.test.mjs" />
     <File Path=".claude/hooks/git-changes.mjs" />
     <File Path=".claude/hooks/protect-feature-state.mjs" />
     <File Path=".claude/hooks/tests-only.mjs" />

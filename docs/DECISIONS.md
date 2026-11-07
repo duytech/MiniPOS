@@ -2,6 +2,13 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-07: One git status parser for the hooks (#113)
+- **What:** `changedFiles` in `git-changes.mjs` reads `git status -z --no-renames`, and `verify-on-edit.mjs` uses it with
+  `deleted: true`. `block-claude-coauthor.mjs` imports `readHookInput`. `check-utf8.test.mjs` runs the UTF-8 hook on a temp repo.
+- **Why:** without `-z` git quotes a non-ASCII name, so `check-utf8.mjs` could not read the file and blocked the commit.
+- **The user's choice, not in the issue:** `changedFiles` also drops `AD` and `MD` entries (staged, then deleted from the
+  working tree), which were reported as not UTF-8. `UD` and `DU` stay, because a conflict file is still on disk.
+
 ## 2026-11-06: verify-on-edit runs every check, only before git push (#103)
 - **What:** `verify-on-edit.mjs` no longer runs on `Stop` or before `git commit`. Before `git push` it runs build, all
   .NET tests, verifier script tests, web lint, build and Vitest, then E2E types and Playwright, and starts the services
