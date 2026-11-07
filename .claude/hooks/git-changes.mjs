@@ -6,6 +6,8 @@ import path from 'node:path';
 
 // Git options before the subcommand whose value is the next word (-C and --git-dir are read on their own).
 const OPTIONS_WITH_VALUE = /^(-c|--work-tree|--namespace|--config-env|--attr-source)$/;
+// A git status entry whose file is gone from the index or working tree. UD and DU are conflicts: the file is still there.
+const DELETED = /^(?:D[^U]|[^U]D)/;
 
 /** The hook input JSON from stdin (a BOM is dropped: Windows PowerShell may add one). */
 export function readHookInput() {
@@ -110,11 +112,14 @@ export function runsGit({ tool_name, tool_input }, subcommand) {
   return commands.some(({ sub }) => sub === subcommand);
 }
 
-/** Modified, added and untracked files (deleted ones need no check), relative to the repo root with forward slashes. */
-export function changedFiles(root) {
-  const status = spawnSync('git status --porcelain --untracked-files=all', { cwd: root, shell: true, encoding: 'utf8' });
+/** Modified, added and untracked files, relative to the repo root with forward slashes. Deleted ones only with `deleted: true`. */
+export function changedFiles(root, { deleted = false } = {}) {
+  const status = spawnSync('git', ['status', '--porcelain', '-z', '--no-renames', '--untracked-files=all'], {
+    cwd: root,
+    encoding: 'utf8',
+  });
   return (status.stdout ?? '')
-    .split(/\r?\n/)
-    .filter((line) => line.length > 3 && !line.startsWith(' D') && !line.startsWith('D '))
-    .map((line) => line.slice(3).replace(/^.* -> /, '').replace(/^"|"$/g, ''));
+    .split('\0')
+    .filter((entry) => entry && (deleted || !DELETED.test(entry)))
+    .map((entry) => entry.slice(3));
 }
