@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.7173973">
+﻿<Project Sdk="Microsoft.VisualStudio.JavaScript.Sdk/1.0.7173973">
   <PropertyGroup>
     <StartupCommand>npm start</StartupCommand>
     <JavaScriptTestFramework>Vitest</JavaScriptTestFramework>
@@ -6,5 +6,8 @@
     <!-- Keep `dotnet build` / `dotnet test` fast: the Angular app is built with npm, not MSBuild. -->
     <ShouldRunNpmInstall>false</ShouldRunNpmInstall>
     <ShouldRunBuildScript>false</ShouldRunBuildScript>
+
+    <TargetPlatformIdentifier></TargetPlatformIdentifier>
+    <TargetPlatformMoniker></TargetPlatformMoniker>
   </PropertyGroup>
 </Project>
