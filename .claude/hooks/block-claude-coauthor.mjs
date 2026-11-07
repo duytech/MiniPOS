@@ -4,6 +4,7 @@
 // Commits made outside Claude (a terminal, an IDE) are not checked.
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
+import { readHookInput } from './git-changes.mjs';
 
 // A trailer starts a line (or a -m "..." argument) and names an email: "Co-Authored-By: Claude <noreply@anthropic.com>".
 // Prose that mentions the trailer (indented, or without an email) is not one.
@@ -14,7 +15,7 @@ const PUBLISHES_TEXT =
 const LINE_CONTINUATION = /[\\`]\r?\n/g;
 const MESSAGE_FILE = /(?:^|\s)(?:-F|--file|--body-file)(?:=|\s+)(?:"([^"]+)"|'([^']+)'|(\S+))/g;
 
-const input = JSON.parse(readFileSync(0, 'utf8').replace(/^﻿/, '') || '{}');
+const input = readHookInput();
 const command = input.tool_input?.command ?? '';
 if (!PUBLISHES_TEXT.test(command.replace(LINE_CONTINUATION, ' '))) process.exit(0);
 
