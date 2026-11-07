@@ -211,7 +211,8 @@ also runs the .NET tests against Postgres).
 - End to end: setup and run in [`tests/e2e/README.md`](tests/e2e/README.md), or
   `node scripts/verify-features.mjs` to verify every feature and start what is missing
 
-Test cases on 2026-11-07, counting each row of a theory as one case:
+Test cases on 2026-11-07. Each row of a theory counts as one case, and each end to end test counts once per Playwright
+project:
 
 | Group | Project | Test cases |
 | --- | --- | ---: |
