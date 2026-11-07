@@ -2,6 +2,14 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-07: Pos.slnx keeps its hand-kept file lists (#117)
+- **What:** `Pos.slnx` keeps every `<File>` entry that #96 added, and gains the missing
+  `.claude/hooks/verify-on-edit.test.mjs`.
+- **The user's choice:** the files stay visible in Visual Studio. The issue's other options, keeping only the root files
+  or removing all `<File>` entries, were not taken.
+- **Limit:** `.slnx` has no wildcards and nothing checks for drift, so a new file needs its own entry by hand and the list
+  can fall behind again. `dotnet build` does not read these entries, so it does not catch that.
+
 ## 2026-11-07: init.sh shares the Docker Desktop start, not the db check (#114)
 - **What:** `init.sh` calls `ensureDockerDaemon` from `scripts/services.mjs` and deleted its own copy, so the wait is now
   300 s, not 120 s. It keeps `docker compose up -d --wait`.
