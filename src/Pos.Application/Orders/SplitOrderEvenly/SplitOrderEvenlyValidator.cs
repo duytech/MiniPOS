@@ -9,7 +9,6 @@ internal sealed class SplitOrderEvenlyValidator : AbstractValidator<SplitOrderEv
 
     public SplitOrderEvenlyValidator()
     {
-        RuleFor(q => q.OrderId).NotEmpty();
         RuleFor(q => q.Parts).InclusiveBetween(1, MaxParts);
     }
 }

@@ -211,11 +211,11 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
     }
 
     [Fact]
-    public async Task Get_with_an_empty_guid_order_id_is_400()
+    public async Task Get_with_an_empty_guid_order_id_is_404()
     {
         var response = await _client.GetAsync($"/api/orders/{EmptyGuid}/split");
 
-        await AssertProblemAsync(response, HttpStatusCode.BadRequest);
+        await AssertProblemAsync(response, HttpStatusCode.NotFound);
     }
 
     // ---------------------------------------------------------------- PUT /split
@@ -252,11 +252,11 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
     [Theory]
     [InlineData("put")]
     [InlineData("preview")]
-    public async Task Put_or_preview_with_an_empty_guid_order_id_is_400(string route)
+    public async Task Put_or_preview_with_an_empty_guid_order_id_is_404(string route)
     {
         var response = await SendSplitAsync(route, Guid.Empty, [[Guid.NewGuid()], [Guid.NewGuid()]]);
 
-        await AssertProblemAsync(response, HttpStatusCode.BadRequest);
+        await AssertProblemAsync(response, HttpStatusCode.NotFound);
     }
 
     public static TheoryData<string, string> BadBodies => new()
@@ -480,11 +480,11 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
     }
 
     [Fact]
-    public async Task Delete_with_an_empty_guid_order_id_is_400()
+    public async Task Delete_with_an_empty_guid_order_id_is_404()
     {
         var response = await _client.DeleteAsync($"/api/orders/{EmptyGuid}/split");
 
-        await AssertProblemAsync(response, HttpStatusCode.BadRequest);
+        await AssertProblemAsync(response, HttpStatusCode.NotFound);
     }
 
     [Theory]

@@ -103,11 +103,11 @@ public class CloseOrderApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
     [Theory]
     [InlineData("pay")]
     [InlineData("cancel")]
-    public async Task Empty_order_id_is_400(string action)
+    public async Task Empty_order_id_is_404(string action)
     {
         var response = await CloseAsync(action, Guid.Empty);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Theory]

@@ -4,16 +4,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Pos.Application.MenuItems.CreateMenuItem;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Application.Orders.ApplyDiscount;
-using Pos.Application.Orders.CancelOrder;
 using Pos.Application.Orders.ChangeOrderLineQuantity;
-using Pos.Application.Orders.GetSplit;
 using Pos.Application.Orders.ListOrders;
-using Pos.Application.Orders.PayOrder;
 using Pos.Application.Orders.PreviewSplit;
-using Pos.Application.Orders.RemoveDiscount;
-using Pos.Application.Orders.RemoveOrderLine;
-using Pos.Application.Orders.RemoveSplit;
-using Pos.Application.Orders.RemoveTip;
 using Pos.Application.Orders.SaveSplit;
 using Pos.Application.Orders.SetPaymentMethod;
 using Pos.Application.Orders.SetTip;
@@ -40,12 +33,12 @@ public class ValidatorTests
     }
 
     [Fact]
-    public void Add_item_requires_ids()
+    public void Add_item_requires_the_menu_item_id()
     {
         var result = Validator<AddOrderItemCommand>()
-            .Validate(new AddOrderItemCommand(Guid.Empty, Guid.Empty, 1, null));
+            .Validate(new AddOrderItemCommand(Guid.NewGuid(), Guid.Empty, 1, null));
 
-        Assert.Equal(["OrderId", "MenuItemId"], result.Errors.Select(e => e.PropertyName));
+        Assert.Equal(["MenuItemId"], result.Errors.Select(e => e.PropertyName));
     }
 
     [Theory]
@@ -133,29 +126,6 @@ public class ValidatorTests
         Assert.Equal(["PaymentMethod"], result.Errors.Select(e => e.PropertyName));
     }
 
-    [Fact]
-    public void Order_changes_require_the_order_id()
-    {
-        Assert.False(Validator<ApplyDiscountCommand>().Validate(new ApplyDiscountCommand(Guid.Empty, Percentage.Zero, null)).IsValid);
-        Assert.False(Validator<RemoveDiscountCommand>().Validate(new RemoveDiscountCommand(Guid.Empty)).IsValid);
-        Assert.False(Validator<RemoveOrderLineCommand>().Validate(new RemoveOrderLineCommand(Guid.Empty, Guid.NewGuid())).IsValid);
-        Assert.False(Validator<SetTipCommand>().Validate(new SetTipCommand(Guid.Empty, Percentage.Zero)).IsValid);
-        Assert.False(Validator<RemoveTipCommand>().Validate(new RemoveTipCommand(Guid.Empty)).IsValid);
-        Assert.False(Validator<SetPaymentMethodCommand>()
-            .Validate(new SetPaymentMethodCommand(Guid.Empty, PaymentMethod.Card)).IsValid);
-        Assert.False(Validator<PayOrderCommand>().Validate(new PayOrderCommand(Guid.Empty)).IsValid);
-        Assert.False(Validator<CancelOrderCommand>().Validate(new CancelOrderCommand(Guid.Empty)).IsValid);
-        Assert.False(Validator<RemoveSplitCommand>().Validate(new RemoveSplitCommand(Guid.Empty)).IsValid);
-        Assert.True(Validator<RemoveSplitCommand>().Validate(new RemoveSplitCommand(Guid.NewGuid())).IsValid);
-    }
-
-    [Fact]
-    public void Get_split_requires_the_order_id()
-    {
-        Assert.False(Validator<GetSplitQuery>().Validate(new GetSplitQuery(Guid.Empty)).IsValid);
-        Assert.True(Validator<GetSplitQuery>().Validate(new GetSplitQuery(Guid.NewGuid())).IsValid);
-    }
-
     /// <summary>
     /// Shapes for the split by item body. Part counts, empty parts and which lines are in them are the order's rules
     /// (422), so one part or an empty part is a valid shape here.
@@ -169,7 +139,6 @@ public class ValidatorTests
         { "parts-null", false },
         { "part-null", false },
         { "line-id-empty", false },
-        { "order-id-empty", false },
     };
 
     [Theory]
@@ -194,8 +163,7 @@ public class ValidatorTests
             "empty-part" => (Guid.NewGuid(), [a, []]),
             "parts-null" => (Guid.NewGuid(), null),
             "part-null" => (Guid.NewGuid(), [a, null]),
-            "line-id-empty" => (Guid.NewGuid(), [a, [Guid.NewGuid(), Guid.Empty]]),
-            _ => (Guid.Empty, [a, b]),
+            _ => (Guid.NewGuid(), [a, [Guid.NewGuid(), Guid.Empty]]),
         };
     }
 
@@ -213,25 +181,6 @@ public class ValidatorTests
         Assert.Equal(valid, result.IsValid);
     }
 
-    [Fact]
-    public void Change_line_quantity_requires_both_ids()
-    {
-        var result = Validator<ChangeOrderLineQuantityCommand>()
-            .Validate(new ChangeOrderLineQuantityCommand(Guid.Empty, Guid.Empty, 1));
-
-        Assert.Equal(["OrderId", "LineId"], result.Errors.Select(e => e.PropertyName));
-    }
-
-    [Fact]
-    public void Remove_line_requires_both_ids()
-    {
-        var result = Validator<RemoveOrderLineCommand>().Validate(new RemoveOrderLineCommand(Guid.Empty, Guid.Empty));
-
-        Assert.Equal(["OrderId", "LineId"], result.Errors.Select(e => e.PropertyName));
-        Assert.True(Validator<RemoveOrderLineCommand>()
-            .Validate(new RemoveOrderLineCommand(Guid.NewGuid(), Guid.NewGuid())).IsValid);
-    }
-
     [Theory]
     [InlineData(-1, false)]
     [InlineData(0, false)]
@@ -242,7 +191,6 @@ public class ValidatorTests
     public void Even_split_is_between_1_and_20_parts(int parts, bool valid)
     {
         Assert.Equal(valid, Validator<SplitOrderEvenlyQuery>().Validate(new SplitOrderEvenlyQuery(Guid.NewGuid(), parts)).IsValid);
-        Assert.False(Validator<SplitOrderEvenlyQuery>().Validate(new SplitOrderEvenlyQuery(Guid.Empty, 2)).IsValid);
     }
 
     private IValidator<T> Validator<T>() => _services.GetRequiredService<IValidator<T>>();

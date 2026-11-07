@@ -7,7 +7,6 @@ internal sealed class ApplyDiscountValidator : AbstractValidator<ApplyDiscountCo
 {
     public ApplyDiscountValidator()
     {
-        RuleFor(c => c.OrderId).NotEmpty();
         RuleFor(c => c)
             .Must(c => (c.Rate is null) != (c.Amount is null))
             .WithName("Discount")
