@@ -1,5 +1,5 @@
 import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
-import { addItem, createMenuItem, createOrder } from './api';
+import { addItem, createMenuItem, createOrder, dataOf, envelopeOf } from './api';
 import { apiCents, shownCents } from './checks';
 import { getOrder, type ApiOrder } from './pages';
 
@@ -50,28 +50,26 @@ export function lineIdsOf(order: ApiOrder, names: string[]): string[] {
   });
 }
 
-/** GET /api/orders/{id}/split; `null` on 404 (no saved split). */
+/** GET /api/orders/{id}/split; `null` when there is no saved split. */
 export async function getSplit(api: APIRequestContext, orderId: string): Promise<ApiSplit | null> {
   const response = await api.get(`/api/orders/${orderId}/split`);
-  if (response.status() === 404) return null;
-  expect(response.status(), await response.text()).toBe(200);
-  return (await response.json()) as ApiSplit;
+  if ((await envelopeOf(response)).error?.code === 'SplitNotFound') return null;
+  return dataOf<ApiSplit>(response);
 }
 
 export async function saveSplit(api: APIRequestContext, orderId: string, parts: string[][]): Promise<ApiSplit> {
   const response = await api.put(`/api/orders/${orderId}/split`, { data: { parts: parts.map((lineIds) => ({ lineIds })) } });
-  expect(response.status(), await response.text()).toBe(200);
-  return (await response.json()) as ApiSplit;
+  return dataOf<ApiSplit>(response);
 }
 
 export async function payOrder(api: APIRequestContext, orderId: string): Promise<void> {
   const response = await api.post(`/api/orders/${orderId}/pay`);
-  expect(response.status(), await response.text()).toBe(200);
+  await dataOf(response);
 }
 
 export async function cancelOrder(api: APIRequestContext, orderId: string): Promise<void> {
   const response = await api.post(`/api/orders/${orderId}/cancel`);
-  expect(response.status(), await response.text()).toBe(200);
+  await dataOf(response);
 }
 
 // ---------------------------------------------------------------- page

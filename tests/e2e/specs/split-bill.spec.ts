@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Response } from '@playwright/test';
-import { createMenuItem, createOrder, addItem } from '../support/api';
+import { createMenuItem, createOrder, addItem, dataOf } from '../support/api';
 import { expectAllOnScreen, expectNoHorizontalPageScroll, isPhone } from '../support/checks';
 import { expectDetailFitsPhone, expectDetailMatchesApi, getOrder } from '../support/pages';
 import {
@@ -40,7 +40,7 @@ function isPreview(url: string, orderId: string): boolean {
   return new URL(url).pathname === `/api/orders/${orderId}/split/preview`;
 }
 
-/** Opens the detail page and waits for its GET /split answer (200 or 404), so the builder state is the loaded one. */
+/** Opens the detail page and waits for its GET /split answer, so the builder state is the loaded one. */
 async function openDetail(page: Page, orderId: string): Promise<void> {
   const splitLoaded = page.waitForResponse((r) => isSplitGet(r, orderId));
   await page.goto(`/orders/${orderId}`);
@@ -76,7 +76,7 @@ test('builds a split on the detail page; preview and saved split equal the API',
 
   const previewed = page.waitForResponse((r) => r.request().method() === 'POST' && isPreview(r.url(), orderId));
   await assignLine(page, names[1], names, 2);
-  expect((await previewed).status()).toBe(200);
+  await dataOf(await previewed);
 
   await expectPartColumn(page, 'subtotal', ['$60.00', '$40.00']);
   await expectPartColumn(page, 'tax', ['$5.33', '$3.55']);
@@ -86,7 +86,7 @@ test('builds a split on the detail page; preview and saved split equal the API',
 
   const saved = page.waitForResponse((r) => r.request().method() === 'PUT' && isSplitUrl(r.url(), orderId));
   await section.getByTestId('split-save').click();
-  expect((await saved).status()).toBe(200);
+  await dataOf(await saved);
 
   const split = await getSplit(request, orderId);
   expect(split, 'GET /split after Save split').not.toBeNull();
@@ -111,14 +111,14 @@ test('a saved split fills the builder after a reload', async ({ page, request },
   await previewed;
   const saved = page.waitForResponse((r) => r.request().method() === 'PUT' && isSplitUrl(r.url(), orderId));
   await splitSection(page).getByTestId('split-save').click();
-  expect((await saved).status()).toBe(200);
+  await dataOf(await saved);
 
   const split = await getSplit(request, orderId);
   expect(split!.parts.map((p) => sorted(p.lineIds))).toEqual([[b], [c], [a]]);
 
   const reloaded = page.waitForResponse((r) => isSplitGet(r, orderId));
   await page.reload();
-  expect((await reloaded).status()).toBe(200);
+  await dataOf(await reloaded);
 
   // R13: saved split -> builder filled from it, part count = its number of parts.
   const section = splitSection(page);
