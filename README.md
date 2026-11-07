@@ -217,12 +217,12 @@ project:
 | Group | Project | Test cases |
 | --- | --- | ---: |
 | Backend unit | `tests/Pos.Domain.Tests` | 147 |
-| Backend unit | `tests/Pos.Application.Tests` | 72 |
+| Backend unit | `tests/Pos.Application.Tests` | 67 |
 | Architecture | `tests/Pos.ArchitectureTests` | 8 |
 | Frontend unit | Vitest in `web/` | 76 |
 | Integration | `tests/Pos.Api.IntegrationTests` | 236 |
 | End to end | Playwright in `tests/e2e` (21 tests, on desktop and phone width) | 42 |
-| **Total** | | **581** |
+| **Total** | | **576** |
 
 ## Repository layout
 
