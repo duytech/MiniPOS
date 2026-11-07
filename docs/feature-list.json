@@ -163,9 +163,9 @@
       ],
       "rules": "business-rules.md#lines",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T07:53:21Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "26948f8",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\"",
           "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.AddOrderItemHandlerTests.\"",
@@ -248,9 +248,9 @@
       ],
       "rules": "business-rules.md#pricing-ordercalculatetotals-the-only-place-totals-are-calculated",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T07:53:21Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "26948f8",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\"",
           "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\"",

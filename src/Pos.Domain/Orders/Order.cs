@@ -74,11 +74,6 @@ public class Order
     public OrderLine AddItem(MenuItem menuItem, int quantity, string? notes)
     {
         EnsureOpen();
-        if (menuItem.Price.Currency != Currency)
-        {
-            throw new DomainException($"Menu item is priced in {menuItem.Price.Currency}, the order is in {Currency}.");
-        }
-
         var normalizedNotes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
         var line = _lines.FirstOrDefault(l => l.IsSameAs(menuItem.Id, menuItem.Price, normalizedNotes));
         if (line is null)
@@ -148,11 +143,6 @@ public class Order
         if (discount.Rate is { Value: > 100m } rate)
         {
             throw new DomainException($"A discount of {rate} is more than the subtotal.");
-        }
-
-        if (discount.Amount is { } amount)
-        {
-            EnsureSameCurrency(amount);
         }
 
         EnsureFixedDiscountFits(discount.Amount, CalculateSubtotal(), change: null);
@@ -485,13 +475,5 @@ public class Order
             ? $"A discount of {discount} is more than the subtotal of {subtotal}."
             : $"{change} would leave a subtotal of {subtotal}, less than the discount of {discount}. " +
               "Change or remove the discount first.");
-    }
-
-    private void EnsureSameCurrency(Money money)
-    {
-        if (money.Currency != Currency)
-        {
-            throw new DomainException($"The amount is in {money.Currency}, the order is in {Currency}.");
-        }
     }
 }
