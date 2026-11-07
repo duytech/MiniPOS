@@ -102,7 +102,7 @@ const dbUp = () => portOpen(DB_HOST, DB_PORT);
 const apiUp = () => answers(API);
 const webUp = () => answers(WEB);
 
-/** Docker Desktop's executable on Windows, the same places init.sh looks: next to the docker CLI, per user, machine. */
+/** Docker Desktop's executable on Windows: next to the docker CLI, per user, machine. */
 function dockerDesktopExe() {
   const cli = spawnSync('where', ['docker'], { encoding: 'utf8' }).stdout?.split(/\r?\n/)[0] ?? '';
   return [
@@ -113,10 +113,10 @@ function dockerDesktopExe() {
 }
 
 /**
- * Starts Docker Desktop when the daemon is down (Windows and macOS, like init.sh) and waits for it. Docker Desktop is
- * left running at the end: only the db container is stopped.
+ * Starts Docker Desktop when the daemon is down (Windows and macOS) and waits for it; init.sh calls this too. Docker
+ * Desktop is left running at the end: only the db container is stopped.
  */
-async function ensureDockerDaemon() {
+export async function ensureDockerDaemon() {
   const daemonUp = async () => docker('info').ok;
   if (await daemonUp()) return undefined;
   if (process.platform === 'win32') {

@@ -10,8 +10,8 @@
 #   2. Local config: .env exists and ConnectionStrings:Pos is in the user-secrets of the API and of the integration
 #      tests (or in ConnectionStrings__Pos). Values are never printed.
 #   3. Harness files: CLAUDE.md, docs/*.md, the hooks, ci.yml and the E2E README exist.
-#   4. Postgres: starts Docker Desktop when the daemon is down (Windows, macOS; waits up to 120 s), then
-#      docker compose up -d --wait. Fatal only with --full.
+#   4. Postgres: starts Docker Desktop when the daemon is down (ensureDockerDaemon in scripts/services.mjs; Windows,
+#      macOS; waits up to 300 s), then docker compose up -d --wait. Fatal only with --full.
 #   5. .NET build: warnings are errors and analyzers run.
 #   6. .NET tests: the three projects that need no database; with --full, dotnet test Pos.slnx.
 #   7. Web: npm ci when web/node_modules is missing, then lint, build and Vitest.
@@ -62,37 +62,8 @@ for file in CLAUDE.md docs/feature-list.json docs/business-rules.md docs/archite
 done
 echo ""
 
-DOCKER_START_TIMEOUT=120
-# Starts Docker Desktop when the daemon is down (Windows and macOS) and waits until it answers.
-start_docker() {
-  docker info > /dev/null 2>&1 && return 0
-  case "$(uname -s)" in
-    MINGW* | MSYS* | CYGWIN*)
-      # Per-user install (next to the docker CLI, under LOCALAPPDATA) or the machine-wide one under Program Files.
-      local exe candidate
-      for candidate in "$(dirname "$(command -v docker)")/../../Docker Desktop.exe" \
-        "${LOCALAPPDATA:-}/Programs/DockerDesktop/Docker Desktop.exe" \
-        "${ProgramW6432:-C:/Program Files}/Docker/Docker/Docker Desktop.exe"; do
-        if [ -f "$candidate" ]; then exe="$candidate"; break; fi
-      done
-      [ -n "${exe:-}" ] || return 1
-      "$exe" > /dev/null 2>&1 &
-      ;;
-    Darwin) open -a Docker || return 1 ;;
-    *) return 1 ;;
-  esac
-  echo "  Docker daemon is not running: starting Docker Desktop (up to ${DOCKER_START_TIMEOUT}s)..."
-  local waited=0
-  until docker info > /dev/null 2>&1; do
-    [ "$waited" -ge "$DOCKER_START_TIMEOUT" ] && return 1
-    sleep 3
-    waited=$((waited + 3))
-  done
-  echo "  OK: Docker is running"
-}
-
 echo "[4/7] Starting Postgres (127.0.0.1:5433)..."
-if ! start_docker; then
+if ! node --input-type=module -e 'import { ensureDockerDaemon } from "./scripts/services.mjs"; process.exitCode = (await ensureDockerDaemon()) ? 1 : 0'; then
   DB_PROBLEM="the Docker daemon is not running and Docker Desktop could not be started"
 elif ! docker compose up -d --wait > /dev/null 2>&1; then
   DB_PROBLEM="docker compose up failed: run 'docker compose up -d --wait' and check its output"

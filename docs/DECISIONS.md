@@ -2,6 +2,13 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-07: init.sh shares the Docker Desktop start, not the db check (#114)
+- **What:** `init.sh` calls `ensureDockerDaemon` from `scripts/services.mjs` and deleted its own copy, so the wait is now
+  300 s, not 120 s. It keeps `docker compose up -d --wait`.
+- **The user's choice, not in the issue:** the issue named `ensure('db', true)`. That treats any open port 5433 as up, so
+  `init.sh` would report OK for another process on the port, not wait for a container that is still starting, and not
+  apply compose changes.
+
 ## 2026-11-07: One git status parser for the hooks (#113)
 - **What:** `changedFiles` in `git-changes.mjs` reads `git status -z --no-renames`, and `verify-on-edit.mjs` uses it with
   `deleted: true`. `block-claude-coauthor.mjs` imports `readHookInput`. `check-utf8.test.mjs` runs the UTF-8 hook on a temp repo.
