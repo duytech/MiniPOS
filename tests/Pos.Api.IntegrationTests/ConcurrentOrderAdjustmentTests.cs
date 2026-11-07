@@ -312,7 +312,7 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
                 },
             }));
 
-        var winner = Assert.Single(AssertOnlyOkConflictOrUnprocessable(results));
+        var winner = Assert.Single(AssertOnlySuccessConflictOrOrderNotOpen(results));
         Assert.Equal(winner, await StoredAsync<string>(orderId, "status"));
         Assert.Equal(winner == "Paid", await StoredAsync<bool>(orderId, "paid_at IS NOT NULL"));
         Assert.Equal(winner == "Cancelled", await StoredAsync<bool>(orderId, "cancelled_at IS NOT NULL"));
@@ -337,7 +337,7 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
             });
         var results = await ConcurrentlyAsync(requests);
 
-        var accepted = AssertOnlyOkConflictOrUnprocessable(results);
+        var accepted = AssertOnlySuccessConflictOrOrderNotOpen(results);
         Assert.Equal(1 + accepted.Count(a => a == "add"), await StoredAsync<int>(
             orderId, "(SELECT SUM(quantity)::int FROM order_lines WHERE order_id = o.id)"));
         Assert.Equal(accepted.Contains("pay") ? "Paid" : "Open", await StoredAsync<string>(orderId, "status"));
@@ -402,15 +402,15 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
     /// For races where a request can legitimately find the order already closed. Returns the label of every accepted
     /// request.
     /// </summary>
-    private static List<string> AssertOnlyOkConflictOrUnprocessable(
+    private static List<string> AssertOnlySuccessConflictOrOrderNotOpen(
         IReadOnlyList<(ErrorCode? Status, string Label)> results)
     {
         var unexpected = results
-            .Where(r => r.Status is not (null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict or ErrorCode.OrderNotOpen or ErrorCode.DiscountExceedsSubtotal))
+            .Where(r => r.Status is not (null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict or ErrorCode.OrderNotOpen))
             .GroupBy(r => r.Status)
             .Select(g => $"{g.Key} x{g.Count()}")
             .ToList();
-        Assert.True(unexpected.Count == 0, $"Expected only success, a conflict or a broken rule, got: {string.Join(", ", unexpected)}");
+        Assert.True(unexpected.Count == 0, $"Expected only success, a conflict or OrderNotOpen, got: {string.Join(", ", unexpected)}");
 
         var accepted = results.Where(r => r.Status is null).Select(r => r.Label).ToList();
         Assert.NotEmpty(accepted);

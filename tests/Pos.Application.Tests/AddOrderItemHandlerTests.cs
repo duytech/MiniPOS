@@ -61,6 +61,21 @@ public class AddOrderItemHandlerTests
     }
 
     [Fact]
+    public async Task Failed_save_is_returned()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        _orders.Add(order);
+        var menuItem = new MenuItem("Pho", Money.Usd(7.70m));
+        _menuItems.Add(menuItem);
+        _unitOfWork.SaveResult = Result.Fail(new Error(ErrorCode.ConcurrentChange, "Changed."));
+
+        var result = await _handler.HandleAsync(
+            new AddOrderItemCommand(order.Id, menuItem.Id, 1, null), CancellationToken.None);
+
+        Assert.Equal(ErrorCode.ConcurrentChange, result.Error.Code);
+    }
+
+    [Fact]
     public async Task Broken_domain_rule_is_returned_and_nothing_is_saved()
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);

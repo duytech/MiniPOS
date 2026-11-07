@@ -155,7 +155,7 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
         return (orderId, [.. lineIds]);
     }
 
-    /// <summary>Fails on any status not listed; returns the label of every accepted (2xx) request.</summary>
+    /// <summary>Fails on any outcome not listed (null is a success); returns the label of every successful request.</summary>
     private static List<string> AssertOnly(
         IReadOnlyList<(ErrorCode? Status, string Label)> results, params ErrorCode?[] allowed)
     {

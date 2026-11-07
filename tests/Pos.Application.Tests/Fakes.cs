@@ -43,9 +43,12 @@ internal sealed class FakeUnitOfWork : IUnitOfWork
 {
     public int SaveCount { get; private set; }
 
+    /// <summary>What every save answers; a test sets a failure to play a conflict.</summary>
+    public Result SaveResult { get; set; } = Result.Ok();
+
     public Task<Result> SaveChangesAsync(CancellationToken cancellationToken)
     {
         SaveCount++;
-        return Task.FromResult(Result.Ok());
+        return Task.FromResult(SaveResult);
     }
 }

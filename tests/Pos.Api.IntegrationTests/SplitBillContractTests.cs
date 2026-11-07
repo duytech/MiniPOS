@@ -335,7 +335,8 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
         var response = await SendSplitAsync(route, orderId, parts);
 
-        await AssertProblemAsync(response, rule.EndsWith("-line", StringComparison.Ordinal) || rule == "line-of-another-order" ? ErrorCode.LineNotOnOrder : ErrorCode.InvalidSplit, detail);
+        var code = rule is "unknown-line" or "line-of-another-order" ? ErrorCode.LineNotOnOrder : ErrorCode.InvalidSplit;
+        await AssertProblemAsync(response, code, detail);
         await (await GetSplitAsync(orderId)).AssertErrorAsync(ErrorCode.SplitNotFound);
     }
 
