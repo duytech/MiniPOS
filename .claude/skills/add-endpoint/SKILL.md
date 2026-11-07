@@ -44,8 +44,7 @@ In the area's controller (`src/Pos.Api/Controllers/`):
 - Route under `api/<area>`, ids as `{id:guid}`. Body → a `sealed record XxxRequest` at the bottom of the file, with
   `[Required]` on nullable value types that must be sent. Required query params: `[FromQuery, BindRequired]`.
 - `[ProducesResponseType]` for 200/201 and each error it can return: 400 whenever the command/query has a validator
-  (`{id:guid}` accepts `00000000-…`, which `NotEmpty` rejects) or a body/query to bind, 404, 409 (any order change:
-  concurrency token), 422 (Domain rule). Some older actions (`RemoveTip`, `RemoveDiscount`) miss the 400: don't copy that.
+  or a body/query to bind, 404, 409 (any order change: concurrency token), 422 (Domain rule).
 - Inject the handler with `[FromServices]`. No logic in the controller. Errors are mapped by
   `src/Pos.Api/Errors/ApiExceptionHandler.cs`; a 500 is always a bug.
 
