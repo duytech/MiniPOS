@@ -636,9 +636,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-07T08:09:02Z",
+      "testedAt": "2026-11-07T08:57:34Z",
       "evidence": {
-        "commit": "e8303eb",
+        "commit": "ae4df24",
         "passed": [
           "npx ng test --watch=false --include src/app/orders/order-detail/order-detail.spec.ts",
           "npx playwright test specs/smoke.spec.ts specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts"
@@ -665,9 +665,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-07T04:53:57Z",
+      "testedAt": "2026-11-07T08:57:34Z",
       "evidence": {
-        "commit": "b0514f5",
+        "commit": "ae4df24",
         "passed": [
           "npx ng test --watch=false --include src/app/orders/order-split/order-split.spec.ts",
           "npx playwright test specs/split-bill.spec.ts"
