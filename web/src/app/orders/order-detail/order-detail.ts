@@ -5,7 +5,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Observable, Subject, catchError, concatMap, defer, map, merge, of, scan, startWith, switchMap } from 'rxjs';
 
-import { Order, OrderLine, OrderStatus } from '../order.models';
+import { Order, OrderLine, statusClass } from '../order.models';
 import { OrderSplitSection } from '../order-split/order-split';
 import { OrdersApi } from '../orders-api';
 
@@ -68,6 +68,7 @@ export class OrderDetail {
 
   protected readonly order = computed(() => this.state().order);
   protected readonly isOpen = computed(() => this.order()?.status === 'Open');
+  protected readonly statusClass = statusClass;
 
   protected removeLine(line: OrderLine): void {
     this.writes.next({ kind: 'remove', lineId: line.id });
@@ -84,17 +85,6 @@ export class OrderDetail {
   /** The split section saw a 409 (or its split vanished): show the latest order and say why. */
   protected splitChanged(): void {
     this.reloads.next();
-  }
-
-  protected statusClass(status: OrderStatus): string {
-    switch (status) {
-      case 'Open':
-        return 'bg-sky-50 text-sky-700 ring-sky-600/20';
-      case 'Paid':
-        return 'bg-emerald-50 text-emerald-700 ring-emerald-600/20';
-      case 'Cancelled':
-        return 'bg-slate-100 text-slate-600 ring-slate-500/20';
-    }
   }
 
   private load(id: string): Observable<Patch> {
