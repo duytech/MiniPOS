@@ -6,10 +6,10 @@ import { EMPTY, Observable, Subject, catchError, concat, defer, exhaustMap, map,
 
 import { Order, OrderSplit, SaveSplitRequest } from '../order.models';
 import { OrdersApi } from '../orders-api';
+import { GENERIC_ERROR, problemDetail } from '../problem-detail';
 
 export const CLEARED_MESSAGE = 'The saved split was cleared because the order changed.';
 export const TOO_FEW_LINES_MESSAGE = 'Add at least 2 lines to split the bill.';
-export const SPLIT_GENERIC_ERROR = 'Something went wrong. Try again.';
 
 /** The smallest number of parts a split can have (R7). */
 const MIN_PARTS = 2;
@@ -85,11 +85,6 @@ function toRequest(order: Order, draft: Draft): SaveSplitRequest {
       lineIds: order.lines.filter((line) => draft.assignments[line.id] === part).map((line) => line.id),
     })),
   };
-}
-
-function problemDetail(error: HttpErrorResponse): string {
-  const detail = (error.error as { detail?: unknown } | null)?.detail;
-  return error.status === 422 && typeof detail === 'string' ? detail : SPLIT_GENERIC_ERROR;
 }
 
 @Component({
@@ -193,7 +188,7 @@ export class OrderSplitSection {
       catchError((error: HttpErrorResponse) =>
         error.status === 404
           ? this.noSavedSplit(order)
-          : of<Reducer>((state) => ({ ...state, loadingSplit: false, error: SPLIT_GENERIC_ERROR })),
+          : of<Reducer>((state) => ({ ...state, loadingSplit: false, error: GENERIC_ERROR })),
       ),
       // Lines may have changed: keep the assignments of remaining lines now; the previous parts stay on screen.
       startWith<Reducer>((state) => ({

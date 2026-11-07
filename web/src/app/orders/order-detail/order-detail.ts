@@ -8,9 +8,9 @@ import { EMPTY, Observable, Subject, catchError, concatMap, defer, map, merge, o
 import { Order, OrderLine, statusClass } from '../order.models';
 import { OrderSplitSection } from '../order-split/order-split';
 import { OrdersApi } from '../orders-api';
+import { GENERIC_ERROR, problemDetail } from '../problem-detail';
 
 export const CHANGED_MESSAGE = 'The order changed. Showing the latest version.';
-export const GENERIC_ERROR = 'Something went wrong. Try again.';
 
 /** What the cashier asked for. The quantity to send is worked out when the write runs, from the latest order. */
 type LineWrite = { kind: 'remove'; lineId: string } | { kind: 'step'; lineId: string; step: 1 | -1 };
@@ -139,10 +139,6 @@ export class OrderDetail {
       // Someone else changed the order (or removed the line): show the latest version.
       return this.reload(id);
     }
-    if (error.status === 422) {
-      const detail = (error.error as { detail?: unknown } | null)?.detail;
-      return of<Patch>({ loading: false, error: typeof detail === 'string' ? detail : GENERIC_ERROR });
-    }
-    return of<Patch>({ loading: false, error: GENERIC_ERROR });
+    return of<Patch>({ loading: false, error: problemDetail(error) });
   }
 }

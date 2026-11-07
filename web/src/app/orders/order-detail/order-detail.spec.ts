@@ -4,7 +4,8 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { Order, OrderLine, OrderSplit } from '../order.models';
-import { CHANGED_MESSAGE, GENERIC_ERROR, OrderDetail } from './order-detail';
+import { GENERIC_ERROR } from '../problem-detail';
+import { CHANGED_MESSAGE, OrderDetail } from './order-detail';
 
 describe('OrderDetail', () => {
   let fixture: ComponentFixture<OrderDetail>;
