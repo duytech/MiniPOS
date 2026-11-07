@@ -11,17 +11,17 @@ Read `references/templates.md` (in this skill's folder, next to this file) befor
 ## 0. Business rules first: stop and ask
 
 Before any code, list every rule the task does not state and ask the user in one message. Typical gaps:
-- Which order statuses allow it (others → 422)?
+- Which order statuses allow it (others → `OrderNotOpen`)?
 - Money: the base of each amount, rounding, what happens to an existing discount/tip when the order changes.
 - Limits (max quantity, max N), and what an empty or edge result means.
 - Response: 200 + `OrderDto` (what order changes return today) or something else.
 
-Do not pick a limit, default or merge behavior yourself. Not-found ids are 404 and need no question.
+Do not pick a limit, default or merge behavior yourself. Not-found ids are a `*NotFound` code and need no question.
 
 ## 1. Domain (only if the order or another entity changes)
 
 - One public method on the entity (`Order.RemoveLine(...)`), next to the related ones. Order changes start with
-  `EnsureOpen()`. A broken rule throws `DomainException` (→ 422).
+  `OpenError()`. A broken rule returns `Result.Fail(new Error(ErrorCode.X, message))`; add a code to `ErrorCode` when no existing one fits.
 - Totals are only in `Order.CalculateTotals()`. Never add, subtract, round or multiply `Money` outside Domain: the arch
   tests `Only_domain_rounds_amounts` and `Only_domain_adds_up_money` fail.
 - Persisted shape changes (new column, owned type) need an EF migration in `src/Pos.Infrastructure`.
@@ -31,10 +31,11 @@ Do not pick a limit, default or merge behavior yourself. Not-found ids are 404 a
 `src/Pos.Application/<Area>/<UseCase>/`:
 - `<UseCase>Command` (changes state) or `<UseCase>Query` (reads), a `sealed record` taking ids + value objects
   (`Money`, `Percentage`), never raw `decimal`.
-- `<UseCase>Handler` (`ICommandHandler<,>` / `IQueryHandler<,>`): load through the repository, `?? throw new
-  NotFoundException(...)`, call Domain, `unitOfWork.SaveChangesAsync` for commands, return a DTO built by `XxxDto.From`.
+- `<UseCase>Handler` (`ICommandHandler<,>` / `IQueryHandler<,>`): load through the repository, on null return
+  `Result.Fail<T>(NotFoundErrors.X(id))`, call Domain, check its `Result`, `unitOfWork.SaveChangesAsync` for commands and check
+  that too, return `Result.Ok(XxxDto.From(...))`. Throwing away a `Result` fails `ResultUsageTests`.
 - `<UseCase>Validator` (`internal sealed`, FluentValidation), when the request has shape to check: ids in the body not
-  empty, ranges, formats. No rule the Domain already enforces. A route id is not validated: the handler answers 404.
+  empty, ranges, formats. No rule the Domain already enforces. A route id is not validated: the handler answers not found.
 - Register in `src/Pos.Application/DependencyInjection.cs` with `AddCommandHandler<,,>` / `AddQueryHandler<,,>` (these
   wrap the handler with the validators).
 
@@ -43,21 +44,19 @@ Do not pick a limit, default or merge behavior yourself. Not-found ids are 404 a
 In the area's controller (`src/Pos.Api/Controllers/`):
 - Route under `api/<area>`, ids as `{id:guid}`. Body → a `sealed record XxxRequest` at the bottom of the file, with
   `[Required]` on nullable value types that must be sent. Required query params: `[FromQuery, BindRequired]`.
-- `[ProducesResponseType]` for 200/201 and each error it can return: 400 whenever the command/query has a validator
-  or a body/query to bind, 404, 409 (any order change: concurrency token), 422 (Domain rule).
-- Inject the handler with `[FromServices]`. No logic in the controller. Errors are mapped by
-  `src/Pos.Api/Errors/ApiExceptionHandler.cs`; a 500 is always a bug.
+- Inject the handler with `[FromServices]`. No logic in the controller: `(await handler.HandleAsync(...)).ToResponse()`
+  (`src/Pos.Api/Contracts/ApiResponse.cs`); every expected answer is HTTP 200, and a 500 is always a bug.
 
 ## 4. Tests: what each kind of endpoint needs
 
 | Endpoint | Tests |
 |---|---|
 | Has a validator | Validator theory in `tests/Pos.Application.Tests/ValidatorTests.cs` |
-| Any | Integration tests in `tests/Pos.Api.IntegrationTests`: happy path, each 4xx it declares |
+| Any | Integration tests in `tests/Pos.Api.IntegrationTests`: happy path, each `ErrorCode` it can return (`AssertSuccessAsync`, `AssertErrorAsync`, not the status) |
 | Returns money | Assert raw JSON strings with exactly 2 decimals (`order.Money("total") == "15.40"`); a midpoint (x.xx5) case; list total == `GET /api/orders/{id}` total |
 | Changes Domain money | Domain unit test with exact cents and a midpoint case (`tests/Pos.Domain.Tests`) |
-| Changes an order | Concurrency test: N parallel requests that would each succeed alone (e.g. removing *different* lines), then the same racing add-item; only 200/409, and the stored rows show exactly the accepted requests. When a race can legitimately break a Domain rule (a removal racing a fixed discount), allow that 422 too and assert the rule holds in the stored rows |
-| Moves the order to another status (pay, cancel) | Only one request can ever win, so the "each would succeed alone" pattern does not fit: N parallel requests → exactly one 200, the rest 409/422, at least one 409; competing transitions (pay vs cancel) → the stored status is the winner's; the transition racing add-item → stored quantity = the accepted adds |
+| Changes an order | Concurrency test: N parallel requests that would each succeed alone (e.g. removing *different* lines), then the same racing add-item; only successes and conflicts, and the stored rows show exactly the accepted requests. When a race can legitimately break a Domain rule (a removal racing a fixed discount), allow that code too and assert the rule holds in the stored rows |
+| Moves the order to another status (pay, cancel) | Only one request can ever win, so the "each would succeed alone" pattern does not fit: N parallel requests → exactly one success, the rest `ConcurrentChange`/`OrderNotOpen`, at least one `ConcurrentChange`; competing transitions (pay vs cancel) → the stored status is the winner's; the transition racing add-item → stored quantity = the accepted adds |
 
 Copy helpers from the existing test classes (see templates); add new HTTP helpers to `ApiClient.cs`.
 Tests check money against what the API returns (`GET /api/orders/{id}`), never against a total summed in SQL or LINQ:
@@ -66,6 +65,6 @@ that would be a second total implementation. SQL in tests reads stored columns (
 ## 5. Verify
 
 - `dotnet build Pos.slnx` (0 warnings), `docker compose up -d`, `dotnet test Pos.slnx` (integration tests need the DB).
-- Check the concurrency test really races: at least one 409 in a run, not N sequential 200s.
+- Check the concurrency test really races: at least one `ConcurrentChange` in a run, not N sequential successes.
 - The `PreToolUse` hook runs every check only before `git push`; while you work, build and tests are yours to run.
 - Summary: endpoint, status codes, the business rules you were given, anything still open.

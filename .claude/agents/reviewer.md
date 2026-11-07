@@ -37,10 +37,11 @@ analyzers, ESLint, `ngc` and the no-DB tests, so do not treat integration, Vites
   values and the rule that set the old ones.
 - **Tests for changed behavior**: a changed code path (new branch, removed check, new field) with no test that would
   fail without the change, at the level where it can break (unit, integration, Vitest).
-- **Concurrency**: Order keeps `xmin` as the concurrency token; a conflict maps to 409. Every endpoint that changes an
-  order has a parallel integration test that checks stored state (only 200/409, or exactly one winner for a status
+- **Concurrency**: Order keeps `xmin` as the concurrency token; a conflict is `ConcurrentChange`. Every endpoint that changes an
+  order has a parallel integration test that checks stored state (only successes and `ConcurrentChange`, or exactly one winner for a status
   change). An expected DB error that can reach a 500 is a finding.
-- **API**: ProblemDetails with 400 / 404 / 409 / 422 as `CLAUDE.md` assigns them. Lists paged with `page`,
+- **API**: every expected answer is HTTP 200 with the envelope and an `ErrorCode`, as `CLAUDE.md` says; a test that checks only
+  the status proves nothing. An ignored `Result`, also one stored and never read, is a finding. Lists paged with `page`,
   `pageSize`, `totalCount`; no silent cap.
 - **Architecture**: one folder per use case (command/query, handler, validator), no service classes, no MediatR.
   Validators check shape, entities check invariants, not both. Repositories return entities, not DTOs.
@@ -48,7 +49,7 @@ analyzers, ESLint, `ngc` and the no-DB tests, so do not treat integration, Vites
   even if it looks sensible. A rule from the plan that the diff does not implement is a finding too.
 - **Frontend**: no arithmetic or rounding on money; `currency` pipe with `'USD'`; previous data stays visible while
   reloading; no hosts or ports in components.
-- **Security**: nothing that a client can receive (ProblemDetails `detail` or extensions, DTOs, headers) exposes
+- **Security**: nothing that a client can receive (`error.message`, `error.fields`, ProblemDetails of a 500, DTOs, headers) exposes
   exception types or messages, stack traces, inner exceptions, SQL, connection strings or server paths, in any
   environment. A 500 returns only a generic message. SQL with request input is parameterized (no string
   concatenation or interpolation into raw SQL); a request value used as a file path or a process argument is a

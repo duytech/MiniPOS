@@ -15,7 +15,7 @@
     {
       "id": "F01",
       "area": "api",
-      "behavior": "POST /api/menu-items: create a menu item (name, price). Returns 201.",
+      "behavior": "POST /api/menu-items: create a menu item (name, price).",
       "verification": [
         {
           "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\""
@@ -517,7 +517,7 @@
     {
       "id": "F19",
       "area": "api",
-      "behavior": "GET /api/orders/{id}/split: the saved split, priced with the current order; 404 when there is none.",
+      "behavior": "GET /api/orders/{id}/split: the saved split, priced with the current order; SplitNotFound when there is none.",
       "verification": [
         {
           "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\""
@@ -697,6 +697,29 @@
         ],
         "skipped": []
       }
+    },
+    {
+      "id": "F26",
+      "area": "api",
+      "behavior": "Every expected answer is HTTP 200 with { isSuccess, data, error }, including requests rejected before the handler; error has an ErrorCode and a message, plus fields for ValidationFailed. No layer throws away a Result.",
+      "verification": [
+        {
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.ResultTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.ArchitectureTests --no-build --filter \"FullyQualifiedName~Pos.ArchitectureTests.ResultUsageTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.EnvelopeContractTests.\"",
+          "requires": [
+            "db"
+          ]
+        }
+      ],
+      "rules": null,
+      "state": "not_started",
+      "testedAt": null,
+      "evidence": null
     }
   ]
 }

@@ -122,7 +122,7 @@ source column says where the rule is written down.
 | Repositories return Domain types, not DTOs | [`docs/architecture.md`](docs/architecture.md) | `Repositories_return_domain_types_not_application_types` ([`MoneyTypeTests.cs`](tests/Pos.ArchitectureTests/MoneyTypeTests.cs)) |
 | Each pricing step rounds to cents `AwayFromZero`, with a midpoint test | `CLAUDE.md` | [`OrderPricingTests.cs`](tests/Pos.Domain.Tests/OrderPricingTests.cs) (discount, tax, tip) and [`OrderSurchargeTests.cs`](tests/Pos.Domain.Tests/OrderSurchargeTests.cs) (surcharge); midpoints chosen so `ToEven` would round the other way |
 | Split parts add up exactly; leftover cents go where the rules say | [`docs/business-rules.md`](docs/business-rules.md) | [`SplitBillContractTests.cs`](tests/Pos.Api.IntegrationTests/SplitBillContractTests.cs), written from the contract by the `tester` |
-| Concurrency conflict is a 409, never a lost update or a 500 | `CLAUDE.md` | Parallel-request tests: [`ConcurrentAddItemTests.cs`](tests/Pos.Api.IntegrationTests/ConcurrentAddItemTests.cs), [`OrderConcurrencyTests.cs`](tests/Pos.Api.IntegrationTests/OrderConcurrencyTests.cs), [`ConcurrentOrderAdjustmentTests.cs`](tests/Pos.Api.IntegrationTests/ConcurrentOrderAdjustmentTests.cs), [`ConcurrentSplitTests.cs`](tests/Pos.Api.IntegrationTests/ConcurrentSplitTests.cs) |
+| Concurrency conflict is the error code `ConcurrentChange`, never a lost update or a 500 | `CLAUDE.md` | Parallel-request tests: [`ConcurrentAddItemTests.cs`](tests/Pos.Api.IntegrationTests/ConcurrentAddItemTests.cs), [`OrderConcurrencyTests.cs`](tests/Pos.Api.IntegrationTests/OrderConcurrencyTests.cs), [`ConcurrentOrderAdjustmentTests.cs`](tests/Pos.Api.IntegrationTests/ConcurrentOrderAdjustmentTests.cs), [`ConcurrentSplitTests.cs`](tests/Pos.Api.IntegrationTests/ConcurrentSplitTests.cs) |
 | Money in JSON has exactly 2 decimals; list total equals detail total | `CLAUDE.md` | `List_total_equals_get_order_total_with_two_decimals` ([`OrdersListApiTests.cs`](tests/Pos.Api.IntegrationTests/OrdersListApiTests.cs)) and the raw-JSON tests in [`OrdersApiTests.cs`](tests/Pos.Api.IntegrationTests/OrdersApiTests.cs) |
 | A 500 leaks nothing about the exception, and is still logged | `reviewer` agent, CodeRabbit instructions | [`UnexpectedErrorTests.cs`](tests/Pos.Api.IntegrationTests/UnexpectedErrorTests.cs) |
 | The frontend never calculates money | `CLAUDE.md` | `shows no money value the API did not send` ([`order-detail.spec.ts`](web/src/app/orders/order-detail/order-detail.spec.ts)) |
@@ -231,7 +231,7 @@ src/
   Pos.Domain/          Order aggregate, Money, pricing and split rules
   Pos.Application/     one folder per use case: Command/Query + Handler + Validator
   Pos.Infrastructure/  EF Core + Npgsql, repositories, migrations
-  Pos.Api/             controllers, ProblemDetails, money JSON
+  Pos.Api/             controllers, response envelope, money JSON
 web/                   Angular 20 + Tailwind
 tests/                 Domain, Application, architecture, integration, e2e
 .claude/               skills, agents, hooks

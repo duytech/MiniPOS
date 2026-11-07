@@ -315,6 +315,23 @@ Important design decisions: what, why, when. Newest first.
 - **Requires per step, not per feature:** a web feature runs its Vitest specs even when the E2E stack is down; it is
   `blocked`, not `passing`, until its E2E specs also ran.
 
+## 2026-11-07: Result pattern and HTTP 200 for every expected answer (#138)
+- **What:** Domain, handlers and `IUnitOfWork` return `Result` / `Result<T>` (`IsSuccess`, `Data`, `Error` with `Code` and
+  `Message`) instead of throwing `DomainException`, `NotFoundException`, `ConflictException` or `ValidationException`.
+  The API answers HTTP 200 with `{ isSuccess, data, error }` for all of them, including requests rejected before the
+  handler. `ErrorCode` is the project's own enum. Unexpected errors stay a 500 ProblemDetails with no details (#70).
+  `[ProducesResponseType]` is gone: every action now answers one shape, and the OpenAPI endpoint is gone since #119.
+- **Why:** the owner's decision: expected errors show in the signature, and clients branch on one code instead of an
+  HTTP status.
+- **Trade-off, accepted:** monitoring, proxies and clients that count 4xx no longer see expected failures; a test that
+  only checks the status passes on a failure, so tests check `isSuccess` or the code. POST no longer answers 201 with
+  `Location`.
+- **Guard:** with exceptions a broken rule could not be missed. Now a handler that ignores `order.Pay(...)` would save and
+  answer success, and the compiler says nothing, so `ResultUsageTests` fails when a `Result` is thrown away. Its limit: a
+  `Result` stored in a variable that is never read is not found.
+- **Limit:** a missing route, a wrong method or a wrong Content-Type (404, 405, 415) stays the framework's answer: it
+  never reaches a controller.
+
 ## 2026-11-07: An empty GUID on a route is 404 (#109)
 - **What:** route ids are not validated. The all-zero GUID on a route is 404, like any other unknown id. The 7 validators
   that only checked a route id are deleted, and a use case has a validator only when its request has shape to check.
