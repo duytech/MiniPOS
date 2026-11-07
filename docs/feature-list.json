@@ -558,9 +558,9 @@
       ],
       "rules": "business-rules.md#split-bill",
       "state": "passing",
-      "testedAt": "2026-11-07T14:30:59Z",
+      "testedAt": "2026-11-07T23:49:21Z",
       "evidence": {
-        "commit": "4262535",
+        "commit": "60f0702",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\"",
           "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentSplitTests.\""
@@ -636,9 +636,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-07T14:30:59Z",
+      "testedAt": "2026-11-07T23:49:21Z",
       "evidence": {
-        "commit": "4262535",
+        "commit": "60f0702",
         "passed": [
           "npx ng test --watch=false --include src/app/orders/order-detail/order-detail.spec.ts",
           "npx playwright test specs/smoke.spec.ts specs/slow-network.spec.ts specs/long-names.spec.ts specs/many-lines.spec.ts"
@@ -718,9 +718,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-07T14:42:26Z",
+      "testedAt": "2026-11-07T23:51:27Z",
       "evidence": {
-        "commit": "4262535",
+        "commit": "60f0702",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.ResultTests.\"",
           "dotnet test tests/Pos.ArchitectureTests --no-build --filter \"FullyQualifiedName~Pos.ArchitectureTests.ResultUsageTests.\"",
