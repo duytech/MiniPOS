@@ -8,6 +8,9 @@ Important design decisions: what, why, when. Newest first.
 - **Why:** without `-z` git quotes a non-ASCII name, so `check-utf8.mjs` could not read the file and blocked the commit.
 - **The user's choice, not in the issue:** `changedFiles` also drops `AD` and `MD` entries (staged, then deleted from the
   working tree), which were reported as not UTF-8. `UD` and `DU` stay, because a conflict file is still on disk.
+- **The user's choice, from the CodeRabbit review:** `changedFiles` throws when `git status` fails, and reads up to 64 MiB
+  (the default 1 MiB cut the list without an error). `check-utf8.mjs` then blocks, and `verify-on-edit.mjs` runs the checks.
+  A broken `git` therefore also stops Claude from ending a turn, through the `Stop` hook, until `git` works again.
 
 ## 2026-11-06: verify-on-edit runs every check, only before git push (#103)
 - **What:** `verify-on-edit.mjs` no longer runs on `Stop` or before `git commit`. Before `git push` it runs build, all

@@ -117,6 +117,14 @@ test('a staged delete (D ) passes', () => {
   assert.equal(result.status, ALLOWED, result.stderr);
 });
 
+test('a git status that fails is blocked', () => {
+  commit('a.md');
+  write('.git/index', 'not an index');
+  const result = beforeCommit();
+  assert.equal(result.status, BLOCKED);
+  assert.match(result.stderr, /git status failed/);
+});
+
 test('a conflict file still on disk (UD) that is not UTF-8 is blocked', () => {
   commit('a.md');
   git('switch', '-q', '-c', 'other');

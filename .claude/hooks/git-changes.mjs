@@ -112,13 +112,20 @@ export function runsGit({ tool_name, tool_input }, subcommand) {
   return commands.some(({ sub }) => sub === subcommand);
 }
 
-/** Modified, added and untracked files, relative to the repo root with forward slashes. Deleted ones only with `deleted: true`. */
+/**
+ * Modified, added and untracked files, relative to the repo root with forward slashes. Deleted ones only with
+ * `deleted: true`. Throws when git status fails: a partial list would let a hook skip a file.
+ */
 export function changedFiles(root, { deleted = false } = {}) {
   const status = spawnSync('git', ['status', '--porcelain', '-z', '--no-renames', '--untracked-files=all'], {
     cwd: root,
     encoding: 'utf8',
+    maxBuffer: 64 * 1024 * 1024,
   });
-  return (status.stdout ?? '')
+  if (status.error || status.status !== 0) {
+    throw new Error(`git status failed: ${status.error?.message ?? status.stderr.trim()}`);
+  }
+  return status.stdout
     .split('\0')
     .filter((entry) => entry && (deleted || !DELETED.test(entry)))
     .map((entry) => entry.slice(3));
