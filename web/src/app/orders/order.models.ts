@@ -2,6 +2,17 @@ export const ORDER_STATUSES = ['Open', 'Paid', 'Cancelled'] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
+export function statusClass(status: OrderStatus): string {
+  switch (status) {
+    case 'Open':
+      return 'bg-sky-50 text-sky-700 ring-sky-600/20';
+    case 'Paid':
+      return 'bg-emerald-50 text-emerald-700 ring-emerald-600/20';
+    case 'Cancelled':
+      return 'bg-slate-100 text-slate-600 ring-slate-500/20';
+  }
+}
+
 /** A row of the orders list. `total` is computed by the API; the UI only displays it. */
 export interface OrderSummary {
   id: string;

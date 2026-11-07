@@ -16,7 +16,7 @@ import {
   switchMap,
 } from 'rxjs';
 
-import { ORDER_STATUSES, OrderStatus, OrderSummary, PagedResult } from '../order.models';
+import { ORDER_STATUSES, OrderStatus, OrderSummary, PagedResult, statusClass } from '../order.models';
 import { OrdersApi } from '../orders-api';
 
 export const SEARCH_DEBOUNCE_MS = 300;
@@ -40,6 +40,7 @@ export class OrdersList {
   private readonly api = inject(OrdersApi);
 
   protected readonly statuses = ORDER_STATUSES;
+  protected readonly statusClass = statusClass;
   protected readonly search = new FormControl('', { nonNullable: true });
   protected readonly status = new FormControl<OrderStatus | ''>('', { nonNullable: true });
   private readonly pageRequests = new Subject<number>();
@@ -101,16 +102,5 @@ export class OrdersList {
 
   protected goToPage(page: number): void {
     this.pageRequests.next(page);
-  }
-
-  protected statusClass(status: OrderStatus): string {
-    switch (status) {
-      case 'Open':
-        return 'bg-sky-50 text-sky-700 ring-sky-600/20';
-      case 'Paid':
-        return 'bg-emerald-50 text-emerald-700 ring-emerald-600/20';
-      case 'Cancelled':
-        return 'bg-slate-100 text-slate-600 ring-slate-500/20';
-    }
   }
 }
