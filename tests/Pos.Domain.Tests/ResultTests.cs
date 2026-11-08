@@ -24,6 +24,16 @@ public class ResultTests
     }
 
     [Fact]
+    public void Ok_may_have_null_data()
+    {
+        var result = Result.Ok<string?>(null);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Data);
+        Assert.Null(result.Error);
+    }
+
+    [Fact]
     public void Fail_has_the_error()
     {
         var result = Result.Fail(Failure);

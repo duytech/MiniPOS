@@ -21,6 +21,6 @@ public sealed class PreviewSplitHandler(IOrderRepository orders) : IQueryHandler
         }
 
         var parts = OrderSplitting.Split(order, query.Parts!.Select(p => (IReadOnlyCollection<Guid>)p!).ToList());
-        return parts.IsSuccess ? Result.Ok(OrderSplitDto.From(parts.Data)) : Result.Fail<OrderSplitDto>(parts.Error);
+        return parts.IsSuccess ? Result.Ok(OrderSplitDto.From(parts.Data!)) : Result.Fail<OrderSplitDto>(parts.Error);
     }
 }

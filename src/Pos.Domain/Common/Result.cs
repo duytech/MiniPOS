@@ -4,8 +4,8 @@ namespace Pos.Domain.Common;
 
 /// <summary>
 /// The outcome of an operation that can fail in an expected way. The unused side is null: <see cref="Error"/> on a
-/// success, <see cref="Result{T}.Data"/> on a failure. Check <see cref="IsSuccess"/> first and the compiler knows which
-/// side is set.
+/// success, <see cref="Result{T}.Data"/> on a failure. A failure always has an <see cref="Error"/>; a success may have
+/// null <see cref="Result{T}.Data"/>.
 /// </summary>
 public sealed class Result
 {
@@ -37,7 +37,6 @@ public sealed class Result<T>
         Error = error;
     }
 
-    [MemberNotNullWhen(true, nameof(Data))]
     [MemberNotNullWhen(false, nameof(Error))]
     public bool IsSuccess => Error is null;
 

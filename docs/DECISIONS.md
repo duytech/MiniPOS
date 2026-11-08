@@ -4,12 +4,13 @@ Important design decisions: what, why, when. Newest first.
 
 ## 2026-11-08: Result returns null for the unused side (#142)
 - **What:** `Result<T>.Data` is null on a failure and `Result.Error` / `Result<T>.Error` is null on a success, instead of
-  throwing `InvalidOperationException`. `IsSuccess` carries `[MemberNotNullWhen]`, so after checking it the compiler
-  knows which side is set; handlers did not change.
-- **Why:** the owner's decision: reading a property should not throw.
-- **Trade-off, accepted:** reading the wrong side no longer fails at once; it gives null, and only the nullable warning
-  (an error here) catches it. Tests that read a side without checking `IsSuccess` use `!`. For a value type `T`,
-  `Data` on a failure is `default` (a failed `Result<bool>` has `false`), so use `bool?` when null matters.
+  throwing `InvalidOperationException`. A success may carry null `Data` (`Result.Ok<string?>(null)` is allowed), so
+  `IsSuccess` only promises a non-null `Error` on a failure (`[MemberNotNullWhen(false, nameof(Error))]`), not a non-null
+  `Data` on a success.
+- **Why:** the owner's decision: reading a property should not throw, and a success with no data is fine.
+- **Trade-off, accepted:** reading the wrong side no longer fails at once; it gives null. Code that knows a success has
+  data (the split handlers, tests) reads it with `!`. For a value type `T`, `Data` on a failure is `default` (a failed
+  `Result<bool>` has `false`), so use `bool?` when null matters.
 
 ## 2026-11-08: Mapped Domain entities hold only properties (#140)
 - **What:** `Order`, `OrderLine`, `MenuItem`, `SavedSplitPart` and `SavedSplitLine` are `{ get; set; }` properties only.
