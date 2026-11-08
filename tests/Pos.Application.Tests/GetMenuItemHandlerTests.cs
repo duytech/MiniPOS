@@ -16,7 +16,7 @@ public class GetMenuItemHandlerTests
         var menuItem = OrderActions.Item("Pho", 7.70m);
         _menuItems.Add(menuItem);
 
-        var result = (await _handler.HandleAsync(new GetMenuItemQuery(menuItem.Id), CancellationToken.None)).Data;
+        var result = (await _handler.HandleAsync(new GetMenuItemQuery(menuItem.Id), CancellationToken.None)).Data!;
 
         Assert.Equal(menuItem.Id, result.Id);
         Assert.Equal("Pho", result.Name);
@@ -28,6 +28,6 @@ public class GetMenuItemHandlerTests
     {
         var result = await _handler.HandleAsync(new GetMenuItemQuery(Guid.NewGuid()), CancellationToken.None);
 
-        Assert.Equal(ErrorCode.MenuItemNotFound, result.Error.Code);
+        Assert.Equal(ErrorCode.MenuItemNotFound, result.Error!.Code);
     }
 }

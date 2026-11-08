@@ -14,7 +14,7 @@ public class RemoveOrderLineHandlerTests
         var burger = await _act.AddLine(order, 12.99m, 2);
         var fries = await _act.AddLine(order, 3.35m);
 
-        var result = (await _act.RemoveLine(order, burger)).Data;
+        var result = (await _act.RemoveLine(order, burger)).Data!;
 
         Assert.Equal(fries, Assert.Single(order.Lines).Id);
         Assert.Equal(Money.Usd(3.35m), result.Total);
@@ -26,7 +26,7 @@ public class RemoveOrderLineHandlerTests
         var order = _act.NewOrder();
         var burger = await _act.AddLine(order, 12.99m);
 
-        var result = (await _act.RemoveLine(order, burger)).Data;
+        var result = (await _act.RemoveLine(order, burger)).Data!;
 
         Assert.Empty(order.Lines);
         Assert.Equal(OrderStatus.Open, order.Status);
@@ -42,7 +42,7 @@ public class RemoveOrderLineHandlerTests
 
         var result = await _act.RemoveLine(order, Guid.NewGuid());
 
-        Assert.Equal(ErrorCode.OrderLineNotFound, result.Error.Code);
+        Assert.Equal(ErrorCode.OrderLineNotFound, result.Error!.Code);
         Assert.Single(order.Lines);
         Assert.Equal(savesBefore, _act.UnitOfWork.SaveCount);
     }
@@ -53,10 +53,10 @@ public class RemoveOrderLineHandlerTests
         var order = _act.NewOrder();
         await _act.AddLine(order, 0.70m);
         var tea = await _act.AddLine(order, 2.00m);
-        var discounted = (await _act.ApplyPercentDiscount(order, 15m)).Data;
+        var discounted = (await _act.ApplyPercentDiscount(order, 15m)).Data!;
         Assert.Equal(Money.Usd(0.41m), discounted.Discount); // 15% of 2.70 = 0.405
 
-        var totals = (await _act.RemoveLine(order, tea)).Data;
+        var totals = (await _act.RemoveLine(order, tea)).Data!;
 
         Assert.Equal(Money.Usd(0.70m), totals.Subtotal);
         Assert.Equal(Money.Usd(0.11m), totals.Discount); // 15% of 0.70 = 0.105
@@ -71,7 +71,7 @@ public class RemoveOrderLineHandlerTests
         var tea = await _act.AddLine(order, 2.00m);
         await _act.ApplyFixedDiscount(order, 7.70m);
 
-        var totals = (await _act.RemoveLine(order, tea)).Data;
+        var totals = (await _act.RemoveLine(order, tea)).Data!;
 
         Assert.Equal(Money.Usd(7.70m), totals.Discount);
         Assert.Equal(Money.Usd(0.00m), totals.Total);
@@ -87,11 +87,11 @@ public class RemoveOrderLineHandlerTests
 
         var result = await _act.RemoveLine(order, tea);
 
-        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, result.Error.Code);
+        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, result.Error!.Code);
         Assert.Equal(
             "Removing the line would leave a subtotal of 7.70 USD, less than the discount of 7.71 USD. " +
             "Change or remove the discount first.",
-            result.Error.Message);
+            result.Error!.Message);
         Assert.Equal(2, order.Lines.Count);
         Assert.Equal(Money.Usd(1.99m), OrderPricing.CalculateTotals(order).Total);
     }

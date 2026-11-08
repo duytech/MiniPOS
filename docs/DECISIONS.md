@@ -2,6 +2,15 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-08: Result returns null for the unused side (#142)
+- **What:** `Result<T>.Data` is null on a failure and `Result.Error` / `Result<T>.Error` is null on a success, instead of
+  throwing `InvalidOperationException`. `IsSuccess` carries `[MemberNotNullWhen]`, so after checking it the compiler
+  knows which side is set; handlers did not change.
+- **Why:** the owner's decision: reading a property should not throw.
+- **Trade-off, accepted:** reading the wrong side no longer fails at once; it gives null, and only the nullable warning
+  (an error here) catches it. Tests that read a side without checking `IsSuccess` use `!`. For a value type `T`,
+  `Data` on a failure is `default` (a failed `Result<bool>` has `false`), so use `bool?` when null matters.
+
 ## 2026-11-08: Mapped Domain entities hold only properties (#140)
 - **What:** `Order`, `OrderLine`, `MenuItem`, `SavedSplitPart` and `SavedSplitLine` are `{ get; set; }` properties only.
   Each use case's logic moved from the entity into its handler (e.g. `Order.Pay` → `PayOrderHandler`). Pricing and

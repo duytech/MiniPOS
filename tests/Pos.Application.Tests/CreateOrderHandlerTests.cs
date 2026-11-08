@@ -16,7 +16,7 @@ public class CreateOrderHandlerTests
         var handler = new CreateOrderHandler(_act.Orders, _act.UnitOfWork, _act.Time,
             new PricingOptions { TaxRatePercent = 8.875m, CardSurchargePercent = 3m });
 
-        var result = (await handler.HandleAsync(new CreateOrderCommand(), CancellationToken.None)).Data;
+        var result = (await handler.HandleAsync(new CreateOrderCommand(), CancellationToken.None)).Data!;
 
         var order = Assert.Single(_act.Orders.Orders.Values);
         Assert.Equal(order.Id, result.Id);

@@ -58,7 +58,7 @@ internal sealed class OrderActions
     public async Task<Guid> AddLine(Order order, decimal price, int quantity = 1)
     {
         var added = await AddItem(order, Item($"Item {order.Lines.Count}", price), quantity);
-        return added.Data.Lines[^1].Id;
+        return added.Data!.Lines[^1].Id;
     }
 
     public Task<Result<OrderDto>> RemoveLine(Order order, Guid lineId) =>

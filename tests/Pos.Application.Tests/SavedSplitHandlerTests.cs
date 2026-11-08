@@ -49,15 +49,15 @@ public class SavedSplitHandlerTests
     }
 
     private async Task<IEnumerable<IReadOnlyList<Guid>>> SavedLineIds(Order order) =>
-        (await _act.GetSplit(order)).Data.Parts.Select(p => p.LineIds);
+        (await _act.GetSplit(order)).Data!.Parts.Select(p => p.LineIds);
 
     [Fact]
     public async Task Saved_split_reads_back_with_exact_cents()
     {
         var (order, l) = await OrderWithLines(60.00m, 40.00m);
 
-        var saved = (await _act.SaveSplit(order, Part(l[0]), Part(l[1]))).Data;
-        var read = (await _act.GetSplit(order)).Data;
+        var saved = (await _act.SaveSplit(order, Part(l[0]), Part(l[1]))).Data!;
+        var read = (await _act.GetSplit(order)).Data!;
 
         // Order tax 8.875% of 100.00 = 8.875 → 8.88 (midpoint, away from zero).
         // Shares: 8.88 × 60/100 = 5.328 → 5.32, 8.88 × 40/100 = 3.552 → 3.55; leftover 0.01 to the 60.00 part.
@@ -81,7 +81,7 @@ public class SavedSplitHandlerTests
         await _act.SaveSplit(order, Part(l[0]), Part(l[1]));
 
         var totals = OrderPricing.CalculateTotals(order);
-        var parts = (await _act.GetSplit(order)).Data.Parts;
+        var parts = (await _act.GetSplit(order)).Data!.Parts;
 
         // Order: subtotal 10.00, discount 1.50, surcharge 3% of 8.50 = 0.255 → 0.26, tax 8.875% of 8.76 = 0.77745 → 0.78,
         // tip 18% of 8.50 = 1.53, total 11.07.
@@ -100,7 +100,7 @@ public class SavedSplitHandlerTests
     {
         var (order, l) = await OrderWithLines(60.00m, 40.00m);
 
-        var parts = (await _act.PreviewSplit(order, Part(l[0]), Part(l[1]))).Data.Parts;
+        var parts = (await _act.PreviewSplit(order, Part(l[0]), Part(l[1]))).Data!.Parts;
 
         Assert.Equal([Money.Usd(65.33m), Money.Usd(43.55m)], parts.Select(p => p.Total));
         Assert.Empty(order.SavedSplitParts);
@@ -111,8 +111,8 @@ public class SavedSplitHandlerTests
     {
         var (order, _) = await OrderWithLines(60.00m, 40.00m);
 
-        Assert.Equal(ErrorCode.SplitNotFound, (await _act.GetSplit(order)).Error.Code);
-        Assert.Equal(ErrorCode.SplitNotFound, (await _act.RemoveSplit(order)).Error.Code);
+        Assert.Equal(ErrorCode.SplitNotFound, (await _act.GetSplit(order)).Error!.Code);
+        Assert.Equal(ErrorCode.SplitNotFound, (await _act.RemoveSplit(order)).Error!.Code);
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class SavedSplitHandlerTests
 
         await _act.SaveSplit(order, Part(l[2]), Part(l[0]), Part(l[1]));
 
-        var parts = (await _act.GetSplit(order)).Data.Parts;
+        var parts = (await _act.GetSplit(order)).Data!.Parts;
         Assert.Equal([[l[2]], [l[0]], [l[1]]], parts.Select(p => p.LineIds));
         Assert.Equal([Money.Usd(3.00m), Money.Usd(1.00m), Money.Usd(2.00m)], parts.Select(p => p.Subtotal));
         Assert.Equal([0, 1, 2], order.SavedSplitParts.Select(p => p.Position).Order());
@@ -134,7 +134,7 @@ public class SavedSplitHandlerTests
     {
         var (order, l) = await OrderWithSavedSplit();
 
-        Assert.Equal(ErrorCode.InvalidSplit, (await _act.SaveSplit(order, Part(l[0], l[1]))).Error.Code);
+        Assert.Equal(ErrorCode.InvalidSplit, (await _act.SaveSplit(order, Part(l[0], l[1]))).Error!.Code);
 
         Assert.Equal([[l[0]], [l[1]]], await SavedLineIds(order));
     }
@@ -144,7 +144,7 @@ public class SavedSplitHandlerTests
     {
         var (order, _) = await OrderWithSavedSplit();
 
-        Assert.True((await _act.RemoveSplit(order)).Data);
+        Assert.True((await _act.RemoveSplit(order)).Data!);
 
         Assert.Empty(order.SavedSplitParts);
     }
@@ -158,7 +158,7 @@ public class SavedSplitHandlerTests
 
         await _act.Close(order, status);
 
-        Assert.Equal([Money.Usd(65.33m), Money.Usd(43.55m)], (await _act.GetSplit(order)).Data.Parts.Select(p => p.Total));
+        Assert.Equal([Money.Usd(65.33m), Money.Usd(43.55m)], (await _act.GetSplit(order)).Data!.Parts.Select(p => p.Total));
     }
 
     [Theory]
@@ -170,9 +170,9 @@ public class SavedSplitHandlerTests
         await _act.Close(order, status);
         var expected = $"The order is {status}; only an open order can be changed.";
 
-        Assert.Equal(expected, (await _act.SaveSplit(order, Part(l[1]), Part(l[0]))).Error.Message);
-        Assert.Equal(expected, (await _act.PreviewSplit(order, Part(l[1]), Part(l[0]))).Error.Message);
-        Assert.Equal(expected, (await _act.RemoveSplit(order)).Error.Message);
+        Assert.Equal(expected, (await _act.SaveSplit(order, Part(l[1]), Part(l[0]))).Error!.Message);
+        Assert.Equal(expected, (await _act.PreviewSplit(order, Part(l[1]), Part(l[0]))).Error!.Message);
+        Assert.Equal(expected, (await _act.RemoveSplit(order)).Error!.Message);
         Assert.Equal([[l[0]], [l[1]]], await SavedLineIds(order));
     }
 
@@ -284,7 +284,7 @@ public class SavedSplitHandlerTests
         await _act.ApplyFixedDiscount(order, 50.00m);
         await _act.SaveSplit(order, Part(l[0]), Part(l[1]));
 
-        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, (await _act.RemoveLine(order, l[0])).Error.Code);
+        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, (await _act.RemoveLine(order, l[0])).Error!.Code);
 
         Assert.NotEmpty(order.SavedSplitParts);
     }
