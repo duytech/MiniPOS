@@ -292,12 +292,14 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         Assert.True(await StoredAsync<bool>(orderId, "cancelled_at IS NULL"));
     }
 
+    /// <summary>All of them load the open order before any commits (<see cref="OrderRace"/>), so every loser loses on the
+    /// concurrency token, not by finding the order already closed.</summary>
     [Fact]
     public async Task Parallel_pays_and_cancels_accept_exactly_one_and_store_its_status()
     {
         var (orderId, _) = await OrderWithOneItemAsync();
 
-        var results = await ConcurrentlyAsync(Enumerable.Range(0, ConcurrentRequests / 2)
+        var results = await OrderRace.RunAsync(factory.ConnectionString, orderId, Enumerable.Range(0, ConcurrentRequests / 2)
             .SelectMany(_ => new Func<Task<(ErrorCode?, string)>>[]
             {
                 async () =>
@@ -312,7 +314,8 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
                 },
             }));
 
-        var winner = Assert.Single(AssertOnlySuccessConflictOrOrderNotOpen(results));
+        var winner = Assert.Single(AssertOnlyOkOrConflict(results));
+        Assert.All(results.Where(r => r.Item1 is not null), r => Assert.Equal(ErrorCode.ConcurrentChange, r.Item1));
         Assert.Equal(winner, await StoredAsync<string>(orderId, "status"));
         Assert.Equal(winner == "Paid", await StoredAsync<bool>(orderId, "paid_at IS NOT NULL"));
         Assert.Equal(winner == "Cancelled", await StoredAsync<bool>(orderId, "cancelled_at IS NOT NULL"));
