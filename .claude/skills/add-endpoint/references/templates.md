@@ -45,11 +45,11 @@ public sealed class RemoveTipHandler(IOrderRepository orders, IUnitOfWork unitOf
 
 ```csharp
 [HttpDelete("{id:guid}/tip")]
-public async Task<ApiResponse<OrderDto>> RemoveTip(
+public async Task<Result<OrderDto>> RemoveTip(
     Guid id,
     [FromServices] ICommandHandler<RemoveTipCommand, OrderDto> handler,
     CancellationToken cancellationToken) =>
-    (await handler.HandleAsync(new RemoveTipCommand(id), cancellationToken)).ToResponse();
+    await handler.HandleAsync(new RemoveTipCommand(id), cancellationToken);
 ```
 
 ## Concurrency test shape

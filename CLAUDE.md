@@ -71,7 +71,7 @@ vs domain, repositories).
   result (e.g. N parallel add-item requests: only successes and `ConcurrentChange`, stored quantity = number of successes).
 
 ## API
-- Every expected answer is HTTP 200 with `{ isSuccess, data, error: { code, message, fields? } }`, including requests
+- Every expected answer is HTTP 200 with `{ isSuccess, data, error: { code, message } }`, including requests
   rejected before the handler (malformed JSON, wrong type, missing required field). `code` is an `ErrorCode`, never an
   HTTP status. Different: an unexpected error (a bug) is a 500 ProblemDetails with no details, and a request that never
   reaches a controller (unknown route or an id that is not a GUID, wrong method, wrong Content-Type) gets the framework's

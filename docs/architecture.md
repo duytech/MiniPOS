@@ -9,8 +9,8 @@ lists each offending member.
   No service classes, no MediatR.
 - Expected errors are values: Domain, handlers and `IUnitOfWork` return `Result` / `Result<T>` with an `Error` (`ErrorCode`
   + message) and never throw for them. Check every `Result` before going on: an architecture test fails when one is
-  thrown away. Exceptions are left for bugs (constructor guards), which end as a 500. The controller only turns the
-  `Result` into the envelope (`ToResponse`).
+  thrown away. Exceptions are left for bugs (constructor guards), which end as a 500. The controller returns the
+  `Result` as it is: it serializes as the envelope.
 - Domain classes mapped to the database (`Order`, `OrderLine`, `MenuItem`, `SavedSplitPart`, `SavedSplitLine`) hold only
   `{ get; set; }` properties: no methods, computed properties or constructors with parameters (`EntityShapeTests`).
   A use case's logic lives in its handler (e.g. `PayOrderHandler` checks the order is open, then sets `Status` and

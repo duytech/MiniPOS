@@ -54,7 +54,7 @@ public class EnvelopeContractTests(PosApiFactory factory) : IClassFixture<PosApi
     }
 
     [Fact]
-    public async Task Broken_rule_has_the_code_and_message_and_no_fields()
+    public async Task Broken_rule_has_the_code_and_message()
     {
         var orderId = await _client.CreateOrderAsync();
         await _client.CloseOrderAsync(orderId, "Paid");
@@ -68,14 +68,16 @@ public class EnvelopeContractTests(PosApiFactory factory) : IClassFixture<PosApi
     }
 
     [Fact]
-    public async Task Failed_validator_has_the_fields()
+    public async Task Failed_validator_has_its_messages_in_the_message()
     {
         var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);
         var orderId = await _client.CreateOrderAsync();
 
         var response = await _client.AddItemAsync(orderId, pho, 0);
 
-        await AssertValidationFailedAsync(response, "Quantity");
+        Assert.Equal(
+            """{"isSuccess":false,"data":null,"error":{"code":"ValidationFailed","message":"'Quantity' must be greater than '0'."}}""",
+            await response.Content.ReadAsStringAsync());
     }
 
     [Fact]
@@ -86,7 +88,11 @@ public class EnvelopeContractTests(PosApiFactory factory) : IClassFixture<PosApi
         var response = await _client.PutAsync(
             $"/api/orders/{orderId}/tip", new StringContent("""{ "rate": """, Encoding.UTF8, "application/json"));
 
-        await AssertValidationFailedAsync(response);
+        await response.AssertErrorAsync(ErrorCode.ValidationFailed);
+        var body = await response.ReadJsonAsync();
+        Assert.Equal(JsonValueKind.Null, body.GetProperty("data").ValueKind);
+        Assert.Equal(["code", "message"], body.GetProperty("error").EnumerateObject().Select(p => p.Name));
+        Assert.NotEmpty(body.GetProperty("error").GetProperty("message").GetString()!);
     }
 
     [Fact]
@@ -96,19 +102,8 @@ public class EnvelopeContractTests(PosApiFactory factory) : IClassFixture<PosApi
 
         var response = await _client.PutAsJsonAsync($"/api/orders/{orderId}/tip", new { });
 
-        await AssertValidationFailedAsync(response, "Rate");
-    }
-
-    private static async Task AssertValidationFailedAsync(HttpResponseMessage response, string? field = null)
-    {
-        await response.AssertErrorAsync(ErrorCode.ValidationFailed, "One or more validation errors occurred.");
-        var body = await response.ReadJsonAsync();
-        Assert.Equal(JsonValueKind.Null, body.GetProperty("data").ValueKind);
-        var fields = body.GetProperty("error").GetProperty("fields");
-        Assert.NotEmpty(fields.EnumerateObject());
-        if (field is not null)
-        {
-            Assert.Single(fields.EnumerateObject(), f => f.Name == field);
-        }
+        Assert.Equal(
+            """{"isSuccess":false,"data":null,"error":{"code":"ValidationFailed","message":"The Rate field is required."}}""",
+            await response.Content.ReadAsStringAsync());
     }
 }

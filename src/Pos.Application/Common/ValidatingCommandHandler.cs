@@ -3,7 +3,7 @@ using Pos.Domain.Common;
 
 namespace Pos.Application.Common;
 
-/// <summary>Runs the command's validators before the handler; fails with a <see cref="ValidationError"/>.</summary>
+/// <summary>Runs the command's validators before the handler; fails with <see cref="ErrorCode.ValidationFailed"/>.</summary>
 internal sealed class ValidatingCommandHandler<TCommand, TResult>(
     ICommandHandler<TCommand, TResult> inner,
     IEnumerable<IValidator<TCommand>> validators) : ICommandHandler<TCommand, TResult>

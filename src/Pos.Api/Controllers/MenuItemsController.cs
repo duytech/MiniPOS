@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
-using Pos.Api.Contracts;
 using Pos.Application.Common;
 using Pos.Application.MenuItems;
 using Pos.Application.MenuItems.CreateMenuItem;
@@ -14,18 +13,18 @@ namespace Pos.Api.Controllers;
 public sealed class MenuItemsController : ControllerBase
 {
     [HttpPost]
-    public async Task<ApiResponse<MenuItemDto>> Create(
+    public async Task<Result<MenuItemDto>> Create(
         CreateMenuItemRequest request,
         [FromServices] ICommandHandler<CreateMenuItemCommand, MenuItemDto> handler,
         CancellationToken cancellationToken) =>
-        (await handler.HandleAsync(new CreateMenuItemCommand(request.Name, request.Price!.Value), cancellationToken)).ToResponse();
+        await handler.HandleAsync(new CreateMenuItemCommand(request.Name, request.Price!.Value), cancellationToken);
 
     [HttpGet("{id:guid}")]
-    public async Task<ApiResponse<MenuItemDto>> Get(
+    public async Task<Result<MenuItemDto>> Get(
         Guid id,
         [FromServices] IQueryHandler<GetMenuItemQuery, MenuItemDto> handler,
         CancellationToken cancellationToken) =>
-        (await handler.HandleAsync(new GetMenuItemQuery(id), cancellationToken)).ToResponse();
+        await handler.HandleAsync(new GetMenuItemQuery(id), cancellationToken);
 }
 
 public sealed record CreateMenuItemRequest(string Name, [Required] Money? Price);

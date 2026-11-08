@@ -6,7 +6,7 @@ is the source of truth; when this file and the code disagree, fix this file.
 ## API conventions
 
 All routes are under `/api`. Every expected answer is HTTP 200 with `{ isSuccess, data, error }`; `error` has an `ErrorCode`:
-`ValidationFailed`; `OrderNotFound`, `MenuItemNotFound`, `OrderLineNotFound`, `SplitNotFound`; `ConcurrentChange` (Postgres
+`ValidationFailed` (its message joins every failure message); `OrderNotFound`, `MenuItemNotFound`, `OrderLineNotFound`, `SplitNotFound`; `ConcurrentChange` (Postgres
 `xmin`), `DataConflict`; `OrderNotOpen`, `LineNotOnOrder`, `DiscountExceedsSubtotal`, `LineQuantityTooLarge`, `InvalidSplit`.
 Money is returned as numbers with exactly 2 decimals, USD only.
 
