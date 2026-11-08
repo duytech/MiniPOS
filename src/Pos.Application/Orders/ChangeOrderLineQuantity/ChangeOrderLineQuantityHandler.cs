@@ -42,7 +42,7 @@ public sealed class ChangeOrderLineQuantityHandler(IOrderRepository orders, IUni
             return null;
         }
 
-        var newSubtotal = OrderPricing.Subtotal(order) - OrderPricing.LineTotal(line) + line.UnitPrice * quantity;
+        var newSubtotal = OrderPricing.SubtotalWithQuantity(order, line, quantity);
         if (OrderRules.FixedDiscountError(order.DiscountAmount, newSubtotal, $"A quantity of {quantity}") is { } tooLarge)
         {
             return tooLarge;

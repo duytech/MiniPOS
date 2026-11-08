@@ -11,6 +11,10 @@ public static class OrderPricing
     public static Money Subtotal(Order order) =>
         order.Lines.Aggregate(Money.Zero(order.Currency), (sum, line) => sum + LineTotal(line));
 
+    /// <summary>The subtotal the order would have with <paramref name="line"/> at <paramref name="quantity"/> (0 = removed).</summary>
+    public static Money SubtotalWithQuantity(Order order, OrderLine line, int quantity) =>
+        Subtotal(order) - LineTotal(line) + line.UnitPrice * quantity;
+
     /// <summary>The order's discount, built from its two stored columns; null when it has none.</summary>
     public static OrderDiscount? Discount(Order order) => (order.DiscountRate, order.DiscountAmount) switch
     {

@@ -26,7 +26,7 @@ public sealed class RemoveOrderLineHandler(IOrderRepository orders, IUnitOfWork 
             return Result.Fail<OrderDto>(NotFoundErrors.OrderLine(command.LineId));
         }
 
-        var newSubtotal = OrderPricing.Subtotal(order) - OrderPricing.LineTotal(line);
+        var newSubtotal = OrderPricing.SubtotalWithQuantity(order, line, quantity: 0);
         if ((OrderRules.OpenError(order)
              ?? OrderRules.FixedDiscountError(order.DiscountAmount, newSubtotal, "Removing the line")) is { } error)
         {
