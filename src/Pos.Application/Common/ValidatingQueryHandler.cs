@@ -3,7 +3,7 @@ using Pos.Domain.Common;
 
 namespace Pos.Application.Common;
 
-/// <summary>Runs the query's validators before the handler; fails with a <see cref="ValidationError"/>.</summary>
+/// <summary>Runs the query's validators before the handler; fails with <see cref="ErrorCode.ValidationFailed"/>.</summary>
 internal sealed class ValidatingQueryHandler<TQuery, TResult>(
     IQueryHandler<TQuery, TResult> inner,
     IEnumerable<IValidator<TQuery>> validators) : IQueryHandler<TQuery, TResult>

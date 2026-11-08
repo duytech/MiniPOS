@@ -48,8 +48,8 @@ Do not pick a limit, default or merge behavior yourself. Not-found ids are a `*N
 In the area's controller (`src/Pos.Api/Controllers/`):
 - Route under `api/<area>`, ids as `{id:guid}`. Body → a `sealed record XxxRequest` at the bottom of the file, with
   `[Required]` on nullable value types that must be sent. Required query params: `[FromQuery, BindRequired]`.
-- Inject the handler with `[FromServices]`. No logic in the controller: `(await handler.HandleAsync(...)).ToResponse()`
-  (`src/Pos.Api/Contracts/ApiResponse.cs`); every expected answer is HTTP 200, and a 500 is always a bug.
+- Inject the handler with `[FromServices]`. No logic in the controller: return `await handler.HandleAsync(...)`
+  as `Task<Result<T>>`; every expected answer is HTTP 200, and a 500 is always a bug.
 
 ## 4. Tests: what each kind of endpoint needs
 

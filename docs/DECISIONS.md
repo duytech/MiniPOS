@@ -2,6 +2,17 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-08: Validation failures go into the message; controllers return Result (#144)
+- **What:** `ValidationError` and `error.fields` are gone. A validation failure is `Error.Validation(messages)`: code
+  `ValidationFailed`, message every failure message joined with a space (`"'Quantity' must be greater than '0'."`).
+  `Result<T>` now serializes as the envelope (`isSuccess`, `data`, `error { code, message }`), so controllers return it
+  as it is and `ApiResponse` / `ToResponse` are deleted. Requests rejected before the handler build the same `Result`
+  in `InvalidModelStateResponseFactory`.
+- **Why:** the owner's decision. `ApiResponse` only existed to copy `Result` and to write `fields`, which the serializer
+  cannot see on a subclass of `Error`; the web app never read `fields`.
+- **Trade-off, accepted:** a client can no longer tell which field failed without parsing the message. The API JSON
+  shape now follows `Result` and `Error`: renaming one of their properties changes the API.
+
 ## 2026-11-08: Result returns null for the unused side (#142)
 - **What:** `Result<T>.Data` is null on a failure and `Result.Error` / `Result<T>.Error` is null on a success, instead of
   throwing `InvalidOperationException`. A success may carry null `Data` (`Result.Ok<string?>(null)` is allowed), so

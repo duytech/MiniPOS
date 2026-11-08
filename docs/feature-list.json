@@ -749,7 +749,7 @@
     {
       "id": "F26",
       "area": "api",
-      "behavior": "Every expected answer is HTTP 200 with { isSuccess, data, error }, including requests rejected before the handler; error has an ErrorCode and a message, plus fields for ValidationFailed. No layer throws away a Result.",
+      "behavior": "Every expected answer is HTTP 200 with { isSuccess, data, error }, including requests rejected before the handler; error has an ErrorCode and a message; a ValidationFailed message joins every failure message. No layer throws away a Result.",
       "verification": [
         {
           "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.ResultTests.\""
@@ -766,9 +766,9 @@
       ],
       "rules": null,
       "state": "passing",
-      "testedAt": "2026-11-08T02:35:11Z",
+      "testedAt": "2026-11-08T04:12:15Z",
       "evidence": {
-        "commit": "aa47e61",
+        "commit": "4578c2b",
         "passed": [
           "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.ResultTests.\"",
           "dotnet test tests/Pos.ArchitectureTests --no-build --filter \"FullyQualifiedName~Pos.ArchitectureTests.ResultUsageTests.\"",
