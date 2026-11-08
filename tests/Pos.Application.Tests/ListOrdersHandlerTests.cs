@@ -1,6 +1,5 @@
 using Pos.Application.Orders.ListOrders;
 using Pos.Domain.Common;
-using Pos.Domain.MenuItems;
 using Pos.Domain.Orders;
 
 namespace Pos.Application.Tests;
@@ -15,17 +14,19 @@ public class ListOrdersHandlerTests
     [Fact]
     public async Task Summary_total_is_the_domain_total_in_exact_cents()
     {
-        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
-        order.AddItem(new MenuItem("Pho", Money.Usd(7.70m)), 2, null); // 15.40
-        order.AddItem(new MenuItem("Iced tea", Money.Usd(1.15m)), 3, null); // 3.45
-        order.AddItem(new MenuItem("Pho", Money.Usd(7.70m)), 1, "no onions"); // 7.70
+        var act = new OrderActions();
+        var order = act.NewOrder();
+        var pho = OrderActions.Item("Pho", 7.70m);
+        await act.AddItem(order, pho, 2); // 15.40
+        await act.AddItem(order, OrderActions.Item("Iced tea", 1.15m), 3); // 3.45
+        await act.AddItem(order, pho, 1, "no onions"); // 7.70
         _orders.Add(order);
 
         var result = (await _handler.HandleAsync(new ListOrdersQuery(null, null, 1, 20), CancellationToken.None)).Data;
 
         var summary = Assert.Single(result.Items);
         Assert.Equal(Money.Usd(26.55m), summary.Total);
-        Assert.Equal(order.CalculateTotals().Total, summary.Total);
+        Assert.Equal(OrderPricing.CalculateTotals(order).Total, summary.Total);
         Assert.Equal(["Pho", "Iced tea"], summary.ItemNames);
         Assert.Equal(OrderStatus.Open, summary.Status);
         Assert.Equal(1, result.TotalCount);
