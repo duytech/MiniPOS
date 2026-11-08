@@ -1,5 +1,6 @@
 using Pos.Application.Common;
 using Pos.Domain.Common;
+using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.PayOrder;
 
@@ -14,11 +15,14 @@ public sealed class PayOrderHandler(IOrderRepository orders, IUnitOfWork unitOfW
             return Result.Fail<OrderDto>(NotFoundErrors.Order(command.OrderId));
         }
 
-        var changed = order.Pay(timeProvider.GetUtcNow());
-        if (!changed.IsSuccess)
+        if (OrderRules.OpenError(order) is { } notOpen)
         {
-            return Result.Fail<OrderDto>(changed.Error);
+            return Result.Fail<OrderDto>(notOpen);
         }
+
+        // The totals are not changed, and a saved split is kept (display only).
+        order.Status = OrderStatus.Paid;
+        order.PaidAt = timeProvider.GetUtcNow().ToUniversalTime();
 
         var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);

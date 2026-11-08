@@ -28,7 +28,7 @@ touch that side of the repo (`src/`, `web/`). The commands are in the Verificati
 ## Money
 
 - [ ] All amounts are `Money`; no `double`/`float`, no raw `decimal` in Domain/Application signatures
-- [ ] Totals computed only by the order's pricing method in Domain, in the order discount, surcharge, tax, tip, each
+- [ ] Totals computed only by `OrderPricing` in Domain, in the order discount, surcharge, tax, tip, each
       rounded with `MidpointRounding.AwayFromZero`
 - [ ] The base of each pricing step is named in code and tests
 - [ ] No totals in SQL, LINQ projections or the frontend; a list that shows totals has a test that they equal

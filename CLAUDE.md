@@ -49,7 +49,7 @@ vs domain, repositories).
 ## Money (the rules that matter most)
 - All amounts are `Money` (Domain value object: `decimal Amount` + `Currency`, USD only for now). Never `double`/`float`,
   never raw `decimal` in Domain/Application signatures.
-- Calculation order and rounding, in **one place** in Domain (the order's pricing method):
+- Calculation order and rounding, in **one place** in Domain (`OrderPricing.CalculateTotals`):
   1. line total = unit price × quantity (exact cents, no rounding needed)
   2. subtotal = sum of line totals
   3. then discount → surcharge → tax → tip, each rounded to 2 decimals **immediately** with

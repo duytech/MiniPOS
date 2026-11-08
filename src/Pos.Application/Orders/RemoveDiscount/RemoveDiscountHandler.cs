@@ -1,5 +1,6 @@
 using Pos.Application.Common;
 using Pos.Domain.Common;
+using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.RemoveDiscount;
 
@@ -14,10 +15,16 @@ public sealed class RemoveDiscountHandler(IOrderRepository orders, IUnitOfWork u
             return Result.Fail<OrderDto>(NotFoundErrors.Order(command.OrderId));
         }
 
-        var changed = order.RemoveDiscount();
-        if (!changed.IsSuccess)
+        if (OrderRules.OpenError(order) is { } notOpen)
         {
-            return Result.Fail<OrderDto>(changed.Error);
+            return Result.Fail<OrderDto>(notOpen);
+        }
+
+        if (order.DiscountRate is not null || order.DiscountAmount is not null)
+        {
+            order.DiscountRate = null;
+            order.DiscountAmount = null;
+            order.SavedSplitParts.Clear();
         }
 
         var saved = await unitOfWork.SaveChangesAsync(cancellationToken);

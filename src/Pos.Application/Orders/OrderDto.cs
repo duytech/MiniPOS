@@ -21,7 +21,7 @@ public sealed record OrderDto(
 {
     public static OrderDto From(Order order)
     {
-        var totals = order.CalculateTotals();
+        var totals = OrderPricing.CalculateTotals(order);
         return new OrderDto(
             order.Id,
             order.Number,
@@ -50,5 +50,5 @@ public sealed record OrderLineDto(
     Money LineTotal)
 {
     public static OrderLineDto From(OrderLine line) =>
-        new(line.Id, line.MenuItemId, line.Name, line.UnitPrice, line.Quantity, line.Notes, line.LineTotal);
+        new(line.Id, line.MenuItemId, line.Name, line.UnitPrice, line.Quantity, line.Notes, OrderPricing.LineTotal(line));
 }

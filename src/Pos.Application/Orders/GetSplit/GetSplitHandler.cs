@@ -1,5 +1,6 @@
 using Pos.Application.Common;
 using Pos.Domain.Common;
+using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.GetSplit;
 
@@ -13,12 +14,12 @@ public sealed class GetSplitHandler(IOrderRepository orders) : IQueryHandler<Get
             return Result.Fail<OrderSplitDto>(NotFoundErrors.Order(query.OrderId));
         }
 
-        if (!order.HasSavedSplit)
+        if (order.SavedSplitParts.Count == 0)
         {
             return Result.Fail<OrderSplitDto>(NotFoundErrors.Split(query.OrderId));
         }
 
-        var parts = order.GetSavedSplit();
+        var parts = OrderSplitting.Split(order, OrderSplitting.SavedSplitLineIds(order));
         return parts.IsSuccess ? Result.Ok(OrderSplitDto.From(parts.Data)) : Result.Fail<OrderSplitDto>(parts.Error);
     }
 }

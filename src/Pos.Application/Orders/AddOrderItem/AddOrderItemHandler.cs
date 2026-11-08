@@ -1,6 +1,8 @@
 using Pos.Application.Common;
 using Pos.Application.MenuItems;
 using Pos.Domain.Common;
+using Pos.Domain.MenuItems;
+using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.AddOrderItem;
 
@@ -21,13 +23,49 @@ public sealed class AddOrderItemHandler(IOrderRepository orders, IMenuItemReposi
             return Result.Fail<OrderDto>(NotFoundErrors.MenuItem(command.MenuItemId));
         }
 
-        var changed = order.AddItem(menuItem, command.Quantity, command.Notes);
-        if (!changed.IsSuccess)
+        if ((OrderRules.OpenError(order) ?? AddItem(order, menuItem, command.Quantity, command.Notes)) is { } error)
         {
-            return Result.Fail<OrderDto>(changed.Error);
+            return Result.Fail<OrderDto>(error);
         }
 
         var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
+    }
+
+    /// <summary>
+    /// Adds the menu item at its current price. A line with the same menu item, snapshotted unit price and notes
+    /// gets its quantity increased; anything different becomes a new line.
+    /// </summary>
+    private static Error? AddItem(Order order, MenuItem menuItem, int quantity, string? notes)
+    {
+        var normalizedNotes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
+        var line = order.Lines.FirstOrDefault(l =>
+            l.MenuItemId == menuItem.Id && l.UnitPrice == menuItem.Price && l.Notes == normalizedNotes);
+        if (line is null)
+        {
+            order.Lines.Add(new OrderLine
+            {
+                Id = Guid.NewGuid(),
+                MenuItemId = menuItem.Id,
+                Name = menuItem.Name,
+                UnitPrice = menuItem.Price,
+                Quantity = quantity,
+                Notes = normalizedNotes,
+            });
+        }
+        else
+        {
+            try
+            {
+                line.Quantity = checked(line.Quantity + quantity);
+            }
+            catch (OverflowException)
+            {
+                return new Error(ErrorCode.LineQuantityTooLarge, "The line quantity is too large.");
+            }
+        }
+
+        order.SavedSplitParts.Clear();
+        return null;
     }
 }

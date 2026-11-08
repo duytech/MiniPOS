@@ -2,6 +2,19 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-08: Mapped Domain entities hold only properties (#140)
+- **What:** `Order`, `OrderLine`, `MenuItem`, `SavedSplitPart` and `SavedSplitLine` are `{ get; set; }` properties only.
+  Each use case's logic moved from the entity into its handler (e.g. `Order.Pay` → `PayOrderHandler`). Pricing and
+  splitting stay in Domain as static `OrderPricing` and `OrderSplitting`, so totals are still computed in one place in
+  Domain; the rules several handlers share are in static `OrderRules`. Value objects and records not mapped to tables
+  (`Money`, `Percentage`, `OrderDiscount`, `OrderTotals`, `SplitPart`) keep their members. No API or schema change.
+- **Why:** the owner's decision.
+- **Trade-off, accepted:** the entities no longer protect themselves: any code can set `Status` or `Quantity` without the
+  rules. The rules are kept by the handlers, checked by handler tests (`OrderActions` runs the real handlers on fakes),
+  and `EntityShapeTests` fails when an entity gains a method, computed property, field or constructor with parameters.
+- **Tests:** use-case and rule tests moved from `Pos.Domain.Tests` to `Pos.Application.Tests`; the two "line of another
+  order" tests became "unknown line is not found", since a handler looks a line up by id on the loaded order.
+
 ## 2026-11-07: No OpenAPI endpoint (#119)
 - **What:** removed `AddOpenApi`, `MapOpenApi` and the `Microsoft.AspNetCore.OpenApi` package.
 - **Why:** no test, client or launch profile used the endpoint, and `src/Pos.Api/Pos.Api.http` covers calling the API by

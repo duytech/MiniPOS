@@ -23,7 +23,7 @@ is `ValidationFailed`: `menuItemId`, and each line id in `parts` of save split a
   gets its quantity increased; anything different becomes a new line. Blank notes count as no notes.
 - Removing the last line leaves the order open and empty.
 
-## Pricing (`Order.CalculateTotals`, the only place totals are calculated)
+## Pricing (`OrderPricing.CalculateTotals`, the only place totals are calculated)
 Each step is rounded to cents with `MidpointRounding.AwayFromZero` before the next step uses it.
 1. line total = unit price × quantity
 2. subtotal = sum of line totals

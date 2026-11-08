@@ -1,5 +1,6 @@
 using Pos.Application.Common;
 using Pos.Domain.Common;
+using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.SplitOrderEvenly;
 
@@ -15,7 +16,7 @@ public sealed class SplitOrderEvenlyHandler(IOrderRepository orders)
             return Result.Fail<IReadOnlyList<SplitPartDto>>(NotFoundErrors.Order(query.OrderId));
         }
 
-        var parts = order.SplitEvenly(query.Parts);
+        var parts = OrderSplitting.SplitEvenly(order, query.Parts);
         return parts.IsSuccess
             ? Result.Ok<IReadOnlyList<SplitPartDto>>(parts.Data.Select(SplitPartDto.From).ToList())
             : Result.Fail<IReadOnlyList<SplitPartDto>>(parts.Error);

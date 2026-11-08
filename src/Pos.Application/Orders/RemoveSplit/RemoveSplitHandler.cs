@@ -1,5 +1,6 @@
 using Pos.Application.Common;
 using Pos.Domain.Common;
+using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.RemoveSplit;
 
@@ -17,16 +18,17 @@ public sealed class RemoveSplitHandler(IOrderRepository orders, IUnitOfWork unit
             return Result.Fail<bool?>(NotFoundErrors.Order(command.OrderId));
         }
 
-        if (!order.HasSavedSplit)
+        if (order.SavedSplitParts.Count == 0)
         {
             return Result.Fail<bool?>(NotFoundErrors.Split(command.OrderId));
         }
 
-        var removed = order.RemoveSplit();
-        if (!removed.IsSuccess)
+        if (OrderRules.OpenError(order) is { } notOpen)
         {
-            return Result.Fail<bool?>(removed.Error);
+            return Result.Fail<bool?>(notOpen);
         }
+
+        order.SavedSplitParts.Clear();
 
         var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok<bool?>(true) : Result.Fail<bool?>(saved.Error);

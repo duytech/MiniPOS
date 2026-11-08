@@ -1,6 +1,5 @@
 using Pos.Application.MenuItems.GetMenuItem;
 using Pos.Domain.Common;
-using Pos.Domain.MenuItems;
 
 namespace Pos.Application.Tests;
 
@@ -14,7 +13,7 @@ public class GetMenuItemHandlerTests
     [Fact]
     public async Task Returns_the_menu_item()
     {
-        var menuItem = new MenuItem("Pho", Money.Usd(7.70m));
+        var menuItem = OrderActions.Item("Pho", 7.70m);
         _menuItems.Add(menuItem);
 
         var result = (await _handler.HandleAsync(new GetMenuItemQuery(menuItem.Id), CancellationToken.None)).Data;

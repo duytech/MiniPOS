@@ -23,16 +23,31 @@ public class OrderPricingPersistenceTests(PosApiFactory factory) : IClassFixture
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PosDbContext>();
-            var menuItem = new MenuItem("Pho", Money.Usd(5.00m));
-            var order = Order.Create(DateTimeOffset.UtcNow, new Percentage(8.875m), new Percentage(3m));
-            order.AddItem(menuItem, 1, notes: null);
-            order.ApplyDiscount(discount);
-            order.SetTip(new Percentage(18m));
-            order.SetPaymentMethod(PaymentMethod.Card);
+            var menuItem = new MenuItem { Id = Guid.NewGuid(), Name = "Pho", Price = Money.Usd(5.00m) };
+            var order = new Order
+            {
+                Id = Guid.NewGuid(),
+                Status = OrderStatus.Open,
+                CreatedAt = DateTimeOffset.UtcNow,
+                Currency = Currency.USD,
+                TaxRate = new Percentage(8.875m),
+                CardSurchargeRate = new Percentage(3m),
+                PaymentMethod = PaymentMethod.Card,
+                TipRate = new Percentage(18m),
+                DiscountRate = discount.Rate,
+                DiscountAmount = discount.Amount,
+                Lines =
+                [
+                    new OrderLine
+                    {
+                        Id = Guid.NewGuid(), MenuItemId = menuItem.Id, Name = "Pho", UnitPrice = menuItem.Price, Quantity = 1,
+                    },
+                ],
+            };
             db.MenuItems.Add(menuItem);
             db.Orders.Add(order);
             await db.SaveChangesAsync();
-            (orderId, expected) = (order.Id, order.CalculateTotals());
+            (orderId, expected) = (order.Id, OrderPricing.CalculateTotals(order));
         }
 
         using (var scope = factory.Services.CreateScope())
@@ -44,9 +59,9 @@ public class OrderPricingPersistenceTests(PosApiFactory factory) : IClassFixture
             Assert.Equal(new Percentage(3m), loaded.CardSurchargeRate);
             Assert.Equal(PaymentMethod.Card, loaded.PaymentMethod);
             Assert.Equal(new Percentage(18m), loaded.TipRate);
-            Assert.Equal(discount, loaded.Discount);
-            Assert.Equal(expected, loaded.CalculateTotals());
-            Assert.Equal(Money.Usd(5.54m), loaded.CalculateTotals().Total); // 4.25 + surcharge 0.13 + tax 0.39 + tip 0.77
+            Assert.Equal(discount, OrderPricing.Discount(loaded));
+            Assert.Equal(expected, OrderPricing.CalculateTotals(loaded));
+            Assert.Equal(Money.Usd(5.54m), OrderPricing.CalculateTotals(loaded).Total); // 4.25 + surcharge 0.13 + tax 0.39 + tip 0.77
         }
     }
 }
