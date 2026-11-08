@@ -7,9 +7,10 @@ lists each offending member.
   (`ICommandHandler<TCommand, TResult>` / `IQueryHandler<TQuery, TResult>`), and `XxxValidator` (FluentValidation) when
   the request has shape to check.
   No service classes, no MediatR.
-- Expected errors are values: Domain, handlers and repository saves return `Result` / `Result<T>` with an `Error` (`ErrorCode`
-  + message) and never throw for them. Check every `Result` before going on: an architecture test fails when one is
-  thrown away. Exceptions are left for bugs (constructor guards), which end as a 500. The controller returns the
+- Expected errors are values: Domain and handlers return `Result` / `Result<T>` with an `Error` (`ErrorCode` + message)
+  and never throw for them. Check every `Result` before going on: an architecture test fails when one is thrown away.
+  The one expected exception is a repository save's `SaveFailedException` (below). Other exceptions are left for bugs
+  (constructor guards), which end as a 500. The controller returns the
   `Result` as it is: it serializes as the envelope.
 - Domain classes mapped to the database (`Order`, `OrderLine`, `MenuItem`, `SavedSplitPart`, `SavedSplitLine`) hold only
   `{ get; set; }` properties: no methods, computed properties or constructors with parameters (`EntityShapeTests`).
@@ -19,7 +20,10 @@ lists each offending member.
 - Validators check request shape (required, ranges, formats). Handlers and `OrderRules` enforce the business rules
   (status transitions, discount limits). Don't duplicate one in the other.
 - Repositories save: `CreateAsync` adds a new entity and saves it, `SaveAsync` saves the changes to tracked entities
-  loaded by `GetByIdAsync`; both return `Result` (`ConcurrentChange`, `DataConflict`). Handlers never call the DbContext.
+  loaded by `GetByIdAsync`. They return `Task`, not `Result`: an expected failure throws `ConcurrentChangeException` or
+  `DataConflictException` (both `SaveFailedException`, in Application). The handler catches `SaveFailedException`
+  around the save, logs it at Error (`SaveFailedLog`) and returns `Result.Fail(ex.ToError())`. Handlers never call the
+  DbContext.
 - Repositories return domain entities. Read models for lists live in Application (query + projection); Infrastructure
   never returns Application DTOs from a repository.
 - Delete template leftovers (e.g. `WeatherForecast`) when you touch that project.

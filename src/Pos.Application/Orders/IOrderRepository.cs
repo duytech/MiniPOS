@@ -1,5 +1,5 @@
+using Pos.Application.Common;
 using Pos.Application.Orders.ListOrders;
-using Pos.Domain.Common;
 using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders;
@@ -16,12 +16,13 @@ public interface IOrderRepository
     Task<(IReadOnlyList<Order> Orders, int TotalCount)> ListAsync(
         OrderStatus? status, OrderSearch? search, int page, int pageSize, CancellationToken cancellationToken);
 
-    /// <summary>Adds the order and saves it. Fails with a constraint violation; that is expected, anything else throws.</summary>
-    Task<Result> CreateAsync(Order order, CancellationToken cancellationToken);
+    /// <summary>Adds the order and saves it. Throws a <see cref="SaveFailedException"/> for an expected
+    /// failure.</summary>
+    Task CreateAsync(Order order, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Saves the changes made to orders loaded by <see cref="GetByIdAsync"/>. Fails with a concurrent change or a
-    /// constraint violation; those are expected, anything else throws.
+    /// Saves the changes made to orders loaded by <see cref="GetByIdAsync"/>. Throws a
+    /// <see cref="SaveFailedException"/> for an expected failure (concurrent change, constraint violation).
     /// </summary>
-    Task<Result> SaveAsync(CancellationToken cancellationToken);
+    Task SaveAsync(CancellationToken cancellationToken);
 }

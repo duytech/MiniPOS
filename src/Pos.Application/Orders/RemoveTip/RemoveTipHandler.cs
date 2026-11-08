@@ -1,10 +1,11 @@
+using Microsoft.Extensions.Logging;
 using Pos.Application.Common;
 using Pos.Domain.Common;
 using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.RemoveTip;
 
-public sealed class RemoveTipHandler(IOrderRepository orders)
+public sealed class RemoveTipHandler(IOrderRepository orders, ILogger<RemoveTipHandler> logger)
     : ICommandHandler<RemoveTipCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(RemoveTipCommand command, CancellationToken cancellationToken)
@@ -26,7 +27,16 @@ public sealed class RemoveTipHandler(IOrderRepository orders)
             order.SavedSplitParts.Clear();
         }
 
-        var saved = await orders.SaveAsync(cancellationToken);
-        return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
+        try
+        {
+            await orders.SaveAsync(cancellationToken);
+        }
+        catch (SaveFailedException ex)
+        {
+            logger.OrderSaveFailed(ex, order.Id, ex.Code);
+            return Result.Fail<OrderDto>(ex.ToError());
+        }
+
+        return Result.Ok(OrderDto.From(order));
     }
 }

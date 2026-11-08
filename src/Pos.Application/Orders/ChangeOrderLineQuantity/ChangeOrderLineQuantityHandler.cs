@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Pos.Application.Common;
 using Pos.Domain.Common;
 using Pos.Domain.Orders;
@@ -9,7 +10,8 @@ namespace Pos.Application.Orders.ChangeOrderLineQuantity;
 /// follow the new subtotal. A fixed discount must not be more than the new subtotal: the change is rejected and the
 /// discount has to be changed or removed first.
 /// </summary>
-public sealed class ChangeOrderLineQuantityHandler(IOrderRepository orders)
+public sealed class ChangeOrderLineQuantityHandler(IOrderRepository orders,
+    ILogger<ChangeOrderLineQuantityHandler> logger)
     : ICommandHandler<ChangeOrderLineQuantityCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(ChangeOrderLineQuantityCommand command, CancellationToken cancellationToken)
@@ -31,8 +33,17 @@ public sealed class ChangeOrderLineQuantityHandler(IOrderRepository orders)
             return Result.Fail<OrderDto>(error);
         }
 
-        var saved = await orders.SaveAsync(cancellationToken);
-        return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
+        try
+        {
+            await orders.SaveAsync(cancellationToken);
+        }
+        catch (SaveFailedException ex)
+        {
+            logger.OrderSaveFailed(ex, order.Id, ex.Code);
+            return Result.Fail<OrderDto>(ex.ToError());
+        }
+
+        return Result.Ok(OrderDto.From(order));
     }
 
     private static Error? ChangeQuantity(Order order, OrderLine line, int quantity)

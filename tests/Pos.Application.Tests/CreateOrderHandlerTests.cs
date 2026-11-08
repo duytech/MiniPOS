@@ -14,7 +14,7 @@ public class CreateOrderHandlerTests
     {
         _act.Time.Now = new DateTimeOffset(2026, 10, 26, 14, 30, 0, TimeSpan.FromHours(7));
         var handler = new CreateOrderHandler(_act.Orders, _act.Time,
-            new PricingOptions { TaxRatePercent = 8.875m, CardSurchargePercent = 3m });
+            new PricingOptions { TaxRatePercent = 8.875m, CardSurchargePercent = 3m }, _act.Logger<CreateOrderHandler>());
 
         var result = (await handler.HandleAsync(new CreateOrderCommand(), CancellationToken.None)).Data!;
 

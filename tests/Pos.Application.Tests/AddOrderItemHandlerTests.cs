@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Pos.Application.Common;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Domain.Common;
 using Pos.Domain.MenuItems;
@@ -42,7 +44,7 @@ public class AddOrderItemHandlerTests
     {
         var order = _act.NewOrder();
 
-        var result = await new AddOrderItemHandler(_act.Orders, _act.MenuItems)
+        var result = await new AddOrderItemHandler(_act.Orders, _act.MenuItems, _act.Logger<AddOrderItemHandler>())
             .HandleAsync(new AddOrderItemCommand(order.Id, Guid.NewGuid(), 1, null), CancellationToken.None);
 
         Assert.Equal(ErrorCode.MenuItemNotFound, result.Error!.Code);
@@ -50,14 +52,20 @@ public class AddOrderItemHandlerTests
     }
 
     [Fact]
-    public async Task Failed_save_is_returned()
+    public async Task Failed_save_is_logged_and_returned()
     {
         var order = _act.NewOrder();
-        _act.Orders.SaveResult = Result.Fail(new Error(ErrorCode.ConcurrentChange, "Changed."));
+        var conflict = new ConcurrentChangeException("Changed.", new InvalidOperationException());
+        _act.Orders.SaveException = conflict;
 
         var result = await _act.AddItem(order, Burger, 1);
 
+        Assert.False(result.IsSuccess);
         Assert.Equal(ErrorCode.ConcurrentChange, result.Error!.Code);
+        Assert.Equal("Changed.", result.Error.Message);
+        var log = Assert.Single(_act.Logs);
+        Assert.Equal(LogLevel.Error, log.Level);
+        Assert.Same(conflict, log.Exception);
     }
 
     [Fact]

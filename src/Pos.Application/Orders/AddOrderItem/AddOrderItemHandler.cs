@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Pos.Application.Common;
 using Pos.Application.MenuItems;
 using Pos.Domain.Common;
@@ -6,7 +7,8 @@ using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.AddOrderItem;
 
-public sealed class AddOrderItemHandler(IOrderRepository orders, IMenuItemRepository menuItems)
+public sealed class AddOrderItemHandler(IOrderRepository orders, IMenuItemRepository menuItems,
+    ILogger<AddOrderItemHandler> logger)
     : ICommandHandler<AddOrderItemCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(AddOrderItemCommand command, CancellationToken cancellationToken)
@@ -28,8 +30,17 @@ public sealed class AddOrderItemHandler(IOrderRepository orders, IMenuItemReposi
             return Result.Fail<OrderDto>(error);
         }
 
-        var saved = await orders.SaveAsync(cancellationToken);
-        return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
+        try
+        {
+            await orders.SaveAsync(cancellationToken);
+        }
+        catch (SaveFailedException ex)
+        {
+            logger.OrderSaveFailed(ex, order.Id, ex.Code);
+            return Result.Fail<OrderDto>(ex.ToError());
+        }
+
+        return Result.Ok(OrderDto.From(order));
     }
 
     /// <summary>
