@@ -20,6 +20,6 @@ public sealed class GetSplitHandler(IOrderRepository orders) : IQueryHandler<Get
         }
 
         var parts = OrderSplitting.Split(order, OrderSplitting.SavedSplitLineIds(order));
-        return parts.IsSuccess ? Result.Ok(OrderSplitDto.From(parts.Data)) : Result.Fail<OrderSplitDto>(parts.Error);
+        return parts.IsSuccess ? Result.Ok(OrderSplitDto.From(parts.Data!)) : Result.Fail<OrderSplitDto>(parts.Error);
     }
 }

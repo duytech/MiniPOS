@@ -57,8 +57,8 @@ public class CloseOrderHandlerTests
             _ => await _act.SetPaymentMethod(order, PaymentMethod.Card),
         };
 
-        Assert.Equal(ErrorCode.OrderNotOpen, result.Error.Code);
-        Assert.Equal($"The order is {status}; only an open order can be changed.", result.Error.Message);
+        Assert.Equal(ErrorCode.OrderNotOpen, result.Error!.Code);
+        Assert.Equal($"The order is {status}; only an open order can be changed.", result.Error!.Message);
         Assert.Equal(1, Assert.Single(order.Lines).Quantity);
         Assert.Equal(totalsBefore, OrderPricing.CalculateTotals(order));
         Assert.Equal(PaymentMethod.Cash, order.PaymentMethod);
@@ -77,7 +77,7 @@ public class CloseOrderHandlerTests
         await _act.SetPaymentMethod(order, PaymentMethod.Card);
         var totalsBefore = OrderPricing.CalculateTotals(order);
 
-        var totals = (await _act.Close(order, status, ClosedAt)).Data;
+        var totals = (await _act.Close(order, status, ClosedAt)).Data!;
 
         Assert.Equal(status, order.Status);
         Assert.Equal(status == OrderStatus.Paid ? ClosedAt : null, order.PaidAt);
@@ -98,7 +98,7 @@ public class CloseOrderHandlerTests
     {
         var order = _act.NewOrder(new Percentage(8.875m));
 
-        var result = (await _act.Close(order, status)).Data;
+        var result = (await _act.Close(order, status)).Data!;
 
         Assert.Equal(status, order.Status);
         Assert.Empty(order.Lines);
@@ -119,7 +119,7 @@ public class CloseOrderHandlerTests
 
         var result = await _act.Close(order, second, ClosedAt.AddMinutes(5));
 
-        Assert.Equal(ErrorCode.OrderNotOpen, result.Error.Code);
+        Assert.Equal(ErrorCode.OrderNotOpen, result.Error!.Code);
         Assert.Equal(first, order.Status);
         Assert.Equal(paidAt, order.PaidAt);
         Assert.Equal(cancelledAt, order.CancelledAt);

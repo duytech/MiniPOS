@@ -10,7 +10,7 @@ public class ResultTests
     public void Ok_has_no_error()
     {
         Assert.True(Result.Ok().IsSuccess);
-        Assert.Throws<InvalidOperationException>(() => Result.Ok().Error);
+        Assert.Null(Result.Ok().Error);
     }
 
     [Fact]
@@ -20,7 +20,17 @@ public class ResultTests
 
         Assert.True(result.IsSuccess);
         Assert.Equal(5, result.Data);
-        Assert.Throws<InvalidOperationException>(() => result.Error);
+        Assert.Null(result.Error);
+    }
+
+    [Fact]
+    public void Ok_may_have_null_data()
+    {
+        var result = Result.Ok<string?>(null);
+
+        Assert.True(result.IsSuccess);
+        Assert.Null(result.Data);
+        Assert.Null(result.Error);
     }
 
     [Fact]
@@ -35,10 +45,10 @@ public class ResultTests
     [Fact]
     public void Fail_with_data_type_has_the_error_and_no_data()
     {
-        var result = Result.Fail<int>(Failure);
+        var result = Result.Fail<string>(Failure);
 
         Assert.False(result.IsSuccess);
         Assert.Equal(Failure, result.Error);
-        Assert.Throws<InvalidOperationException>(() => result.Data);
+        Assert.Null(result.Data);
     }
 }

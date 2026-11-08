@@ -17,7 +17,7 @@ public class AddOrderItemHandlerTests
     {
         var order = _act.NewOrder();
 
-        var result = (await _act.AddItem(order, OrderActions.Item("Pho", 7.70m), 2)).Data;
+        var result = (await _act.AddItem(order, OrderActions.Item("Pho", 7.70m), 2)).Data!;
 
         var line = Assert.Single(result.Lines);
         Assert.Equal("Pho", line.Name);
@@ -33,7 +33,7 @@ public class AddOrderItemHandlerTests
     {
         var result = await _act.AddItem(new Order { Id = Guid.NewGuid() }, Burger, 1);
 
-        Assert.Equal(ErrorCode.OrderNotFound, result.Error.Code);
+        Assert.Equal(ErrorCode.OrderNotFound, result.Error!.Code);
         Assert.Equal(0, _act.UnitOfWork.SaveCount);
     }
 
@@ -45,7 +45,7 @@ public class AddOrderItemHandlerTests
         var result = await new AddOrderItemHandler(_act.Orders, _act.MenuItems, _act.UnitOfWork)
             .HandleAsync(new AddOrderItemCommand(order.Id, Guid.NewGuid(), 1, null), CancellationToken.None);
 
-        Assert.Equal(ErrorCode.MenuItemNotFound, result.Error.Code);
+        Assert.Equal(ErrorCode.MenuItemNotFound, result.Error!.Code);
         Assert.Equal(0, _act.UnitOfWork.SaveCount);
     }
 
@@ -57,7 +57,7 @@ public class AddOrderItemHandlerTests
 
         var result = await _act.AddItem(order, Burger, 1);
 
-        Assert.Equal(ErrorCode.ConcurrentChange, result.Error.Code);
+        Assert.Equal(ErrorCode.ConcurrentChange, result.Error!.Code);
     }
 
     [Fact]
@@ -66,7 +66,7 @@ public class AddOrderItemHandlerTests
         var order = _act.NewOrder();
 
         await _act.AddItem(order, Burger, 1, "no onions");
-        var result = (await _act.AddItem(order, Burger, 2, "no onions")).Data;
+        var result = (await _act.AddItem(order, Burger, 2, "no onions")).Data!;
 
         Assert.Equal(3, Assert.Single(order.Lines).Quantity);
         Assert.Equal(Money.Usd(38.97m), result.Total);
@@ -116,7 +116,7 @@ public class AddOrderItemHandlerTests
         await _act.AddItem(order, pho, 1);
 
         pho.Price = Money.Usd(8.00m);
-        var result = (await _act.AddItem(order, pho, 1)).Data;
+        var result = (await _act.AddItem(order, pho, 1)).Data!;
 
         Assert.Equal([Money.Usd(7.70m), Money.Usd(8.00m)], result.Lines.Select(l => l.UnitPrice));
         Assert.Equal(Money.Usd(15.70m), result.Total);
@@ -131,7 +131,7 @@ public class AddOrderItemHandlerTests
 
         var result = await _act.AddItem(order, Burger, 1);
 
-        Assert.Equal(ErrorCode.LineQuantityTooLarge, result.Error.Code);
+        Assert.Equal(ErrorCode.LineQuantityTooLarge, result.Error!.Code);
         Assert.Equal(int.MaxValue, Assert.Single(order.Lines).Quantity);
         Assert.Equal(savesBefore, _act.UnitOfWork.SaveCount);
     }

@@ -1,16 +1,22 @@
+using System.Diagnostics.CodeAnalysis;
+
 namespace Pos.Domain.Common;
 
-/// <summary>The outcome of an operation that can fail in an expected way. Reading the wrong side is a bug and throws.</summary>
+/// <summary>
+/// The outcome of an operation that can fail in an expected way. The unused side is null: <see cref="Error"/> on a
+/// success, <see cref="Result{T}.Data"/> on a failure. A failure always has an <see cref="Error"/>; a success may have
+/// null <see cref="Result{T}.Data"/>.
+/// </summary>
 public sealed class Result
 {
     private static readonly Result Success = new(null);
-    private readonly Error? _error;
 
-    private Result(Error? error) => _error = error;
+    private Result(Error? error) => Error = error;
 
-    public bool IsSuccess => _error is null;
+    [MemberNotNullWhen(false, nameof(Error))]
+    public bool IsSuccess => Error is null;
 
-    public Error Error => _error ?? throw new InvalidOperationException("A successful result has no error.");
+    public Error? Error { get; }
 
     public static Result Ok() => Success;
 
@@ -22,20 +28,19 @@ public sealed class Result
 }
 
 /// <inheritdoc cref="Result"/>
+// T? does not make a value type nullable: a failed Result<bool> has Data false; use bool? for null.
 public sealed class Result<T>
 {
-    private readonly T? _data;
-    private readonly Error? _error;
-
     internal Result(T? data, Error? error)
     {
-        _data = data;
-        _error = error;
+        Data = data;
+        Error = error;
     }
 
-    public bool IsSuccess => _error is null;
+    [MemberNotNullWhen(false, nameof(Error))]
+    public bool IsSuccess => Error is null;
 
-    public T Data => IsSuccess ? _data! : throw new InvalidOperationException("A failed result has no data.");
+    public T? Data { get; }
 
-    public Error Error => _error ?? throw new InvalidOperationException("A successful result has no error.");
+    public Error? Error { get; }
 }

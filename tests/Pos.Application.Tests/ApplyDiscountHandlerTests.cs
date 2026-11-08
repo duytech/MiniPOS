@@ -22,8 +22,8 @@ public class ApplyDiscountHandlerTests
 
         var result = await _act.ApplyFixedDiscount(order, 11.51m);
 
-        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, result.Error.Code);
-        Assert.Equal("A discount of 11.51 USD is more than the subtotal of 11.50 USD.", result.Error.Message);
+        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, result.Error!.Code);
+        Assert.Equal("A discount of 11.51 USD is more than the subtotal of 11.50 USD.", result.Error!.Message);
         Assert.Null(OrderPricing.Discount(order));
     }
 
@@ -34,7 +34,7 @@ public class ApplyDiscountHandlerTests
 
         var result = await _act.ApplyPercentDiscount(order, 100.01m);
 
-        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, result.Error.Code);
+        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, result.Error!.Code);
         Assert.Null(OrderPricing.Discount(order));
     }
 
@@ -44,11 +44,11 @@ public class ApplyDiscountHandlerTests
         var order = await OrderWith(10.00m);
         await _act.ApplyFixedDiscount(order, 2.00m);
 
-        var replaced = (await _act.ApplyPercentDiscount(order, 10m)).Data;
+        var replaced = (await _act.ApplyPercentDiscount(order, 10m)).Data!;
         Assert.Equal(Money.Usd(1.00m), replaced.Discount);
         Assert.Null(order.DiscountAmount);
 
-        var removed = (await _act.RemoveDiscount(order)).Data;
+        var removed = (await _act.RemoveDiscount(order)).Data!;
         Assert.Null(OrderPricing.Discount(order));
         Assert.Equal(Money.Usd(10.00m), removed.Total);
     }

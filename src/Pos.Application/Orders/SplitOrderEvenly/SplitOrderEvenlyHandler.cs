@@ -18,7 +18,7 @@ public sealed class SplitOrderEvenlyHandler(IOrderRepository orders)
 
         var parts = OrderSplitting.SplitEvenly(order, query.Parts);
         return parts.IsSuccess
-            ? Result.Ok<IReadOnlyList<SplitPartDto>>(parts.Data.Select(SplitPartDto.From).ToList())
+            ? Result.Ok<IReadOnlyList<SplitPartDto>>(parts.Data!.Select(SplitPartDto.From).ToList())
             : Result.Fail<IReadOnlyList<SplitPartDto>>(parts.Error);
     }
 }

@@ -42,6 +42,6 @@ public sealed class SaveSplitHandler(IOrderRepository orders, IUnitOfWork unitOf
         }));
 
         var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
-        return saved.IsSuccess ? Result.Ok(OrderSplitDto.From(parts.Data)) : Result.Fail<OrderSplitDto>(saved.Error);
+        return saved.IsSuccess ? Result.Ok(OrderSplitDto.From(parts.Data!)) : Result.Fail<OrderSplitDto>(saved.Error);
     }
 }
