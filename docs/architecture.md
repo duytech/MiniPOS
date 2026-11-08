@@ -19,7 +19,7 @@ lists each offending member.
   place totals are calculated), `OrderSplitting` (split bill) and `OrderRules` (open-only, fixed discount ≤ subtotal).
 - Validators check request shape (required, ranges, formats). Handlers and `OrderRules` enforce the business rules
   (status transitions, discount limits). Don't duplicate one in the other.
-- Repositories save: `CreateAsync` adds a new entity and saves it, `SaveAsync` saves the changes to tracked entities
+- Repositories save (through `BaseRepository.SaveChangesAsync`): `CreateAsync` adds a new entity and saves it, `SaveAsync` saves the changes to tracked entities
   loaded by `GetByIdAsync`. They return `Task`, not `Result`: an expected failure throws `ConcurrentChangeException` or
   `DataConflictException` (both `SaveFailedException`, in Application). The handler catches `SaveFailedException`
   around the save, logs it at Error (`SaveFailedLog`) and returns `Result.Fail(ex.ToError())`. Handlers never call the

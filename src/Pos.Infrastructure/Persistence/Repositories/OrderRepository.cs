@@ -5,12 +5,12 @@ using Pos.Domain.Orders;
 
 namespace Pos.Infrastructure.Persistence.Repositories;
 
-internal sealed class OrderRepository(PosDbContext db) : IOrderRepository
+internal sealed class OrderRepository(PosDbContext db) : BaseRepository(db), IOrderRepository
 {
     private const string LikeEscape = "\\";
 
     public Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
-        db.Orders
+        Db.Orders
             .Include(o => o.Lines)
             .Include(o => o.SavedSplitParts).ThenInclude(p => p.Lines)
             .AsSplitQuery()
@@ -19,7 +19,7 @@ internal sealed class OrderRepository(PosDbContext db) : IOrderRepository
     public async Task<(IReadOnlyList<Order> Orders, int TotalCount)> ListAsync(
         OrderStatus? status, OrderSearch? search, int page, int pageSize, CancellationToken cancellationToken)
     {
-        var query = db.Orders.AsNoTracking();
+        var query = Db.Orders.AsNoTracking();
         if (status is not null)
         {
             query = query.Where(o => o.Status == status);
@@ -46,11 +46,11 @@ internal sealed class OrderRepository(PosDbContext db) : IOrderRepository
 
     public Task CreateAsync(Order order, CancellationToken cancellationToken)
     {
-        db.Orders.Add(order);
-        return db.SaveChangesTranslatedAsync(cancellationToken);
+        Db.Orders.Add(order);
+        return SaveChangesAsync(cancellationToken);
     }
 
-    public Task SaveAsync(CancellationToken cancellationToken) => db.SaveChangesTranslatedAsync(cancellationToken);
+    public Task SaveAsync(CancellationToken cancellationToken) => SaveChangesAsync(cancellationToken);
 
     /// <summary>Makes '%', '_' and the escape character in user input match themselves in an ILIKE pattern.</summary>
     private static string EscapeLike(string text) =>

@@ -53,7 +53,7 @@ none seeing the others' code. Add two sections to the plan:
   fixed text, a reload). Name the existing DTO the
   response extends, if any. For every array, say its order (as sent, by a named field, or none) and check that the
   stored data can keep it. Give the message per `ErrorCode` (`ConcurrentChange` and `DataConflict` have different ones in
-  `SaveChangesExtensions`); do not plan a constraint that makes a racing request fail before the token check.
+  `BaseRepository`); do not plan a constraint that makes a racing request fail before the token check.
 - **Tasks**: `backend`, `frontend`, `tests`, each with its list of files (new or changed). A file is in exactly one
   list, shared files included (`DependencyInjection.cs`, the migration and model snapshot, `app.routes.ts`, a test
   helper like `ApiClient`). The backend's own tests and the `tests` task's files have different names. The frontend

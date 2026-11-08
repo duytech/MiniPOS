@@ -2,21 +2,23 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Pos.Application.Common;
 
-namespace Pos.Infrastructure.Persistence;
+namespace Pos.Infrastructure.Persistence.Repositories;
 
-internal static class SaveChangesExtensions
+internal abstract class BaseRepository(PosDbContext db)
 {
     private const string ChangedByAnotherRequest = "The data was changed by another request. Reload and try again.";
+
+    protected PosDbContext Db { get; } = db;
 
     /// <summary>
     /// Throws <see cref="ConcurrentChangeException"/> or <see cref="DataConflictException"/> for the expected failures;
     /// anything else is rethrown as it is.
     /// </summary>
-    public static async Task SaveChangesTranslatedAsync(this PosDbContext db, CancellationToken cancellationToken)
+    protected async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await db.SaveChangesAsync(cancellationToken);
+            await Db.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException ex)
         {

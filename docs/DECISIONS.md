@@ -377,13 +377,13 @@ Important design decisions: what, why, when. Newest first.
 ## 2026-11-08: Repositories save, no IUnitOfWork (#146)
 - **What:** `IUnitOfWork` is removed. `IOrderRepository.CreateAsync(order)` and `IMenuItemRepository.CreateAsync(menuItem)`
   add and save; `IOrderRepository.SaveAsync()` saves the changes to orders loaded by `GetByIdAsync`. They return `Result`
-  with the same error mapping as before (`ConcurrentChange`, `DataConflict`), now in `SaveChangesExtensions`.
+  with the same error mapping as before (`ConcurrentChange`, `DataConflict`), now in `BaseRepository.SaveChangesAsync`.
 - **Why:** the owner's decision: saving is database logic and belongs in the repository, not in the handler.
 - **Trade-off, accepted:** `SaveAsync` saves everything the request's DbContext tracks, not only the order: a use case
   that changes two aggregates still commits them together, but the name no longer says so.
 
 ## 2026-11-08: Repository saves throw, handlers catch and log (#146)
-- **What:** `CreateAsync` / `SaveAsync` return `Task`, not `Result`. `SaveChangesExtensions` turns the expected EF and
+- **What:** `CreateAsync` / `SaveAsync` return `Task`, not `Result`. `BaseRepository.SaveChangesAsync` turns the expected EF and
   Postgres failures into `ConcurrentChangeException` / `DataConflictException` (base `SaveFailedException` with an
   `ErrorCode`, in Application). Each command handler catches `SaveFailedException` around the save, logs it at Error
   (`SaveFailedLog`, `LoggerMessage` because CA1848 is on) and returns `Result.Fail(ex.ToError())`. Replaces the
@@ -394,3 +394,6 @@ Important design decisions: what, why, when. Newest first.
   `ConcurrentChange` / `DataConflict` that clients and the concurrency tests see do not change.
 - **Trade-off, accepted:** each command handler repeats the same `try`/`catch`. A conflict between two requests is
   expected but logged at Error (the owner's choice), so parallel edits show up as errors in the logs.
+- **Base class, not an extension:** every repository inherits `BaseRepository` (Infrastructure) and saves with its
+  protected `SaveChangesAsync`, the only place that translates save failures. The owner's choice over the earlier
+  `SaveChangesTranslatedAsync` extension on `PosDbContext`.
