@@ -54,7 +54,9 @@ reviews:
       instructions: |
         Money tests assert exact cents and include a midpoint (x.xx5) case. Tests must not re-calculate a total
         themselves. Every endpoint that changes an order needs a parallel-request test that checks the stored result
-        (only successes and `ConcurrentChange`, stored state matches the successes). HTTP 200 does not mean success: a test
+        (only successes, `ConcurrentChange`, or an error code the loser gets from the state the winner left, such as
+        `DataConflict` for a unique/FK clash, `OrderNotOpen` after a pay, `DiscountExceedsSubtotal` after a line
+        removal; flag any other code; stored state matches the successes). HTTP 200 does not mean success: a test
         checks `isSuccess` or the error code. No credentials in test code.
         When expected values in a test change in the same PR as the production code they check, and the PR
         description does not name the business rule that changed, flag it as Major and ask which rule allows the new
