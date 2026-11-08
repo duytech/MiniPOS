@@ -4,7 +4,7 @@ using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.RemoveTip;
 
-public sealed class RemoveTipHandler(IOrderRepository orders, IUnitOfWork unitOfWork)
+public sealed class RemoveTipHandler(IOrderRepository orders)
     : ICommandHandler<RemoveTipCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(RemoveTipCommand command, CancellationToken cancellationToken)
@@ -26,7 +26,7 @@ public sealed class RemoveTipHandler(IOrderRepository orders, IUnitOfWork unitOf
             order.SavedSplitParts.Clear();
         }
 
-        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
+        var saved = await orders.SaveAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
     }
 }

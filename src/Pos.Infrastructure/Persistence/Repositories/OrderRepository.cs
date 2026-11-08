@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Pos.Application.Orders;
 using Pos.Application.Orders.ListOrders;
+using Pos.Domain.Common;
 using Pos.Domain.Orders;
 
 namespace Pos.Infrastructure.Persistence.Repositories;
@@ -44,7 +45,13 @@ internal sealed class OrderRepository(PosDbContext db) : IOrderRepository
         return (orders, totalCount);
     }
 
-    public void Add(Order order) => db.Orders.Add(order);
+    public Task<Result> CreateAsync(Order order, CancellationToken cancellationToken)
+    {
+        db.Orders.Add(order);
+        return db.SaveChangesAsResultAsync(cancellationToken);
+    }
+
+    public Task<Result> SaveAsync(CancellationToken cancellationToken) => db.SaveChangesAsResultAsync(cancellationToken);
 
     /// <summary>Makes '%', '_' and the escape character in user input match themselves in an ILIKE pattern.</summary>
     private static string EscapeLike(string text) =>

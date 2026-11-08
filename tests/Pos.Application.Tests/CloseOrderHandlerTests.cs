@@ -42,7 +42,7 @@ public class CloseOrderHandlerTests
         await _act.AddItem(order, Burger, 1);
         var totalsBefore = OrderPricing.CalculateTotals(order);
         await _act.Close(order, status);
-        var savesBefore = _act.UnitOfWork.SaveCount;
+        var savesBefore = _act.Orders.SaveCount;
 
         var result = change switch
         {
@@ -62,7 +62,7 @@ public class CloseOrderHandlerTests
         Assert.Equal(1, Assert.Single(order.Lines).Quantity);
         Assert.Equal(totalsBefore, OrderPricing.CalculateTotals(order));
         Assert.Equal(PaymentMethod.Cash, order.PaymentMethod);
-        Assert.Equal(savesBefore, _act.UnitOfWork.SaveCount);
+        Assert.Equal(savesBefore, _act.Orders.SaveCount);
     }
 
     [Theory]

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Pos.Application.MenuItems;
+using Pos.Domain.Common;
 using Pos.Domain.MenuItems;
 
 namespace Pos.Api.IntegrationTests;
@@ -62,7 +63,8 @@ public class UnexpectedErrorTests(PosApiFactory factory) : IClassFixture<PosApiF
         public Task<MenuItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
             throw new InvalidOperationException(OuterSecret, new InvalidOperationException(InnerSecret));
 
-        public void Add(MenuItem menuItem) => throw new NotSupportedException();
+        public Task<Result> CreateAsync(MenuItem menuItem, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed record LogEntry(LogLevel Level, Exception? Exception);

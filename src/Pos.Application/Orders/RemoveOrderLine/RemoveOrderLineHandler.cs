@@ -9,7 +9,7 @@ namespace Pos.Application.Orders.RemoveOrderLine;
 /// follows the new subtotal. A fixed discount must not be more than the new subtotal: the removal is rejected and
 /// the discount has to be changed or removed first.
 /// </summary>
-public sealed class RemoveOrderLineHandler(IOrderRepository orders, IUnitOfWork unitOfWork)
+public sealed class RemoveOrderLineHandler(IOrderRepository orders)
     : ICommandHandler<RemoveOrderLineCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(RemoveOrderLineCommand command, CancellationToken cancellationToken)
@@ -36,7 +36,7 @@ public sealed class RemoveOrderLineHandler(IOrderRepository orders, IUnitOfWork 
         order.Lines.Remove(line);
         order.SavedSplitParts.Clear();
 
-        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
+        var saved = await orders.SaveAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
     }
 }

@@ -1,15 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using Pos.Application.Common;
 using Pos.Domain.Common;
 
 namespace Pos.Infrastructure.Persistence;
 
-internal sealed class UnitOfWork(PosDbContext db) : IUnitOfWork
+internal static class SaveChangesExtensions
 {
     private const string ChangedByAnotherRequest = "The data was changed by another request. Reload and try again.";
 
-    public async Task<Result> SaveChangesAsync(CancellationToken cancellationToken)
+    /// <summary>Fails with a concurrent change or a constraint violation; those are expected, anything else throws.</summary>
+    public static async Task<Result> SaveChangesAsResultAsync(this PosDbContext db, CancellationToken cancellationToken)
     {
         try
         {

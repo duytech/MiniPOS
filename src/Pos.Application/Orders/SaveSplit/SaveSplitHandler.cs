@@ -8,7 +8,7 @@ namespace Pos.Application.Orders.SaveSplit;
 /// Saves the split by item, replacing any saved one. Only the line assignment is stored; its amounts are recomputed on
 /// every read. Only an open order. A real change to the order's lines, discount, tip or payment method clears it.
 /// </summary>
-public sealed class SaveSplitHandler(IOrderRepository orders, IUnitOfWork unitOfWork)
+public sealed class SaveSplitHandler(IOrderRepository orders)
     : ICommandHandler<SaveSplitCommand, OrderSplitDto>
 {
     public async Task<Result<OrderSplitDto>> HandleAsync(SaveSplitCommand command, CancellationToken cancellationToken)
@@ -41,7 +41,7 @@ public sealed class SaveSplitHandler(IOrderRepository orders, IUnitOfWork unitOf
                 .ToList(),
         }));
 
-        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
+        var saved = await orders.SaveAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderSplitDto.From(parts.Data!)) : Result.Fail<OrderSplitDto>(saved.Error);
     }
 }

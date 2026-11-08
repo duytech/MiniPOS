@@ -24,7 +24,6 @@ internal sealed class OrderActions
 {
     public FakeOrderRepository Orders { get; } = new();
     public FakeMenuItemRepository MenuItems { get; } = new();
-    public FakeUnitOfWork UnitOfWork { get; } = new();
     public FixedTimeProvider Time { get; } = new();
 
     /// <summary>An open, empty order in the repository, paid in cash.</summary>
@@ -50,7 +49,7 @@ internal sealed class OrderActions
     public Task<Result<OrderDto>> AddItem(Order order, MenuItem menuItem, int quantity, string? notes = null)
     {
         MenuItems.MenuItems.TryAdd(menuItem.Id, menuItem);
-        return new AddOrderItemHandler(Orders, MenuItems, UnitOfWork)
+        return new AddOrderItemHandler(Orders, MenuItems)
             .HandleAsync(new AddOrderItemCommand(order.Id, menuItem.Id, quantity, notes), CancellationToken.None);
     }
 
@@ -62,33 +61,33 @@ internal sealed class OrderActions
     }
 
     public Task<Result<OrderDto>> RemoveLine(Order order, Guid lineId) =>
-        new RemoveOrderLineHandler(Orders, UnitOfWork)
+        new RemoveOrderLineHandler(Orders)
             .HandleAsync(new RemoveOrderLineCommand(order.Id, lineId), CancellationToken.None);
 
     public Task<Result<OrderDto>> ChangeQuantity(Order order, Guid lineId, int quantity) =>
-        new ChangeOrderLineQuantityHandler(Orders, UnitOfWork)
+        new ChangeOrderLineQuantityHandler(Orders)
             .HandleAsync(new ChangeOrderLineQuantityCommand(order.Id, lineId, quantity), CancellationToken.None);
 
     public Task<Result<OrderDto>> ApplyPercentDiscount(Order order, decimal percent) =>
-        new ApplyDiscountHandler(Orders, UnitOfWork)
+        new ApplyDiscountHandler(Orders)
             .HandleAsync(new ApplyDiscountCommand(order.Id, new Percentage(percent), null), CancellationToken.None);
 
     public Task<Result<OrderDto>> ApplyFixedDiscount(Order order, decimal amount) =>
-        new ApplyDiscountHandler(Orders, UnitOfWork)
+        new ApplyDiscountHandler(Orders)
             .HandleAsync(new ApplyDiscountCommand(order.Id, null, Money.Usd(amount)), CancellationToken.None);
 
     public Task<Result<OrderDto>> RemoveDiscount(Order order) =>
-        new RemoveDiscountHandler(Orders, UnitOfWork).HandleAsync(new RemoveDiscountCommand(order.Id), CancellationToken.None);
+        new RemoveDiscountHandler(Orders).HandleAsync(new RemoveDiscountCommand(order.Id), CancellationToken.None);
 
     public Task<Result<OrderDto>> SetTip(Order order, decimal percent) =>
-        new SetTipHandler(Orders, UnitOfWork)
+        new SetTipHandler(Orders)
             .HandleAsync(new SetTipCommand(order.Id, new Percentage(percent)), CancellationToken.None);
 
     public Task<Result<OrderDto>> RemoveTip(Order order) =>
-        new RemoveTipHandler(Orders, UnitOfWork).HandleAsync(new RemoveTipCommand(order.Id), CancellationToken.None);
+        new RemoveTipHandler(Orders).HandleAsync(new RemoveTipCommand(order.Id), CancellationToken.None);
 
     public Task<Result<OrderDto>> SetPaymentMethod(Order order, PaymentMethod paymentMethod) =>
-        new SetPaymentMethodHandler(Orders, UnitOfWork)
+        new SetPaymentMethodHandler(Orders)
             .HandleAsync(new SetPaymentMethodCommand(order.Id, paymentMethod), CancellationToken.None);
 
     /// <summary>Pays or cancels the order at <paramref name="at"/> (the fake clock's time when null).</summary>
@@ -101,9 +100,9 @@ internal sealed class OrderActions
 
         return status switch
         {
-            OrderStatus.Paid => new PayOrderHandler(Orders, UnitOfWork, Time)
+            OrderStatus.Paid => new PayOrderHandler(Orders, Time)
                 .HandleAsync(new PayOrderCommand(order.Id), CancellationToken.None),
-            OrderStatus.Cancelled => new CancelOrderHandler(Orders, UnitOfWork, Time)
+            OrderStatus.Cancelled => new CancelOrderHandler(Orders, Time)
                 .HandleAsync(new CancelOrderCommand(order.Id), CancellationToken.None),
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Paid or Cancelled"),
         };
@@ -113,10 +112,10 @@ internal sealed class OrderActions
         new PreviewSplitHandler(Orders).HandleAsync(new PreviewSplitQuery(order.Id, parts), CancellationToken.None);
 
     public Task<Result<OrderSplitDto>> SaveSplit(Order order, params Guid[][] parts) =>
-        new SaveSplitHandler(Orders, UnitOfWork).HandleAsync(new SaveSplitCommand(order.Id, parts), CancellationToken.None);
+        new SaveSplitHandler(Orders).HandleAsync(new SaveSplitCommand(order.Id, parts), CancellationToken.None);
 
     public Task<Result<bool?>> RemoveSplit(Order order) =>
-        new RemoveSplitHandler(Orders, UnitOfWork).HandleAsync(new RemoveSplitCommand(order.Id), CancellationToken.None);
+        new RemoveSplitHandler(Orders).HandleAsync(new RemoveSplitCommand(order.Id), CancellationToken.None);
 
     public Task<Result<OrderSplitDto>> GetSplit(Order order) =>
         new GetSplitHandler(Orders).HandleAsync(new GetSplitQuery(order.Id), CancellationToken.None);

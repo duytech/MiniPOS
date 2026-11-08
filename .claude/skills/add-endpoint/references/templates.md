@@ -18,7 +18,7 @@ Read the file, copy its shape, rename. They follow every rule in CLAUDE.md and p
 ## Command handler shape
 
 ```csharp
-public sealed class RemoveTipHandler(IOrderRepository orders, IUnitOfWork unitOfWork)
+public sealed class RemoveTipHandler(IOrderRepository orders)
     : ICommandHandler<RemoveTipCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(RemoveTipCommand command, CancellationToken cancellationToken)
@@ -35,7 +35,7 @@ public sealed class RemoveTipHandler(IOrderRepository orders, IUnitOfWork unitOf
             return Result.Fail<OrderDto>(changed.Error);
         }
 
-        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
+        var saved = await orders.SaveAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
     }
 }

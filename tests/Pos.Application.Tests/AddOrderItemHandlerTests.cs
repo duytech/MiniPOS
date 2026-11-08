@@ -25,7 +25,7 @@ public class AddOrderItemHandlerTests
         Assert.Equal(Money.Usd(15.40m), line.LineTotal);
         Assert.Equal(Money.Usd(15.40m), result.Subtotal);
         Assert.Equal(Money.Usd(15.40m), result.Total);
-        Assert.Equal(1, _act.UnitOfWork.SaveCount);
+        Assert.Equal(1, _act.Orders.SaveCount);
     }
 
     [Fact]
@@ -34,7 +34,7 @@ public class AddOrderItemHandlerTests
         var result = await _act.AddItem(new Order { Id = Guid.NewGuid() }, Burger, 1);
 
         Assert.Equal(ErrorCode.OrderNotFound, result.Error!.Code);
-        Assert.Equal(0, _act.UnitOfWork.SaveCount);
+        Assert.Equal(0, _act.Orders.SaveCount);
     }
 
     [Fact]
@@ -42,18 +42,18 @@ public class AddOrderItemHandlerTests
     {
         var order = _act.NewOrder();
 
-        var result = await new AddOrderItemHandler(_act.Orders, _act.MenuItems, _act.UnitOfWork)
+        var result = await new AddOrderItemHandler(_act.Orders, _act.MenuItems)
             .HandleAsync(new AddOrderItemCommand(order.Id, Guid.NewGuid(), 1, null), CancellationToken.None);
 
         Assert.Equal(ErrorCode.MenuItemNotFound, result.Error!.Code);
-        Assert.Equal(0, _act.UnitOfWork.SaveCount);
+        Assert.Equal(0, _act.Orders.SaveCount);
     }
 
     [Fact]
     public async Task Failed_save_is_returned()
     {
         var order = _act.NewOrder();
-        _act.UnitOfWork.SaveResult = Result.Fail(new Error(ErrorCode.ConcurrentChange, "Changed."));
+        _act.Orders.SaveResult = Result.Fail(new Error(ErrorCode.ConcurrentChange, "Changed."));
 
         var result = await _act.AddItem(order, Burger, 1);
 
@@ -127,12 +127,12 @@ public class AddOrderItemHandlerTests
     {
         var order = _act.NewOrder();
         await _act.AddItem(order, Burger, int.MaxValue);
-        var savesBefore = _act.UnitOfWork.SaveCount;
+        var savesBefore = _act.Orders.SaveCount;
 
         var result = await _act.AddItem(order, Burger, 1);
 
         Assert.Equal(ErrorCode.LineQuantityTooLarge, result.Error!.Code);
         Assert.Equal(int.MaxValue, Assert.Single(order.Lines).Quantity);
-        Assert.Equal(savesBefore, _act.UnitOfWork.SaveCount);
+        Assert.Equal(savesBefore, _act.Orders.SaveCount);
     }
 }

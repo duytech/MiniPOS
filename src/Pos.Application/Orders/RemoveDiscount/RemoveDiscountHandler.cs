@@ -4,7 +4,7 @@ using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.RemoveDiscount;
 
-public sealed class RemoveDiscountHandler(IOrderRepository orders, IUnitOfWork unitOfWork)
+public sealed class RemoveDiscountHandler(IOrderRepository orders)
     : ICommandHandler<RemoveDiscountCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(RemoveDiscountCommand command, CancellationToken cancellationToken)
@@ -27,7 +27,7 @@ public sealed class RemoveDiscountHandler(IOrderRepository orders, IUnitOfWork u
             order.SavedSplitParts.Clear();
         }
 
-        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
+        var saved = await orders.SaveAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
     }
 }

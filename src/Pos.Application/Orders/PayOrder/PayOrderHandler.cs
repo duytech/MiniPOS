@@ -4,7 +4,7 @@ using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.PayOrder;
 
-public sealed class PayOrderHandler(IOrderRepository orders, IUnitOfWork unitOfWork, TimeProvider timeProvider)
+public sealed class PayOrderHandler(IOrderRepository orders, TimeProvider timeProvider)
     : ICommandHandler<PayOrderCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(PayOrderCommand command, CancellationToken cancellationToken)
@@ -24,7 +24,7 @@ public sealed class PayOrderHandler(IOrderRepository orders, IUnitOfWork unitOfW
         order.Status = OrderStatus.Paid;
         order.PaidAt = timeProvider.GetUtcNow().ToUniversalTime();
 
-        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
+        var saved = await orders.SaveAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
     }
 }

@@ -1,4 +1,3 @@
-using Pos.Application.Common;
 using Pos.Application.MenuItems;
 using Pos.Application.Orders;
 using Pos.Application.Orders.ListOrders;
@@ -15,7 +14,25 @@ internal sealed class FakeOrderRepository : IOrderRepository
     public Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(Orders.GetValueOrDefault(id));
 
+    public int SaveCount { get; private set; }
+
+    /// <summary>What every save answers; a test sets a failure to play a conflict.</summary>
+    public Result SaveResult { get; set; } = Result.Ok();
+
+    /// <summary>Puts an order in the repository without a save, to set up a test.</summary>
     public void Add(Order order) => Orders.Add(order.Id, order);
+
+    public Task<Result> CreateAsync(Order order, CancellationToken cancellationToken)
+    {
+        Add(order);
+        return SaveAsync(cancellationToken);
+    }
+
+    public Task<Result> SaveAsync(CancellationToken cancellationToken)
+    {
+        SaveCount++;
+        return Task.FromResult(SaveResult);
+    }
 
     /// <summary>The arguments of the last <see cref="ListAsync"/> call.</summary>
     public (OrderStatus? Status, OrderSearch? Search, int Page, int PageSize)? LastList { get; private set; }
@@ -36,19 +53,13 @@ internal sealed class FakeMenuItemRepository : IMenuItemRepository
     public Task<MenuItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
         Task.FromResult(MenuItems.GetValueOrDefault(id));
 
+    /// <summary>Puts a menu item in the repository without a save, to set up a test.</summary>
     public void Add(MenuItem menuItem) => MenuItems.Add(menuItem.Id, menuItem);
-}
 
-internal sealed class FakeUnitOfWork : IUnitOfWork
-{
-    public int SaveCount { get; private set; }
-
-    /// <summary>What every save answers; a test sets a failure to play a conflict.</summary>
-    public Result SaveResult { get; set; } = Result.Ok();
-
-    public Task<Result> SaveChangesAsync(CancellationToken cancellationToken)
+    public Task<Result> CreateAsync(MenuItem menuItem, CancellationToken cancellationToken)
     {
-        SaveCount++;
-        return Task.FromResult(SaveResult);
+        Add(menuItem);
+        return Task.FromResult(Result.Ok());
     }
 }
+

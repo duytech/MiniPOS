@@ -4,8 +4,7 @@ using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.CreateOrder;
 
-public sealed class CreateOrderHandler(IOrderRepository orders, IUnitOfWork unitOfWork, TimeProvider timeProvider,
-    PricingOptions pricing)
+public sealed class CreateOrderHandler(IOrderRepository orders, TimeProvider timeProvider, PricingOptions pricing)
     : ICommandHandler<CreateOrderCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(CreateOrderCommand command, CancellationToken cancellationToken)
@@ -20,8 +19,7 @@ public sealed class CreateOrderHandler(IOrderRepository orders, IUnitOfWork unit
             CardSurchargeRate = new Percentage(pricing.CardSurchargePercent),
             PaymentMethod = PaymentMethod.Cash,
         };
-        orders.Add(order);
-        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
+        var saved = await orders.CreateAsync(order, cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
     }
 }

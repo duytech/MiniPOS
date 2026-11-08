@@ -5,7 +5,7 @@ using Pos.Domain.Orders;
 namespace Pos.Application.Orders.ApplyDiscount;
 
 /// <summary>Replaces any existing discount. The discount cannot exceed the subtotal at the time it is applied.</summary>
-public sealed class ApplyDiscountHandler(IOrderRepository orders, IUnitOfWork unitOfWork)
+public sealed class ApplyDiscountHandler(IOrderRepository orders)
     : ICommandHandler<ApplyDiscountCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(ApplyDiscountCommand command, CancellationToken cancellationToken)
@@ -31,7 +31,7 @@ public sealed class ApplyDiscountHandler(IOrderRepository orders, IUnitOfWork un
             order.SavedSplitParts.Clear();
         }
 
-        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
+        var saved = await orders.SaveAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
     }
 

@@ -38,13 +38,13 @@ public class RemoveOrderLineHandlerTests
     {
         var order = _act.NewOrder();
         await _act.AddLine(order, 12.99m);
-        var savesBefore = _act.UnitOfWork.SaveCount;
+        var savesBefore = _act.Orders.SaveCount;
 
         var result = await _act.RemoveLine(order, Guid.NewGuid());
 
         Assert.Equal(ErrorCode.OrderLineNotFound, result.Error!.Code);
         Assert.Single(order.Lines);
-        Assert.Equal(savesBefore, _act.UnitOfWork.SaveCount);
+        Assert.Equal(savesBefore, _act.Orders.SaveCount);
     }
 
     [Fact]

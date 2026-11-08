@@ -4,7 +4,7 @@ using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.SetPaymentMethod;
 
-public sealed class SetPaymentMethodHandler(IOrderRepository orders, IUnitOfWork unitOfWork)
+public sealed class SetPaymentMethodHandler(IOrderRepository orders)
     : ICommandHandler<SetPaymentMethodCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(SetPaymentMethodCommand command, CancellationToken cancellationToken)
@@ -26,7 +26,7 @@ public sealed class SetPaymentMethodHandler(IOrderRepository orders, IUnitOfWork
             order.SavedSplitParts.Clear();
         }
 
-        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
+        var saved = await orders.SaveAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
     }
 }

@@ -4,7 +4,7 @@ using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.CancelOrder;
 
-public sealed class CancelOrderHandler(IOrderRepository orders, IUnitOfWork unitOfWork, TimeProvider timeProvider)
+public sealed class CancelOrderHandler(IOrderRepository orders, TimeProvider timeProvider)
     : ICommandHandler<CancelOrderCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(CancelOrderCommand command, CancellationToken cancellationToken)
@@ -24,7 +24,7 @@ public sealed class CancelOrderHandler(IOrderRepository orders, IUnitOfWork unit
         order.Status = OrderStatus.Cancelled;
         order.CancelledAt = timeProvider.GetUtcNow().ToUniversalTime();
 
-        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
+        var saved = await orders.SaveAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
     }
 }

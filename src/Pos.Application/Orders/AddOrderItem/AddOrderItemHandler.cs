@@ -6,7 +6,7 @@ using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.AddOrderItem;
 
-public sealed class AddOrderItemHandler(IOrderRepository orders, IMenuItemRepository menuItems, IUnitOfWork unitOfWork)
+public sealed class AddOrderItemHandler(IOrderRepository orders, IMenuItemRepository menuItems)
     : ICommandHandler<AddOrderItemCommand, OrderDto>
 {
     public async Task<Result<OrderDto>> HandleAsync(AddOrderItemCommand command, CancellationToken cancellationToken)
@@ -28,7 +28,7 @@ public sealed class AddOrderItemHandler(IOrderRepository orders, IMenuItemReposi
             return Result.Fail<OrderDto>(error);
         }
 
-        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
+        var saved = await orders.SaveAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
     }
 

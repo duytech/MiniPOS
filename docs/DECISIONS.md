@@ -373,3 +373,11 @@ Important design decisions: what, why, when. Newest first.
 - **Why:** the same id got 400 on routes with a validator and 404 on `GET /api/orders/{id}`. No order or line has that
   id, so 404 is correct and the rule added nothing. A missing body field arrives as an empty GUID, so that is a bad
   request.
+
+## 2026-11-08: Repositories save, no IUnitOfWork (#146)
+- **What:** `IUnitOfWork` is removed. `IOrderRepository.CreateAsync(order)` and `IMenuItemRepository.CreateAsync(menuItem)`
+  add and save; `IOrderRepository.SaveAsync()` saves the changes to orders loaded by `GetByIdAsync`. They return `Result`
+  with the same error mapping as before (`ConcurrentChange`, `DataConflict`), now in `SaveChangesExtensions`.
+- **Why:** the owner's decision: saving is database logic and belongs in the repository, not in the handler.
+- **Trade-off, accepted:** `SaveAsync` saves everything the request's DbContext tracks, not only the order: a use case
+  that changes two aggregates still commits them together, but the name no longer says so.
