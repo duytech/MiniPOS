@@ -1,5 +1,6 @@
 using Pos.Application.Common;
 using Pos.Domain.Common;
+using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.RemoveTip;
 
@@ -14,10 +15,15 @@ public sealed class RemoveTipHandler(IOrderRepository orders, IUnitOfWork unitOf
             return Result.Fail<OrderDto>(NotFoundErrors.Order(command.OrderId));
         }
 
-        var changed = order.RemoveTip();
-        if (!changed.IsSuccess)
+        if (OrderRules.OpenError(order) is { } notOpen)
         {
-            return Result.Fail<OrderDto>(changed.Error);
+            return Result.Fail<OrderDto>(notOpen);
+        }
+
+        if (order.TipRate is not null)
+        {
+            order.TipRate = null;
+            order.SavedSplitParts.Clear();
         }
 
         var saved = await unitOfWork.SaveChangesAsync(cancellationToken);

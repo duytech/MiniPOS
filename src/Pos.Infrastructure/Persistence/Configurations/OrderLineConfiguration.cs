@@ -21,7 +21,6 @@ internal sealed class OrderLineConfiguration : IEntityTypeConfiguration<OrderLin
             .HasConversion<MoneyConverter>().HasColumnType(MoneyConverter.ColumnType);
         builder.Property(l => l.Quantity).HasColumnName("quantity");
         builder.Property(l => l.Notes).HasColumnName("notes");
-        builder.Ignore(l => l.LineTotal);
 
         builder.HasOne<MenuItem>().WithMany().HasForeignKey(l => l.MenuItemId).OnDelete(DeleteBehavior.Restrict);
     }

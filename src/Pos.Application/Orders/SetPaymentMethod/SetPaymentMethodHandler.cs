@@ -1,5 +1,6 @@
 using Pos.Application.Common;
 using Pos.Domain.Common;
+using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.SetPaymentMethod;
 
@@ -14,10 +15,15 @@ public sealed class SetPaymentMethodHandler(IOrderRepository orders, IUnitOfWork
             return Result.Fail<OrderDto>(NotFoundErrors.Order(command.OrderId));
         }
 
-        var changed = order.SetPaymentMethod(command.PaymentMethod);
-        if (!changed.IsSuccess)
+        if (OrderRules.OpenError(order) is { } notOpen)
         {
-            return Result.Fail<OrderDto>(changed.Error);
+            return Result.Fail<OrderDto>(notOpen);
+        }
+
+        if (order.PaymentMethod != command.PaymentMethod)
+        {
+            order.PaymentMethod = command.PaymentMethod;
+            order.SavedSplitParts.Clear();
         }
 
         var saved = await unitOfWork.SaveChangesAsync(cancellationToken);

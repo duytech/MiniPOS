@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using Pos.Domain.Common;
 using Pos.Domain.Orders;
 
 namespace Pos.Infrastructure.Persistence.Configurations;
@@ -27,11 +26,10 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.PaymentMethod).HasColumnName("payment_method").HasConversion<string>().HasMaxLength(20);
         builder.Property(o => o.TipRate).HasColumnName("tip_rate")
             .HasConversion<PercentageConverter>().HasColumnType(PercentageConverter.ColumnType);
-        builder.Property<Percentage?>("DiscountRate").HasColumnName("discount_rate")
+        builder.Property(o => o.DiscountRate).HasColumnName("discount_rate")
             .HasConversion<PercentageConverter>().HasColumnType(PercentageConverter.ColumnType);
-        builder.Property<Money?>("DiscountAmount").HasColumnName("discount_amount")
+        builder.Property(o => o.DiscountAmount).HasColumnName("discount_amount")
             .HasConversion<MoneyConverter>().HasColumnType(MoneyConverter.ColumnType);
-        builder.Ignore(o => o.Discount);
 
         // Postgres system column that changes on every update of the row: the optimistic concurrency token.
         builder.Property<uint>("xmin").HasColumnName("xmin").HasColumnType("xid").IsRowVersion();
@@ -39,13 +37,9 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.HasMany(o => o.Lines).WithOne()
             .HasForeignKey(OrderLineConfiguration.OrderIdProperty)
             .OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(o => o.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
 
-        builder.Ignore(o => o.HasSavedSplit);
         builder.HasMany(o => o.SavedSplitParts).WithOne()
             .HasForeignKey(SavedSplitPartConfiguration.OrderIdProperty)
             .OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(o => o.SavedSplitParts).HasField("_savedSplitParts")
-            .UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

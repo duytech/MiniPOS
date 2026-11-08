@@ -1,5 +1,6 @@
 using Pos.Application.Common;
 using Pos.Domain.Common;
+using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.CancelOrder;
 
@@ -14,11 +15,14 @@ public sealed class CancelOrderHandler(IOrderRepository orders, IUnitOfWork unit
             return Result.Fail<OrderDto>(NotFoundErrors.Order(command.OrderId));
         }
 
-        var changed = order.Cancel(timeProvider.GetUtcNow());
-        if (!changed.IsSuccess)
+        if (OrderRules.OpenError(order) is { } notOpen)
         {
-            return Result.Fail<OrderDto>(changed.Error);
+            return Result.Fail<OrderDto>(notOpen);
         }
+
+        // A saved split is kept.
+        order.Status = OrderStatus.Cancelled;
+        order.CancelledAt = timeProvider.GetUtcNow().ToUniversalTime();
 
         var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);

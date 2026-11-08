@@ -1,5 +1,6 @@
 using Pos.Application.Common;
 using Pos.Domain.Common;
+using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.SetTip;
 
@@ -14,10 +15,15 @@ public sealed class SetTipHandler(IOrderRepository orders, IUnitOfWork unitOfWor
             return Result.Fail<OrderDto>(NotFoundErrors.Order(command.OrderId));
         }
 
-        var changed = order.SetTip(command.Rate);
-        if (!changed.IsSuccess)
+        if (OrderRules.OpenError(order) is { } notOpen)
         {
-            return Result.Fail<OrderDto>(changed.Error);
+            return Result.Fail<OrderDto>(notOpen);
+        }
+
+        if (order.TipRate != command.Rate)
+        {
+            order.TipRate = command.Rate;
+            order.SavedSplitParts.Clear();
         }
 
         var saved = await unitOfWork.SaveChangesAsync(cancellationToken);

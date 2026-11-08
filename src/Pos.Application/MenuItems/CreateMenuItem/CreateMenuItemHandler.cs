@@ -9,7 +9,7 @@ public sealed class CreateMenuItemHandler(IMenuItemRepository menuItems, IUnitOf
 {
     public async Task<Result<MenuItemDto>> HandleAsync(CreateMenuItemCommand command, CancellationToken cancellationToken)
     {
-        var menuItem = new MenuItem(command.Name.Trim(), command.Price);
+        var menuItem = new MenuItem { Id = Guid.NewGuid(), Name = command.Name.Trim(), Price = command.Price };
         menuItems.Add(menuItem);
         var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(MenuItemDto.From(menuItem)) : Result.Fail<MenuItemDto>(saved.Error);

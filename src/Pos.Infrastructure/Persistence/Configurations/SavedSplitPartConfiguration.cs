@@ -21,6 +21,5 @@ internal sealed class SavedSplitPartConfiguration : IEntityTypeConfiguration<Sav
         builder.HasMany(p => p.Lines).WithOne()
             .HasForeignKey(SavedSplitLineConfiguration.PartIdProperty)
             .OnDelete(DeleteBehavior.Cascade);
-        builder.Navigation(p => p.Lines).HasField("_lines").UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

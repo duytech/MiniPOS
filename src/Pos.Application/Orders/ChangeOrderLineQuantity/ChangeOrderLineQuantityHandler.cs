@@ -1,8 +1,14 @@
 using Pos.Application.Common;
 using Pos.Domain.Common;
+using Pos.Domain.Orders;
 
 namespace Pos.Application.Orders.ChangeOrderLineQuantity;
 
+/// <summary>
+/// Sets the line's quantity; the same quantity as now leaves the order unchanged. A percent discount and the tip
+/// follow the new subtotal. A fixed discount must not be more than the new subtotal: the change is rejected and the
+/// discount has to be changed or removed first.
+/// </summary>
 public sealed class ChangeOrderLineQuantityHandler(IOrderRepository orders, IUnitOfWork unitOfWork)
     : ICommandHandler<ChangeOrderLineQuantityCommand, OrderDto>
 {
@@ -20,13 +26,30 @@ public sealed class ChangeOrderLineQuantityHandler(IOrderRepository orders, IUni
             return Result.Fail<OrderDto>(NotFoundErrors.OrderLine(command.LineId));
         }
 
-        var changed = order.ChangeLineQuantity(line, command.Quantity);
-        if (!changed.IsSuccess)
+        if ((OrderRules.OpenError(order) ?? ChangeQuantity(order, line, command.Quantity)) is { } error)
         {
-            return Result.Fail<OrderDto>(changed.Error);
+            return Result.Fail<OrderDto>(error);
         }
 
         var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
         return saved.IsSuccess ? Result.Ok(OrderDto.From(order)) : Result.Fail<OrderDto>(saved.Error);
+    }
+
+    private static Error? ChangeQuantity(Order order, OrderLine line, int quantity)
+    {
+        if (quantity == line.Quantity)
+        {
+            return null;
+        }
+
+        var newSubtotal = OrderPricing.Subtotal(order) - OrderPricing.LineTotal(line) + line.UnitPrice * quantity;
+        if (OrderRules.FixedDiscountError(order.DiscountAmount, newSubtotal, $"A quantity of {quantity}") is { } tooLarge)
+        {
+            return tooLarge;
+        }
+
+        line.Quantity = quantity;
+        order.SavedSplitParts.Clear();
+        return null;
     }
 }
