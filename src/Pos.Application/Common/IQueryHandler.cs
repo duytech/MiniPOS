@@ -1,6 +1,8 @@
+using Pos.Domain.Common;
+
 namespace Pos.Application.Common;
 
 public interface IQueryHandler<in TQuery, TResult>
 {
-    Task<TResult> HandleAsync(TQuery query, CancellationToken cancellationToken);
+    Task<Result<TResult>> HandleAsync(TQuery query, CancellationToken cancellationToken);
 }

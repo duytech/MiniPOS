@@ -35,11 +35,13 @@ reviews:
     - path: "src/Pos.Infrastructure/**"
       instructions: |
         Order uses Postgres `xmin` as the concurrency token. An expected DB error (unique, FK, deadlock, concurrency)
-        must map to 409, never a 500. No totals in SQL or LINQ projections. Repositories return Domain entities, not
+        must map to an `ErrorCode` (`ConcurrentChange` or `DataConflict`), never a 500. No totals in SQL or LINQ projections. Repositories return Domain entities, not
         Application DTOs. No connection strings or passwords in code or config files.
     - path: "src/Pos.Api/**"
       instructions: |
-        Errors are ProblemDetails: 400 validation, 404 not found, 409 conflict, 422 domain rule broken. Money in JSON
+        Every expected answer is HTTP 200 with `{ isSuccess, data, error: { code, message, fields? } }`; `code` is an
+        `ErrorCode`, never an HTTP status. Only a bug (500 ProblemDetails) and requests that never reach a controller
+        (framework 404, 405, 415) differ. A `Result` that is never checked is a bug. Money in JSON
         always has exactly 2 decimals. List endpoints are paged (`page`, `pageSize`, `totalCount`) and never cap
         results silently.
         A 500 response never contains exception types or messages, stack traces or inner exceptions, in any
@@ -52,7 +54,10 @@ reviews:
       instructions: |
         Money tests assert exact cents and include a midpoint (x.xx5) case. Tests must not re-calculate a total
         themselves. Every endpoint that changes an order needs a parallel-request test that checks the stored result
-        (only 200/409, stored state matches the 200s). No credentials in test code.
+        (only successes, `ConcurrentChange`, or an error code the loser gets from the state the winner left, such as
+        `DataConflict` for a unique/FK clash, `OrderNotOpen` after a pay, `DiscountExceedsSubtotal` after a line
+        removal; flag any other code; stored state matches the successes). HTTP 200 does not mean success: a test
+        checks `isSuccess` or the error code. No credentials in test code.
         When expected values in a test change in the same PR as the production code they check, and the PR
         description does not name the business rule that changed, flag it as Major and ask which rule allows the new
         values; a test edited to match new code hides the bug it should catch.

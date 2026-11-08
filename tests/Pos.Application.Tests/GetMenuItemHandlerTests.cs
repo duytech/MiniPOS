@@ -1,4 +1,3 @@
-using Pos.Application.Common;
 using Pos.Application.MenuItems.GetMenuItem;
 using Pos.Domain.Common;
 using Pos.Domain.MenuItems;
@@ -18,7 +17,7 @@ public class GetMenuItemHandlerTests
         var menuItem = new MenuItem("Pho", Money.Usd(7.70m));
         _menuItems.Add(menuItem);
 
-        var result = await _handler.HandleAsync(new GetMenuItemQuery(menuItem.Id), CancellationToken.None);
+        var result = (await _handler.HandleAsync(new GetMenuItemQuery(menuItem.Id), CancellationToken.None)).Data;
 
         Assert.Equal(menuItem.Id, result.Id);
         Assert.Equal("Pho", result.Name);
@@ -28,7 +27,8 @@ public class GetMenuItemHandlerTests
     [Fact]
     public async Task Unknown_menu_item_is_not_found()
     {
-        await Assert.ThrowsAsync<NotFoundException>(() =>
-            _handler.HandleAsync(new GetMenuItemQuery(Guid.NewGuid()), CancellationToken.None));
+        var result = await _handler.HandleAsync(new GetMenuItemQuery(Guid.NewGuid()), CancellationToken.None);
+
+        Assert.Equal(ErrorCode.MenuItemNotFound, result.Error.Code);
     }
 }

@@ -18,7 +18,7 @@ public class OrderSavedSplitTests
     {
         var order = Order.Create(DateTimeOffset.UtcNow, NycTax, CardSurcharge);
         var lineIds = prices
-            .Select((price, i) => order.AddItem(new MenuItem($"Item {i}", Money.Usd(price)), 1, notes: null).Id)
+            .Select((price, i) => order.AddItem(new MenuItem($"Item {i}", Money.Usd(price)), 1, notes: null).Data.Id)
             .ToArray();
         return (order, lineIds);
     }
@@ -38,8 +38,8 @@ public class OrderSavedSplitTests
     {
         var (order, l) = OrderWithLines(60.00m, 40.00m);
 
-        var saved = order.SaveSplit([Part(l[0]), Part(l[1])]);
-        var read = order.GetSavedSplit();
+        var saved = order.SaveSplit([Part(l[0]), Part(l[1])]).Data;
+        var read = order.GetSavedSplit().Data;
 
         // Order tax 8.875% of 100.00 = 8.875 → 8.88 (midpoint, away from zero).
         // Shares: 8.88 × 60/100 = 5.328 → 5.32, 8.88 × 40/100 = 3.552 → 3.55; leftover 0.01 to the 60.00 part.
@@ -64,7 +64,7 @@ public class OrderSavedSplitTests
         order.SaveSplit([Part(l[0]), Part(l[1])]);
 
         var totals = order.CalculateTotals();
-        var parts = order.GetSavedSplit()!;
+        var parts = order.GetSavedSplit().Data;
 
         // Order: subtotal 10.00, discount 1.50, surcharge 3% of 8.50 = 0.255 → 0.26, tax 8.875% of 8.76 = 0.77745 → 0.78,
         // tip 18% of 8.50 = 1.53, total 11.07.
@@ -83,11 +83,11 @@ public class OrderSavedSplitTests
     {
         var (order, l) = OrderWithLines(60.00m, 40.00m);
 
-        var parts = order.PreviewSplit([Part(l[0]), Part(l[1])]);
+        var parts = order.PreviewSplit([Part(l[0]), Part(l[1])]).Data;
 
         Assert.Equal([Money.Usd(65.33m), Money.Usd(43.55m)], parts.Select(p => p.Total));
         Assert.False(order.HasSavedSplit);
-        Assert.Null(order.GetSavedSplit());
+        Assert.False(order.HasSavedSplit);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class OrderSavedSplitTests
         var (order, _) = OrderWithLines(60.00m, 40.00m);
 
         Assert.False(order.HasSavedSplit);
-        Assert.Null(order.GetSavedSplit());
+        Assert.False(order.HasSavedSplit);
     }
 
     [Fact]
@@ -107,7 +107,7 @@ public class OrderSavedSplitTests
 
         order.SaveSplit([Part(l[2]), Part(l[0]), Part(l[1])]);
 
-        var parts = order.GetSavedSplit()!;
+        var parts = order.GetSavedSplit().Data;
         Assert.Equal([[l[2]], [l[0]], [l[1]]], parts.Select(p => p.LineIds));
         Assert.Equal([Money.Usd(3.00m), Money.Usd(1.00m), Money.Usd(2.00m)], parts.Select(p => p.Subtotal));
         Assert.Equal([0, 1, 2], order.SavedSplitParts.Select(p => p.Position).Order());
@@ -118,9 +118,9 @@ public class OrderSavedSplitTests
     {
         var (order, l) = OrderWithSavedSplit();
 
-        Assert.Throws<DomainException>(() => order.SaveSplit([Part(l[0], l[1])]));
+        Assert.Equal(ErrorCode.InvalidSplit, order.SaveSplit([Part(l[0], l[1])]).Error.Code);
 
-        Assert.Equal([[l[0]], [l[1]]], order.GetSavedSplit()!.Select(p => p.LineIds));
+        Assert.Equal([[l[0]], [l[1]]], order.GetSavedSplit().Data.Select(p => p.LineIds));
     }
 
     [Fact]
@@ -131,7 +131,7 @@ public class OrderSavedSplitTests
         order.RemoveSplit();
 
         Assert.False(order.HasSavedSplit);
-        Assert.Null(order.GetSavedSplit());
+        Assert.False(order.HasSavedSplit);
     }
 
     [Theory]
@@ -143,7 +143,7 @@ public class OrderSavedSplitTests
 
         Close(order, status);
 
-        Assert.Equal([Money.Usd(65.33m), Money.Usd(43.55m)], order.GetSavedSplit()!.Select(p => p.Total));
+        Assert.Equal([Money.Usd(65.33m), Money.Usd(43.55m)], order.GetSavedSplit().Data.Select(p => p.Total));
     }
 
     [Theory]
@@ -155,10 +155,10 @@ public class OrderSavedSplitTests
         Close(order, status);
         var expected = $"The order is {status}; only an open order can be changed.";
 
-        Assert.Equal(expected, Assert.Throws<DomainException>(() => order.SaveSplit([Part(l[1]), Part(l[0])])).Message);
-        Assert.Equal(expected, Assert.Throws<DomainException>(() => order.PreviewSplit([Part(l[1]), Part(l[0])])).Message);
-        Assert.Equal(expected, Assert.Throws<DomainException>(order.RemoveSplit).Message);
-        Assert.Equal([[l[0]], [l[1]]], order.GetSavedSplit()!.Select(p => p.LineIds));
+        Assert.Equal(expected, order.SaveSplit([Part(l[1]), Part(l[0])]).Error.Message);
+        Assert.Equal(expected, order.PreviewSplit([Part(l[1]), Part(l[0])]).Error.Message);
+        Assert.Equal(expected, order.RemoveSplit().Error.Message);
+        Assert.Equal([[l[0]], [l[1]]], order.GetSavedSplit().Data.Select(p => p.LineIds));
     }
 
     public static TheoryData<string> RealChanges =>
@@ -187,7 +187,7 @@ public class OrderSavedSplitTests
         }
 
         Assert.False(order.HasSavedSplit);
-        Assert.Null(order.GetSavedSplit());
+        Assert.False(order.HasSavedSplit);
     }
 
     [Fact]
@@ -195,8 +195,8 @@ public class OrderSavedSplitTests
     {
         var order = Order.Create(DateTimeOffset.UtcNow, NycTax, CardSurcharge);
         var pho = new MenuItem("Pho", Money.Usd(9.50m));
-        var l0 = order.AddItem(pho, 1, notes: null).Id;
-        var l1 = order.AddItem(new MenuItem("Tea", Money.Usd(2.00m)), 1, notes: null).Id;
+        var l0 = order.AddItem(pho, 1, notes: null).Data.Id;
+        var l1 = order.AddItem(new MenuItem("Tea", Money.Usd(2.00m)), 1, notes: null).Data.Id;
         order.SaveSplit([Part(l0), Part(l1)]);
 
         order.AddItem(pho, 1, notes: null);
@@ -233,7 +233,7 @@ public class OrderSavedSplitTests
             default: order.SetPaymentMethod(PaymentMethod.Cash); break;
         }
 
-        Assert.Equal([[l[0]], [l[1]]], order.GetSavedSplit()!.Select(p => p.LineIds));
+        Assert.Equal([[l[0]], [l[1]]], order.GetSavedSplit().Data.Select(p => p.LineIds));
     }
 
     [Fact]
@@ -269,7 +269,7 @@ public class OrderSavedSplitTests
         order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(50.00m)));
         order.SaveSplit([Part(l[0]), Part(l[1])]);
 
-        Assert.Throws<DomainException>(() => order.RemoveLine(order.Lines.Single(line => line.Id == l[0])));
+        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, order.RemoveLine(order.Lines.Single(line => line.Id == l[0])).Error.Code);
 
         Assert.True(order.HasSavedSplit);
     }

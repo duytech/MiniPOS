@@ -63,7 +63,7 @@ public class OrderPricingTests
     {
         var order = OrderWith(11.50m, Percentage.Zero);
 
-        Assert.Throws<DomainException>(() => order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(11.51m))));
+        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(11.51m))).Error.Code);
         Assert.Null(order.Discount);
     }
 
@@ -72,8 +72,9 @@ public class OrderPricingTests
     {
         var order = OrderWith(11.50m, Percentage.Zero);
 
-        Assert.Throws<DomainException>(
-            () => order.ApplyDiscount(OrderDiscount.PercentOfSubtotal(new Percentage(100.01m))));
+        Assert.Equal(
+            ErrorCode.DiscountExceedsSubtotal,
+            order.ApplyDiscount(OrderDiscount.PercentOfSubtotal(new Percentage(100.01m))).Error.Code);
     }
 
     [Fact]
@@ -95,7 +96,7 @@ public class OrderPricingTests
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         order.AddItem(new MenuItem("Pho", Money.Usd(0.70m)), 1, notes: null);
-        var tea = order.AddItem(new MenuItem("Tea", Money.Usd(2.00m)), 1, notes: null);
+        var tea = order.AddItem(new MenuItem("Tea", Money.Usd(2.00m)), 1, notes: null).Data;
         order.ApplyDiscount(OrderDiscount.PercentOfSubtotal(new Percentage(15m)));
         Assert.Equal(Money.Usd(0.41m), order.CalculateTotals().Discount); // 15% of 2.70 = 0.405
 
@@ -112,7 +113,7 @@ public class OrderPricingTests
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         order.AddItem(new MenuItem("Pho", Money.Usd(7.70m)), 1, notes: null);
-        var tea = order.AddItem(new MenuItem("Tea", Money.Usd(2.00m)), 1, notes: null);
+        var tea = order.AddItem(new MenuItem("Tea", Money.Usd(2.00m)), 1, notes: null).Data;
         order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(7.70m)));
 
         order.RemoveLine(tea);
@@ -127,10 +128,10 @@ public class OrderPricingTests
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         order.AddItem(new MenuItem("Pho", Money.Usd(7.70m)), 1, notes: null);
-        var tea = order.AddItem(new MenuItem("Tea", Money.Usd(2.00m)), 1, notes: null);
+        var tea = order.AddItem(new MenuItem("Tea", Money.Usd(2.00m)), 1, notes: null).Data;
         order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(7.71m)));
 
-        Assert.Throws<DomainException>(() => order.RemoveLine(tea));
+        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, order.RemoveLine(tea).Error.Code);
 
         Assert.Equal(2, order.Lines.Count);
         Assert.Equal(Money.Usd(1.99m), order.CalculateTotals().Total);
@@ -140,7 +141,7 @@ public class OrderPricingTests
     public void Percent_discount_and_tip_follow_the_subtotal_after_a_quantity_change_and_round_away_from_zero()
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
-        var tea = order.AddItem(new MenuItem("Tea", Money.Usd(0.35m)), 4, notes: null);
+        var tea = order.AddItem(new MenuItem("Tea", Money.Usd(0.35m)), 4, notes: null).Data;
         order.ApplyDiscount(OrderDiscount.PercentOfSubtotal(new Percentage(15m)));
         order.SetTip(new Percentage(10m));
         Assert.Equal(Money.Usd(0.21m), order.CalculateTotals().Discount); // 15% of 1.40
@@ -158,7 +159,7 @@ public class OrderPricingTests
     public void Fixed_discount_equal_to_the_new_subtotal_allows_lowering_a_quantity()
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
-        var pho = order.AddItem(new MenuItem("Pho", Money.Usd(3.85m)), 3, notes: null);
+        var pho = order.AddItem(new MenuItem("Pho", Money.Usd(3.85m)), 3, notes: null).Data;
         order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(7.70m)));
 
         order.ChangeLineQuantity(pho, 2);
@@ -173,10 +174,10 @@ public class OrderPricingTests
     public void Fixed_discount_more_than_the_new_subtotal_rejects_lowering_a_quantity()
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
-        var pho = order.AddItem(new MenuItem("Pho", Money.Usd(3.85m)), 3, notes: null);
+        var pho = order.AddItem(new MenuItem("Pho", Money.Usd(3.85m)), 3, notes: null).Data;
         order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(7.71m)));
 
-        Assert.Throws<DomainException>(() => order.ChangeLineQuantity(pho, 2));
+        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, order.ChangeLineQuantity(pho, 2).Error.Code);
 
         Assert.Equal(3, pho.Quantity);
         Assert.Equal(Money.Usd(3.84m), order.CalculateTotals().Total); // 11.55 − 7.71
@@ -186,7 +187,7 @@ public class OrderPricingTests
     public void Fixed_discount_does_not_block_raising_a_quantity()
     {
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
-        var pho = order.AddItem(new MenuItem("Pho", Money.Usd(3.85m)), 2, notes: null);
+        var pho = order.AddItem(new MenuItem("Pho", Money.Usd(3.85m)), 2, notes: null).Data;
         order.ApplyDiscount(OrderDiscount.FixedAmount(Money.Usd(7.70m)));
 
         order.ChangeLineQuantity(pho, 3);

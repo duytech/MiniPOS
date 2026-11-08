@@ -1,6 +1,5 @@
-using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
+using Pos.Domain.Common;
 
 namespace Pos.Api.IntegrationTests;
 
@@ -19,8 +18,8 @@ public class CloseOrderApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
 
         var response = await CloseAsync(action, orderId);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var order = await response.ReadJsonAsync();
+        await response.AssertSuccessAsync();
+        var order = await response.ReadDataAsync();
         Assert.Equal(status, order.GetProperty("status").GetString());
         var (closedAt, otherAt) = action == "pay" ? ("paidAt", "cancelledAt") : ("cancelledAt", "paidAt");
         Assert.True(order.GetProperty(closedAt).GetDateTimeOffset()
@@ -55,8 +54,8 @@ public class CloseOrderApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
 
         var response = await CloseAsync(action, orderId);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var order = await response.ReadJsonAsync();
+        await response.AssertSuccessAsync();
+        var order = await response.ReadDataAsync();
         Assert.Equal(status, order.GetProperty("status").GetString());
         Assert.Equal(0, order.GetProperty("lines").GetArrayLength());
         Assert.Equal("0.00", order.Money("total"));
@@ -66,9 +65,9 @@ public class CloseOrderApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
     public async Task Paying_keeps_the_totals_and_midpoint_rounds_away_from_zero()
     {
         var orderId = await OrderWithSubtotalAsync(0.70m);
-        (await _client.ApplyDiscountAsync(orderId, new { rate = 15 })).EnsureSuccessStatusCode();
+        await (await _client.ApplyDiscountAsync(orderId, new { rate = 15 })).AssertSuccessAsync();
 
-        var order = await (await _client.PayOrderAsync(orderId)).ReadJsonAsync();
+        var order = await (await _client.PayOrderAsync(orderId)).ReadDataAsync();
 
         Assert.Equal("Paid", order.GetProperty("status").GetString());
         Assert.Equal("0.70", order.Money("subtotal"));
@@ -83,11 +82,11 @@ public class CloseOrderApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
     public async Task Paying_by_card_returns_the_same_money_as_before_paying()
     {
         var orderId = await OrderWithSubtotalAsync(10.00m);
-        (await _client.SetPaymentMethodAsync(orderId, "Card")).EnsureSuccessStatusCode();
-        (await _client.SetTipAsync(orderId, 18m)).EnsureSuccessStatusCode();
+        await (await _client.SetPaymentMethodAsync(orderId, "Card")).AssertSuccessAsync();
+        await (await _client.SetTipAsync(orderId, 18m)).AssertSuccessAsync();
         var before = await _client.GetOrderAsync(orderId);
 
-        var paid = await (await _client.PayOrderAsync(orderId)).ReadJsonAsync();
+        var paid = await (await _client.PayOrderAsync(orderId)).ReadDataAsync();
 
         Assert.Equal("Card", paid.GetProperty("paymentMethod").GetString());
         foreach (var amount in new[] { "subtotal", "discount", "surcharge", "tax", "tip", "total" })
@@ -103,22 +102,21 @@ public class CloseOrderApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
     [Theory]
     [InlineData("pay")]
     [InlineData("cancel")]
-    public async Task Empty_order_id_is_404(string action)
+    public async Task Empty_order_id_is_not_found(string action)
     {
         var response = await CloseAsync(action, Guid.Empty);
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        await response.AssertErrorAsync(ErrorCode.OrderNotFound);
     }
 
     [Theory]
     [InlineData("pay")]
     [InlineData("cancel")]
-    public async Task Closing_an_unknown_order_is_404(string action)
+    public async Task Closing_an_unknown_order_is_not_found(string action)
     {
         var response = await CloseAsync(action, Guid.NewGuid());
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        await response.AssertErrorAsync(ErrorCode.OrderNotFound);
     }
 
     [Theory]
@@ -126,16 +124,15 @@ public class CloseOrderApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
     [InlineData("pay", "cancel")]
     [InlineData("cancel", "cancel")]
     [InlineData("cancel", "pay")]
-    public async Task Closing_a_closed_order_is_422_and_leaves_it_unchanged(string first, string second)
+    public async Task Closing_a_closed_order_is_rejected_and_leaves_it_unchanged(string first, string second)
     {
         var orderId = await OrderWithSubtotalAsync(10.00m);
-        (await CloseAsync(first, orderId)).EnsureSuccessStatusCode();
+        await (await CloseAsync(first, orderId)).AssertSuccessAsync();
         var before = await _client.GetOrderAsync(orderId);
 
         var response = await CloseAsync(second, orderId);
 
-        Assert.Equal(HttpStatusCode.UnprocessableEntity, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        await response.AssertErrorAsync(ErrorCode.OrderNotOpen);
         var after = await _client.GetOrderAsync(orderId);
         Assert.Equal(before.GetProperty("status").GetString(), after.GetProperty("status").GetString());
         Assert.Equal(before.GetProperty("paidAt").GetRawText(), after.GetProperty("paidAt").GetRawText());
@@ -151,7 +148,7 @@ public class CloseOrderApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
     {
         var menuItem = await _client.CreateMenuItemAsync("Pho", price);
         var orderId = await _client.CreateOrderAsync();
-        (await _client.AddItemAsync(orderId, menuItem, 1)).EnsureSuccessStatusCode();
+        await (await _client.AddItemAsync(orderId, menuItem, 1)).AssertSuccessAsync();
         return orderId;
     }
 
@@ -159,7 +156,7 @@ public class CloseOrderApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
     {
         var order = await _client.GetOrderAsync(orderId);
         var number = order.GetProperty("number").GetInt32();
-        var list = await _client.GetFromJsonAsync<JsonElement>($"/api/orders?search={number}&status=Paid&pageSize=100");
+        var list = await (await _client.GetAsync($"/api/orders?search={number}&status=Paid&pageSize=100")).ReadDataAsync();
         var listed = list.GetProperty("items").EnumerateArray().Single(i => i.GetProperty("id").GetGuid() == orderId);
         Assert.Equal(order.Money("total"), listed.Money("total"));
     }

@@ -5,7 +5,7 @@ namespace Pos.Api.IntegrationTests;
 
 /// <summary>
 /// Makes parallel requests on one order really race, every time. Releasing them together is not enough: when the first
-/// one commits before the others load the order, they see the new state (e.g. a 422 for a paid order) and the
+/// one commits before the others load the order, they see the new state (e.g. OrderNotOpen for a paid order) and the
 /// concurrency token is never exercised. Here the test holds a row lock on the order (<c>FOR NO KEY UPDATE</c>: plain
 /// reads and the foreign-key checks of inserted lines or split parts pass, the order's <c>UPDATE</c> waits). Every
 /// request loads the same order version and then blocks on its write. Once all of them wait, the lock is released

@@ -65,13 +65,18 @@ vs domain, repositories).
 
 ## Concurrency
 - Aggregates that hold money (Order) use Postgres `xmin` as the EF Core concurrency token.
-- A concurrency conflict returns **409** ProblemDetails. Any expected DB error (unique violation, FK, conflict) maps to a
-  4xx; a 500 is always a bug.
+- A concurrency conflict is the error code `ConcurrentChange`. Any expected DB error (unique violation, FK, conflict)
+  maps to an error code; a 500 is always a bug.
 - Every endpoint that changes an order needs an integration test that fires parallel requests and checks the stored
-  result (e.g. N parallel add-item requests: only 200/409 responses, stored quantity = number of 200s).
+  result (e.g. N parallel add-item requests: only successes and `ConcurrentChange`, stored quantity = number of successes).
 
 ## API
-- Errors are ProblemDetails: 400 validation, 404 not found, 409 conflict, 422 domain rule broken.
+- Every expected answer is HTTP 200 with `{ isSuccess, data, error: { code, message, fields? } }`, including requests
+  rejected before the handler (malformed JSON, wrong type, missing required field). `code` is an `ErrorCode`, never an
+  HTTP status. Different: an unexpected error (a bug) is a 500 ProblemDetails with no details, and a request that never
+  reaches a controller (unknown route or an id that is not a GUID, wrong method, wrong Content-Type) gets the framework's
+  404, 405 or 415.
+- HTTP 200 does not mean success: a test checks `isSuccess` or the error code, not the status.
 - List endpoints are paged (`page`, `pageSize`, response includes `totalCount`). Never silently cap results.
 
 ## Frontend (web/)

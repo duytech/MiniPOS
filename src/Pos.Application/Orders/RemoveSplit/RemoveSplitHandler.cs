@@ -1,25 +1,34 @@
 using Pos.Application.Common;
+using Pos.Domain.Common;
 
 namespace Pos.Application.Orders.RemoveSplit;
 
 /// <summary>
-/// Checks in this order: missing order → 404, no saved split → 404, order not open → 422. Returns true once the split
-/// is removed (the API answers 204 with no body).
+/// Checks in this order: missing order, no saved split, order not open. Returns true once the split is removed.
 /// </summary>
 public sealed class RemoveSplitHandler(IOrderRepository orders, IUnitOfWork unitOfWork)
-    : ICommandHandler<RemoveSplitCommand, bool>
+    : ICommandHandler<RemoveSplitCommand, bool?>
 {
-    public async Task<bool> HandleAsync(RemoveSplitCommand command, CancellationToken cancellationToken)
+    public async Task<Result<bool?>> HandleAsync(RemoveSplitCommand command, CancellationToken cancellationToken)
     {
-        var order = await orders.GetByIdAsync(command.OrderId, cancellationToken)
-            ?? throw new NotFoundException("Order", command.OrderId);
-        if (!order.HasSavedSplit)
+        var order = await orders.GetByIdAsync(command.OrderId, cancellationToken);
+        if (order is null)
         {
-            throw new NotFoundException("Split", command.OrderId);
+            return Result.Fail<bool?>(NotFoundErrors.Order(command.OrderId));
         }
 
-        order.RemoveSplit();
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-        return true;
+        if (!order.HasSavedSplit)
+        {
+            return Result.Fail<bool?>(NotFoundErrors.Split(command.OrderId));
+        }
+
+        var removed = order.RemoveSplit();
+        if (!removed.IsSuccess)
+        {
+            return Result.Fail<bool?>(removed.Error);
+        }
+
+        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
+        return saved.IsSuccess ? Result.Ok<bool?>(true) : Result.Fail<bool?>(saved.Error);
     }
 }

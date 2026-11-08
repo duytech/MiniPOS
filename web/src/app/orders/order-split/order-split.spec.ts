@@ -3,7 +3,7 @@ import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@a
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { Order, OrderLine, OrderSplit, SplitPart } from '../order.models';
-import { GENERIC_ERROR } from '../problem-detail';
+import { GENERIC_ERROR } from '../api-error';
 import { CLEARED_MESSAGE, OrderSplitSection, TOO_FEW_LINES_MESSAGE } from './order-split';
 
 describe('OrderSplitSection', () => {
@@ -92,12 +92,18 @@ describe('OrderSplitSection', () => {
   const expectRemove = (): TestRequest => http.expectOne((r) => r.method === 'DELETE' && r.url === SPLIT_URL);
   const noPreview = () => http.expectNone((r) => r.url === PREVIEW_URL);
 
+  const ok = <T>(data: T) => ({ isSuccess: true, data, error: null });
+  const failed = (code: string, message = '') => ({ isSuccess: false, data: null, error: { code, message } });
   const flush = (req: TestRequest, body: OrderSplit | null) => {
-    req.flush(body);
+    req.flush(ok(body));
     fixture.detectChanges();
   };
-  const fail = (req: TestRequest, status: number, body: object | null = null) => {
-    req.flush(body, { status, statusText: 'Error' });
+  const fail = (req: TestRequest, code: string, message = '') => {
+    req.flush(failed(code, message));
+    fixture.detectChanges();
+  };
+  const failHttp = (req: TestRequest, status: number) => {
+    req.flush(null, { status, statusText: 'Error' });
     fixture.detectChanges();
   };
 
@@ -111,7 +117,7 @@ describe('OrderSplitSection', () => {
     if (split) {
       flush(expectGet(), split);
     } else {
-      fail(expectGet(), 404, { status: 404, detail: "Split 'o1' was not found." });
+      fail(expectGet(), 'SplitNotFound', "Split 'o1' was not found.");
     }
   };
 
@@ -147,7 +153,7 @@ describe('OrderSplitSection', () => {
     vi.useRealTimers();
   });
 
-  it('with no saved split (404) shows 2 parts, every line unassigned and sends no preview', () => {
+  it('with no saved split shows 2 parts, every line unassigned and sends no preview', () => {
     load();
 
     expect(el('split-section')).not.toBeNull();
@@ -198,7 +204,7 @@ describe('OrderSplitSection', () => {
     const second = expectPreview({ parts: [{ lineIds: ['l1', 'l2', 'l3'] }, { lineIds: [] }] });
 
     expect(first.cancelled).toBe(true);
-    fail(second, 422, { status: 422, detail: 'Every part of a split needs at least one line.' });
+    fail(second, 'InvalidSplit', 'Every part of a split needs at least one line.');
     expect(text('split-error')).toBe('Every part of a split needs at least one line.');
   });
 
@@ -310,7 +316,7 @@ describe('OrderSplitSection', () => {
     show(order({ lines: [LINES[0], LINES[2], line('l4', 'Spring rolls', 8)] }));
     // While the GET runs, the draft is already reconciled.
     expect(assignments()).toEqual(['0', '2', '']);
-    fail(expectGet(), 404, { status: 404 });
+    fail(expectGet(), 'SplitNotFound');
 
     expect(text('split-message')).toBe(CLEARED_MESSAGE);
     expect(el('split-remove')).toBeNull();
@@ -323,7 +329,7 @@ describe('OrderSplitSection', () => {
     load(order(), { parts: [part(['l1', 'l3']), part(['l2'])] });
 
     show(order({ lines: [LINES[0], LINES[1]] }));
-    fail(expectGet(), 404, { status: 404 });
+    fail(expectGet(), 'SplitNotFound');
 
     expect(text('split-message')).toBe(CLEARED_MESSAGE);
     expect((el('split-part-count') as HTMLSelectElement).value).toBe('2');
@@ -337,7 +343,7 @@ describe('OrderSplitSection', () => {
     load(order(), SAVED);
 
     show(order({ lines: [LINES[0], LINES[1]] }));
-    fail(expectGet(), 404, { status: 404 });
+    fail(expectGet(), 'SplitNotFound');
 
     expect((el('split-part-count') as HTMLSelectElement).value).toBe('2');
     expect(partCountOptions()).toEqual(['2']);
@@ -349,51 +355,51 @@ describe('OrderSplitSection', () => {
     load();
 
     show(order({ lines: [LINES[0], LINES[1]] }));
-    fail(expectGet(), 404, { status: 404 });
+    fail(expectGet(), 'SplitNotFound');
 
     expect(el('split-message')).toBeNull();
   });
 
-  it('shows the 422 detail when saving fails and keeps the parts', () => {
+  it('shows the message of a broken rule when saving fails and keeps the parts', () => {
     load();
     assignAll();
     flush(expectPreview(), PREVIEW);
     const detail = 'The order is Paid; only an open order can be changed.';
 
     click('split-save');
-    fail(expectSave(), 422, { status: 422, detail });
+    fail(expectSave(), 'OrderNotOpen', detail);
 
     expect(text('split-error')).toBe(detail);
     expect(texts('split-part-total')).toEqual(['$108.87', '$3.27']);
     expect(changedCount).toBe(0);
   });
 
-  it('sends an incomplete draft as it is and shows the 422 detail', () => {
+  it('sends an incomplete draft as it is and shows the message of a broken rule', () => {
     load();
     assign(0, 1);
 
     click('split-save');
     const save = expectSave();
     expect(save.request.body).toEqual({ parts: [{ lineIds: ['l1'] }, { lineIds: [] }] });
-    fail(save, 422, { status: 422, detail: 'Every line of the order must be in a part of the split.' });
+    fail(save, 'InvalidSplit', 'Every line of the order must be in a part of the split.');
 
     expect(text('split-error')).toBe('Every line of the order must be in a part of the split.');
   });
 
-  it('on 409 when saving emits changed for the parent to reload', () => {
+  it('on a conflict when saving emits changed for the parent to reload', () => {
     load();
     assignAll();
     flush(expectPreview(), PREVIEW);
 
     click('split-save');
-    fail(expectSave(), 409, { status: 409, detail: 'The data was changed by another request. Reload and try again.' });
+    fail(expectSave(), 'ConcurrentChange', 'The data was changed by another request. Reload and try again.');
 
     expect(changedCount).toBe(1);
     expect(el('split-error')).toBeNull();
     expect(el('split-loading')).toBeNull();
   });
 
-  it('after the 409 reload refills the builder from the saved split', () => {
+  it('after the conflict reload refills the builder from the saved split', () => {
     load();
     assign(0, 2);
 
@@ -411,7 +417,7 @@ describe('OrderSplitSection', () => {
     flush(expectPreview(), PREVIEW);
 
     click('split-save');
-    fail(expectSave(), 500);
+    failHttp(expectSave(), 500);
 
     expect(text('split-error')).toBe(GENERIC_ERROR);
     expect(texts('split-part-total')).toEqual(['$108.87', '$3.27']);
@@ -431,33 +437,33 @@ describe('OrderSplitSection', () => {
     expect(el('split-loading')).toBeNull();
   });
 
-  it('treats a 409 from preview like any other error: the generic message, no reload', () => {
+  it('treats a conflict from preview like any other error: the generic message, no reload', () => {
     load();
     assignAll();
 
-    fail(expectPreview(), 409, { status: 409, detail: 'Conflict' });
+    fail(expectPreview(), 'ConcurrentChange', 'Conflict');
 
     expect(text('split-error')).toBe(GENERIC_ERROR);
     expect(changedCount).toBe(0);
   });
 
-  it('shows the 422 detail from a preview', () => {
+  it('shows the message of a broken rule from a preview', () => {
     load();
     assignAll();
 
-    fail(expectPreview(), 422, { status: 422, detail: 'Line l3 is not on this order.' });
+    fail(expectPreview(), 'LineNotOnOrder', 'Line l3 is not on this order.');
 
     expect(text('split-error')).toBe('Line l3 is not on this order.');
   });
 
-  it('removes the saved split (204) and hides Remove split; a second click while removing is ignored', () => {
+  it('removes the saved split and hides Remove split; a second click while removing is ignored', () => {
     load(order(), SAVED);
 
     click('split-remove');
     click('split-remove');
     const remove = expectRemove();
     expect(remove.request.body).toBeNull();
-    remove.flush(null, { status: 204, statusText: 'No Content' });
+    remove.flush(ok(true));
     fixture.detectChanges();
 
     expect(el('split-remove')).toBeNull();
@@ -465,22 +471,22 @@ describe('OrderSplitSection', () => {
     expect(assignments()).toEqual(['0', '1', '2']);
   });
 
-  it.each([404, 409])('on %s when removing emits changed for the parent to reload', (status) => {
+  it.each(['SplitNotFound', 'ConcurrentChange'])('on %s when removing emits changed for the parent to reload', (code) => {
     load(order(), SAVED);
 
     click('split-remove');
-    fail(expectRemove(), status, { status });
+    fail(expectRemove(), code);
 
     expect(changedCount).toBe(1);
     expect(el('split-error')).toBeNull();
   });
 
-  it('shows the 422 detail when removing fails', () => {
+  it('shows the message of a broken rule when removing fails', () => {
     load(order(), SAVED);
     const detail = 'The order is Cancelled; only an open order can be changed.';
 
     click('split-remove');
-    fail(expectRemove(), 422, { status: 422, detail });
+    fail(expectRemove(), 'OrderNotOpen', detail);
 
     expect(text('split-error')).toBe(detail);
     expect(changedCount).toBe(0);
@@ -488,7 +494,7 @@ describe('OrderSplitSection', () => {
 
   it('shows the generic message when the saved split cannot be read', () => {
     show(order());
-    fail(expectGet(), 500);
+    failHttp(expectGet(), 500);
 
     expect(text('split-error')).toBe(GENERIC_ERROR);
     expect(assignments()).toEqual(['', '', '']);

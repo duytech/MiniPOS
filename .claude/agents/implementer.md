@@ -25,7 +25,8 @@ work and the templates (`references/templates.md` in each skill's folder under `
 - Hooks run build + fast tests when you finish and before a commit; they do not run integration tests or Vitest.
   Before you report back, run them yourself: `docker compose up -d`, `dotnet test Pos.slnx`; if `web/` changed,
   `npm run build`, `npm run lint`, `npx ng test --watch=false` in `web/`.
-- Check that each concurrency test really races (at least one 409 in a run).
+- Check that each concurrency test of an order change really races (at least one `ConcurrentChange` in a run, with
+  `OrderRace.RunAsync` when the test needs one). Requests that cannot conflict, such as parallel creates, all succeed.
 - Write text files as UTF-8 (no `Set-Content` without `-Encoding utf8`).
 
 ## Report

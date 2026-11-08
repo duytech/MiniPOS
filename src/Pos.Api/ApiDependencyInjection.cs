@@ -1,5 +1,6 @@
 using System.Text.Json.Serialization;
-using Pos.Api.Errors;
+using Microsoft.AspNetCore.Mvc;
+using Pos.Api.Contracts;
 using Pos.Api.Json;
 
 namespace Pos.Api;
@@ -9,6 +10,8 @@ public static class ApiDependencyInjection
     public static IServiceCollection AddApi(this IServiceCollection services)
     {
         services.AddControllers()
+            .ConfigureApiBehaviorOptions(o => o.InvalidModelStateResponseFactory = context =>
+                new OkObjectResult(context.ModelState.ToResponse()))
             .AddJsonOptions(o =>
             {
                 o.JsonSerializerOptions.Converters.Add(new MoneyJsonConverter());
@@ -16,7 +19,6 @@ public static class ApiDependencyInjection
                 o.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
             });
         services.AddProblemDetails();
-        services.AddExceptionHandler<ApiExceptionHandler>();
         return services;
     }
 }

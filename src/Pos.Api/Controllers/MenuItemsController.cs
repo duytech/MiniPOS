@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
+using Pos.Api.Contracts;
 using Pos.Application.Common;
 using Pos.Application.MenuItems;
 using Pos.Application.MenuItems.CreateMenuItem;
@@ -13,25 +14,18 @@ namespace Pos.Api.Controllers;
 public sealed class MenuItemsController : ControllerBase
 {
     [HttpPost]
-    [ProducesResponseType<MenuItemDto>(StatusCodes.Status201Created)]
-    [ProducesResponseType<ValidationProblemDetails>(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<MenuItemDto>> Create(
+    public async Task<ApiResponse<MenuItemDto>> Create(
         CreateMenuItemRequest request,
         [FromServices] ICommandHandler<CreateMenuItemCommand, MenuItemDto> handler,
-        CancellationToken cancellationToken)
-    {
-        var menuItem = await handler.HandleAsync(new CreateMenuItemCommand(request.Name, request.Price!.Value), cancellationToken);
-        return CreatedAtAction(nameof(Get), new { id = menuItem.Id }, menuItem);
-    }
+        CancellationToken cancellationToken) =>
+        (await handler.HandleAsync(new CreateMenuItemCommand(request.Name, request.Price!.Value), cancellationToken)).ToResponse();
 
     [HttpGet("{id:guid}")]
-    [ProducesResponseType<MenuItemDto>(StatusCodes.Status200OK)]
-    [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
-    public Task<MenuItemDto> Get(
+    public async Task<ApiResponse<MenuItemDto>> Get(
         Guid id,
         [FromServices] IQueryHandler<GetMenuItemQuery, MenuItemDto> handler,
         CancellationToken cancellationToken) =>
-        handler.HandleAsync(new GetMenuItemQuery(id), cancellationToken);
+        (await handler.HandleAsync(new GetMenuItemQuery(id), cancellationToken)).ToResponse();
 }
 
 public sealed record CreateMenuItemRequest(string Name, [Required] Money? Price);

@@ -33,7 +33,7 @@ async function createBigOrder(api: APIRequestContext, stamp: string): Promise<st
     Array.from({ length: LINES }, (_, i) => createMenuItem(api, `Bulk ${stamp} line ${i + 1}`, priceOf(i))),
   );
   const orderId = await createOrder(api);
-  // Sequential: parallel adds to one order may legitimately get 409.
+  // Sequential: parallel adds to one order may legitimately conflict.
   for (const [i, item] of items.entries()) {
     await addItem(api, orderId, item.id, quantityOf(i));
   }

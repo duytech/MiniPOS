@@ -1,4 +1,3 @@
-using Pos.Application.Common;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Domain.Common;
 using Pos.Domain.MenuItems;
@@ -23,8 +22,8 @@ public class AddOrderItemHandlerTests
         var menuItem = new MenuItem("Pho", Money.Usd(7.70m));
         _menuItems.Add(menuItem);
 
-        var result = await _handler.HandleAsync(
-            new AddOrderItemCommand(order.Id, menuItem.Id, 2, null), CancellationToken.None);
+        var result = (await _handler.HandleAsync(
+            new AddOrderItemCommand(order.Id, menuItem.Id, 2, null), CancellationToken.None)).Data;
 
         var line = Assert.Single(result.Lines);
         Assert.Equal("Pho", line.Name);
@@ -41,8 +40,10 @@ public class AddOrderItemHandlerTests
         var menuItem = new MenuItem("Pho", Money.Usd(7.70m));
         _menuItems.Add(menuItem);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => _handler.HandleAsync(
-            new AddOrderItemCommand(Guid.NewGuid(), menuItem.Id, 1, null), CancellationToken.None));
+        var result = await _handler.HandleAsync(
+            new AddOrderItemCommand(Guid.NewGuid(), menuItem.Id, 1, null), CancellationToken.None);
+
+        Assert.Equal(ErrorCode.OrderNotFound, result.Error.Code);
         Assert.Equal(0, _unitOfWork.SaveCount);
     }
 
@@ -52,8 +53,41 @@ public class AddOrderItemHandlerTests
         var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
         _orders.Add(order);
 
-        await Assert.ThrowsAsync<NotFoundException>(() => _handler.HandleAsync(
-            new AddOrderItemCommand(order.Id, Guid.NewGuid(), 1, null), CancellationToken.None));
+        var result = await _handler.HandleAsync(
+            new AddOrderItemCommand(order.Id, Guid.NewGuid(), 1, null), CancellationToken.None);
+
+        Assert.Equal(ErrorCode.MenuItemNotFound, result.Error.Code);
+        Assert.Equal(0, _unitOfWork.SaveCount);
+    }
+
+    [Fact]
+    public async Task Failed_save_is_returned()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        _orders.Add(order);
+        var menuItem = new MenuItem("Pho", Money.Usd(7.70m));
+        _menuItems.Add(menuItem);
+        _unitOfWork.SaveResult = Result.Fail(new Error(ErrorCode.ConcurrentChange, "Changed."));
+
+        var result = await _handler.HandleAsync(
+            new AddOrderItemCommand(order.Id, menuItem.Id, 1, null), CancellationToken.None);
+
+        Assert.Equal(ErrorCode.ConcurrentChange, result.Error.Code);
+    }
+
+    [Fact]
+    public async Task Broken_domain_rule_is_returned_and_nothing_is_saved()
+    {
+        var order = Order.Create(DateTimeOffset.UtcNow, Percentage.Zero, Percentage.Zero);
+        order.Pay(DateTimeOffset.UtcNow);
+        _orders.Add(order);
+        var menuItem = new MenuItem("Pho", Money.Usd(7.70m));
+        _menuItems.Add(menuItem);
+
+        var result = await _handler.HandleAsync(
+            new AddOrderItemCommand(order.Id, menuItem.Id, 1, null), CancellationToken.None);
+
+        Assert.Equal(ErrorCode.OrderNotOpen, result.Error.Code);
         Assert.Equal(0, _unitOfWork.SaveCount);
     }
 }

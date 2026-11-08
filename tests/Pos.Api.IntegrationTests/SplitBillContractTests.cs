@@ -1,9 +1,9 @@
 using System.Globalization;
-using System.Net;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Pos.Domain.Common;
 
 namespace Pos.Api.IntegrationTests;
 
@@ -34,8 +34,8 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
         var response = await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id]);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var parts = AssertSplitShape(await response.ReadJsonAsync());
+        await response.AssertSuccessAsync();
+        var parts = AssertSplitShape(await response.ReadDataAsync());
         AssertMoney(parts, "subtotal", "60.00", "40.00");
         AssertMoney(parts, "discount", "0.00", "0.00");
         AssertMoney(parts, "surcharge", "0.00", "0.00");
@@ -54,8 +54,8 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
         var response = await PreviewSplitAsync(orderId, [lines[1].Id], [lines[0].Id]);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var parts = AssertSplitShape(await response.ReadJsonAsync());
+        await response.AssertSuccessAsync();
+        var parts = AssertSplitShape(await response.ReadDataAsync());
         AssertMoney(parts, "subtotal", "40.00", "60.00");
         AssertMoney(parts, "tax", "3.55", "5.33");
         AssertMoney(parts, "total", "43.55", "65.33");
@@ -67,17 +67,17 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
     public async Task Discount_card_surcharge_and_tip_are_each_shared_by_subtotal_share()
     {
         var (orderId, lines) = await OrderWithLinesAsync(6.00m, 4.00m);
-        (await _client.ApplyDiscountAsync(orderId, new { rate = 15 })).EnsureSuccessStatusCode();
-        (await _client.SetPaymentMethodAsync(orderId, "Card")).EnsureSuccessStatusCode();
-        (await _client.SetTipAsync(orderId, 18m)).EnsureSuccessStatusCode();
+        await (await _client.ApplyDiscountAsync(orderId, new { rate = 15 })).AssertSuccessAsync();
+        await (await _client.SetPaymentMethodAsync(orderId, "Card")).AssertSuccessAsync();
+        await (await _client.SetTipAsync(orderId, 18m)).AssertSuccessAsync();
         // Order: subtotal 10.00, discount 1.50, surcharge 0.26, tax 0.78, tip 1.53, total 11.07. Shares 60% / 40%:
         // discount 0.90 / 0.60; surcharge 0.156 -> 0.15, 0.104 -> 0.10, +0.01 to the 6.00 part;
         // tax 0.468 -> 0.46, 0.312 -> 0.31, +0.01; tip 0.918 -> 0.91, 0.612 -> 0.61, +0.01.
 
         var response = await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id]);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var body = await response.ReadJsonAsync();
+        await response.AssertSuccessAsync();
+        var body = await response.ReadDataAsync();
         var parts = AssertSplitShape(body);
         AssertMoney(parts, "subtotal", "6.00", "4.00");
         AssertMoney(parts, "discount", "0.90", "0.60");
@@ -86,7 +86,7 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
         AssertMoney(parts, "tip", "0.92", "0.61");
         AssertMoney(parts, "total", "6.65", "4.42");
         await AssertPartTotalsAddUpToOrderTotalAsync(orderId, parts);
-        Assert.Equal(Normalize(body), Normalize(await (await GetSplitAsync(orderId)).ReadJsonAsync()));
+        Assert.Equal(Normalize(body), Normalize(await (await GetSplitAsync(orderId)).ReadDataAsync()));
     }
 
     [Fact]
@@ -98,8 +98,8 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
         var response = await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id], [lines[2].Id]);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var parts = AssertSplitShape(await response.ReadJsonAsync());
+        await response.AssertSuccessAsync();
+        var parts = AssertSplitShape(await response.ReadDataAsync());
         AssertMoney(parts, "subtotal", "5.00", "5.00", "2.50");
         AssertMoney(parts, "tax", "0.45", "0.44", "0.22");
         AssertMoney(parts, "total", "5.45", "5.44", "2.72");
@@ -115,8 +115,8 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
         var response = await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id], [lines[2].Id]);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var parts = AssertSplitShape(await response.ReadJsonAsync());
+        await response.AssertSuccessAsync();
+        var parts = AssertSplitShape(await response.ReadDataAsync());
         AssertMoney(parts, "subtotal", "3.33", "3.33", "3.33");
         AssertMoney(parts, "tax", "0.31", "0.29", "0.29");
         AssertMoney(parts, "total", "3.64", "3.62", "3.62");
@@ -131,8 +131,8 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
         var response = await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id, lines[2].Id]);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var parts = AssertSplitShape(await response.ReadJsonAsync());
+        await response.AssertSuccessAsync();
+        var parts = AssertSplitShape(await response.ReadDataAsync());
         AssertMoney(parts, "subtotal", "60.00", "40.00");
         AssertMoney(parts, "tax", "5.33", "3.55");
         AssertMoney(parts, "total", "65.33", "43.55");
@@ -145,12 +145,12 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
     public async Task Get_returns_the_saved_split_exactly_as_the_put_returned_it()
     {
         var (orderId, lines) = await OrderWithLinesAsync(60.00m, 40.00m);
-        var saved = await (await PutSplitAsync(orderId, [lines[1].Id], [lines[0].Id])).ReadJsonAsync();
+        var saved = await (await PutSplitAsync(orderId, [lines[1].Id], [lines[0].Id])).ReadDataAsync();
 
         var response = await GetSplitAsync(orderId);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var got = await response.ReadJsonAsync();
+        await response.AssertSuccessAsync();
+        var got = await response.ReadDataAsync();
         AssertSplitShape(got);
         Assert.Equal(Normalize(saved), Normalize(got));
     }
@@ -161,9 +161,9 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
         var (orderId, lines) = await OrderWithLinesAsync(1.00m, 2.00m, 3.00m, 4.00m);
         // Reverse of the order the lines were added in, so database row order would not give it back by chance.
         Guid[] sent = [lines[3].Id, lines[1].Id, lines[0].Id];
-        (await PutSplitAsync(orderId, sent, [lines[2].Id])).EnsureSuccessStatusCode();
+        await (await PutSplitAsync(orderId, sent, [lines[2].Id])).AssertSuccessAsync();
 
-        var parts = AssertSplitShape(await (await GetSplitAsync(orderId)).ReadJsonAsync());
+        var parts = AssertSplitShape(await (await GetSplitAsync(orderId)).ReadDataAsync());
 
         Assert.Equal(sent, parts[0].GetProperty("lineIds").EnumerateArray().Select(id => id.GetGuid()));
     }
@@ -174,48 +174,48 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
     public async Task Get_still_returns_the_saved_split_on_a_closed_order(string status)
     {
         var (orderId, lines) = await OrderWithLinesAsync(60.00m, 40.00m);
-        var saved = await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).ReadJsonAsync();
+        var saved = await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).ReadDataAsync();
         await _client.CloseOrderAsync(orderId, status);
 
         var response = await GetSplitAsync(orderId);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(Normalize(saved), Normalize(await response.ReadJsonAsync()));
+        await response.AssertSuccessAsync();
+        Assert.Equal(Normalize(saved), Normalize(await response.ReadDataAsync()));
     }
 
     [Fact]
-    public async Task Get_with_no_saved_split_is_404_split_not_found()
+    public async Task Get_with_no_saved_split_is_not_found_split_not_found()
     {
         var (orderId, _) = await OrderWithLinesAsync(60.00m, 40.00m);
 
-        await AssertProblemAsync(await GetSplitAsync(orderId), HttpStatusCode.NotFound, $"Split '{orderId}' was not found.");
+        await AssertProblemAsync(await GetSplitAsync(orderId), ErrorCode.SplitNotFound, $"Split '{orderId}' was not found.");
     }
 
     [Theory]
     [InlineData("Paid")]
     [InlineData("Cancelled")]
-    public async Task Get_on_a_closed_order_that_never_had_a_split_is_404(string status)
+    public async Task Get_on_a_closed_order_that_never_had_a_split_is_not_found(string status)
     {
         var (orderId, _) = await OrderWithLinesAsync(60.00m, 40.00m);
         await _client.CloseOrderAsync(orderId, status);
 
-        await AssertProblemAsync(await GetSplitAsync(orderId), HttpStatusCode.NotFound, $"Split '{orderId}' was not found.");
+        await AssertProblemAsync(await GetSplitAsync(orderId), ErrorCode.SplitNotFound, $"Split '{orderId}' was not found.");
     }
 
     [Fact]
-    public async Task Get_on_an_unknown_order_is_404_order_not_found()
+    public async Task Get_on_an_unknown_order_is_order_not_found()
     {
         var orderId = Guid.NewGuid();
 
-        await AssertProblemAsync(await GetSplitAsync(orderId), HttpStatusCode.NotFound, $"Order '{orderId}' was not found.");
+        await AssertProblemAsync(await GetSplitAsync(orderId), ErrorCode.OrderNotFound, $"Order '{orderId}' was not found.");
     }
 
     [Fact]
-    public async Task Get_with_an_empty_guid_order_id_is_404()
+    public async Task Get_with_an_empty_guid_order_id_is_not_found()
     {
         var response = await _client.GetAsync($"/api/orders/{EmptyGuid}/split");
 
-        await AssertProblemAsync(response, HttpStatusCode.NotFound);
+        await AssertProblemAsync(response, ErrorCode.OrderNotFound);
     }
 
     // ---------------------------------------------------------------- PUT /split
@@ -224,13 +224,13 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
     public async Task Put_replaces_the_saved_split()
     {
         var (orderId, lines) = await OrderWithLinesAsync(60.00m, 25.00m, 15.00m);
-        (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id, lines[2].Id])).EnsureSuccessStatusCode();
+        await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id, lines[2].Id])).AssertSuccessAsync();
 
         var second = await PutSplitAsync(orderId, [lines[2].Id], [lines[1].Id], [lines[0].Id]);
 
-        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
-        var secondBody = await second.ReadJsonAsync();
-        var got = await (await GetSplitAsync(orderId)).ReadJsonAsync();
+        await second.AssertSuccessAsync();
+        var secondBody = await second.ReadDataAsync();
+        var got = await (await GetSplitAsync(orderId)).ReadDataAsync();
         Assert.Equal(Normalize(secondBody), Normalize(got));
         var parts = AssertSplitShape(got);
         AssertMoney(parts, "subtotal", "15.00", "25.00", "60.00");
@@ -240,23 +240,23 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
     }
 
     [Fact]
-    public async Task Put_on_an_unknown_order_is_404()
+    public async Task Put_on_an_unknown_order_is_not_found()
     {
         var orderId = Guid.NewGuid();
 
         var response = await PutSplitAsync(orderId, [Guid.NewGuid()], [Guid.NewGuid()]);
 
-        await AssertProblemAsync(response, HttpStatusCode.NotFound, $"Order '{orderId}' was not found.");
+        await AssertProblemAsync(response, ErrorCode.OrderNotFound, $"Order '{orderId}' was not found.");
     }
 
     [Theory]
     [InlineData("put")]
     [InlineData("preview")]
-    public async Task Put_or_preview_with_an_empty_guid_order_id_is_404(string route)
+    public async Task Put_or_preview_with_an_empty_guid_order_id_is_not_found(string route)
     {
         var response = await SendSplitAsync(route, Guid.Empty, [[Guid.NewGuid()], [Guid.NewGuid()]]);
 
-        await AssertProblemAsync(response, HttpStatusCode.NotFound);
+        await AssertProblemAsync(response, ErrorCode.OrderNotFound);
     }
 
     public static TheoryData<string, string> BadBodies => new()
@@ -279,7 +279,7 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
     [Theory]
     [MemberData(nameof(BadBodies))]
-    public async Task Body_missing_parts_null_line_ids_null_or_empty_guid_line_is_400_and_stores_nothing(
+    public async Task Body_missing_parts_null_line_ids_null_or_empty_guid_line_is_invalid_and_stores_nothing(
         string route, string template)
     {
         var (orderId, lines) = await OrderWithLinesAsync(60.00m, 40.00m);
@@ -288,8 +288,8 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
         var response = await SendRawAsync(route, orderId, body);
 
-        await AssertProblemAsync(response, HttpStatusCode.BadRequest);
-        Assert.Equal(HttpStatusCode.NotFound, (await GetSplitAsync(orderId)).StatusCode);
+        await AssertProblemAsync(response, ErrorCode.ValidationFailed);
+        await (await GetSplitAsync(orderId)).AssertErrorAsync(ErrorCode.SplitNotFound);
     }
 
     public static TheoryData<string, string> DomainCases => new()
@@ -312,7 +312,7 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
     [Theory]
     [MemberData(nameof(DomainCases))]
-    public async Task Broken_split_rule_is_422_with_the_contract_detail_and_stores_nothing(string route, string rule)
+    public async Task Broken_split_rule_is_rejected_with_the_contract_detail_and_stores_nothing(string route, string rule)
     {
         var (orderId, lines) = await OrderWithLinesAsync(60.00m, 25.00m, 15.00m);
         var (a, b, c) = (lines[0].Id, lines[1].Id, lines[2].Id);
@@ -335,20 +335,21 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
         var response = await SendSplitAsync(route, orderId, parts);
 
-        await AssertProblemAsync(response, HttpStatusCode.UnprocessableEntity, detail);
-        Assert.Equal(HttpStatusCode.NotFound, (await GetSplitAsync(orderId)).StatusCode);
+        var code = rule is "unknown-line" or "line-of-another-order" ? ErrorCode.LineNotOnOrder : ErrorCode.InvalidSplit;
+        await AssertProblemAsync(response, code, detail);
+        await (await GetSplitAsync(orderId)).AssertErrorAsync(ErrorCode.SplitNotFound);
     }
 
     [Fact]
     public async Task Rejected_put_keeps_the_previously_saved_split()
     {
         var (orderId, lines) = await OrderWithLinesAsync(60.00m, 40.00m);
-        var saved = await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).ReadJsonAsync();
+        var saved = await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).ReadDataAsync();
 
         var response = await PutSplitAsync(orderId, [lines[0].Id, lines[1].Id]);
 
-        await AssertProblemAsync(response, HttpStatusCode.UnprocessableEntity, "A split needs at least two parts.");
-        Assert.Equal(Normalize(saved), Normalize(await (await GetSplitAsync(orderId)).ReadJsonAsync()));
+        await AssertProblemAsync(response, ErrorCode.InvalidSplit, "A split needs at least two parts.");
+        Assert.Equal(Normalize(saved), Normalize(await (await GetSplitAsync(orderId)).ReadDataAsync()));
     }
 
     [Theory]
@@ -356,7 +357,7 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
     [InlineData("put", "Cancelled")]
     [InlineData("preview", "Paid")]
     [InlineData("preview", "Cancelled")]
-    public async Task Put_or_preview_on_a_closed_order_is_422_not_open(string route, string status)
+    public async Task Put_or_preview_on_a_closed_order_is_rejected_not_open(string route, string status)
     {
         var (orderId, lines) = await OrderWithLinesAsync(60.00m, 40.00m);
         await _client.CloseOrderAsync(orderId, status);
@@ -364,12 +365,12 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
         var response = await SendSplitAsync(route, orderId, [[lines[0].Id], [lines[1].Id]]);
 
         await AssertProblemAsync(
-            response, HttpStatusCode.UnprocessableEntity, $"The order is {status}; only an open order can be changed.");
-        Assert.Equal(HttpStatusCode.NotFound, (await GetSplitAsync(orderId)).StatusCode);
+            response, ErrorCode.OrderNotOpen, $"The order is {status}; only an open order can be changed.");
+        await (await GetSplitAsync(orderId)).AssertErrorAsync(ErrorCode.SplitNotFound);
     }
 
     [Fact]
-    public async Task Parallel_puts_are_200_or_409_and_the_stored_split_is_one_accepted_body()
+    public async Task Parallel_puts_succeed_or_conflict_and_the_stored_split_is_one_accepted_body()
     {
         var (orderId, lines) = await OrderWithLinesAsync(1.10m, 2.20m, 3.30m, 4.40m);
         var (a, b, c, d) = (lines[0].Id, lines[1].Id, lines[2].Id, lines[3].Id);
@@ -389,20 +390,19 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
         var results = await RaceAsync(orderId, groupings.Select(g => (Func<Task<HttpResponseMessage>>)(() =>
             PutSplitAsync(orderId, g))));
 
-        var unexpected = results.Where(r => r.Status is not (HttpStatusCode.OK or HttpStatusCode.Conflict)).ToList();
-        Assert.True(unexpected.Count == 0, $"Expected only 200 or 409, got: {Describe(unexpected)}");
-        Assert.Single(results, r => r.Status == HttpStatusCode.OK); // all loaded the same order version (OrderRace)
-        foreach (var conflict in results.Where(r => r.Status == HttpStatusCode.Conflict))
+        var unexpected = results.Where(r => r.Error is not (null or ErrorCode.ConcurrentChange)).ToList();
+        Assert.True(unexpected.Count == 0, $"Expected only success or ConcurrentChange, got: {Describe(unexpected)}");
+        Assert.Single(results, r => r.Error is null); // all loaded the same order version (OrderRace)
+        foreach (var conflict in results.Where(r => r.Error == ErrorCode.ConcurrentChange))
         {
-            Assert.Equal("application/problem+json", conflict.MediaType);
-            Assert.Equal(ConflictDetail, conflict.Body.GetProperty("detail").GetString());
+            Assert.Equal(ConflictDetail, conflict.Body.GetProperty("message").GetString());
         }
 
-        var accepted = results.Where(r => r.Status == HttpStatusCode.OK).Select(r => Normalize(r.Body)).ToList();
+        var accepted = results.Where(r => r.Error is null).Select(r => Normalize(r.Body)).ToList();
         Assert.NotEmpty(accepted);
         var stored = await GetSplitAsync(orderId);
-        Assert.Equal(HttpStatusCode.OK, stored.StatusCode);
-        Assert.Contains(Normalize(await stored.ReadJsonAsync()), accepted);
+        await stored.AssertSuccessAsync();
+        Assert.Contains(Normalize(await stored.ReadDataAsync()), accepted);
     }
 
     // ---------------------------------------------------------------- POST /split/preview
@@ -414,14 +414,14 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
         var preview = await PreviewSplitAsync(orderId, [lines[0].Id], [lines[1].Id]);
 
-        Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
-        var previewBody = await preview.ReadJsonAsync();
+        await preview.AssertSuccessAsync();
+        var previewBody = await preview.ReadDataAsync();
         var parts = AssertSplitShape(previewBody);
         AssertMoney(parts, "tax", "5.33", "3.55");
         AssertMoney(parts, "total", "65.33", "43.55");
-        await AssertProblemAsync(await GetSplitAsync(orderId), HttpStatusCode.NotFound, $"Split '{orderId}' was not found.");
+        await AssertProblemAsync(await GetSplitAsync(orderId), ErrorCode.SplitNotFound, $"Split '{orderId}' was not found.");
 
-        var saved = await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).ReadJsonAsync();
+        var saved = await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).ReadDataAsync();
         Assert.Equal(Normalize(previewBody), Normalize(saved));
     }
 
@@ -429,106 +429,105 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
     public async Task Preview_does_not_replace_a_saved_split()
     {
         var (orderId, lines) = await OrderWithLinesAsync(60.00m, 40.00m);
-        var saved = await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).ReadJsonAsync();
+        var saved = await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).ReadDataAsync();
 
         var preview = await PreviewSplitAsync(orderId, [lines[1].Id], [lines[0].Id]);
 
-        Assert.Equal(HttpStatusCode.OK, preview.StatusCode);
-        Assert.Equal(Normalize(saved), Normalize(await (await GetSplitAsync(orderId)).ReadJsonAsync()));
+        await preview.AssertSuccessAsync();
+        Assert.Equal(Normalize(saved), Normalize(await (await GetSplitAsync(orderId)).ReadDataAsync()));
     }
 
     [Fact]
-    public async Task Preview_on_an_unknown_order_is_404()
+    public async Task Preview_on_an_unknown_order_is_not_found()
     {
         var orderId = Guid.NewGuid();
 
         var response = await PreviewSplitAsync(orderId, [Guid.NewGuid()], [Guid.NewGuid()]);
 
-        await AssertProblemAsync(response, HttpStatusCode.NotFound, $"Order '{orderId}' was not found.");
+        await AssertProblemAsync(response, ErrorCode.OrderNotFound, $"Order '{orderId}' was not found.");
     }
 
     // ---------------------------------------------------------------- DELETE /split
 
     [Fact]
-    public async Task Delete_is_204_with_no_body_then_get_and_delete_are_404()
+    public async Task Delete_succeeds_then_get_and_delete_are_not_found()
     {
         var (orderId, lines) = await OrderWithLinesAsync(60.00m, 40.00m);
-        (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).EnsureSuccessStatusCode();
+        await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).AssertSuccessAsync();
 
         var response = await DeleteSplitAsync(orderId);
 
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
-        Assert.Equal(string.Empty, await response.Content.ReadAsStringAsync());
-        await AssertProblemAsync(await GetSplitAsync(orderId), HttpStatusCode.NotFound, $"Split '{orderId}' was not found.");
-        await AssertProblemAsync(await DeleteSplitAsync(orderId), HttpStatusCode.NotFound, $"Split '{orderId}' was not found.");
+        await response.AssertSuccessAsync();
+        await AssertProblemAsync(await GetSplitAsync(orderId), ErrorCode.SplitNotFound, $"Split '{orderId}' was not found.");
+        await AssertProblemAsync(await DeleteSplitAsync(orderId), ErrorCode.SplitNotFound, $"Split '{orderId}' was not found.");
     }
 
     [Fact]
-    public async Task Delete_with_no_saved_split_is_404()
+    public async Task Delete_with_no_saved_split_is_not_found()
     {
         var (orderId, _) = await OrderWithLinesAsync(60.00m, 40.00m);
 
-        await AssertProblemAsync(await DeleteSplitAsync(orderId), HttpStatusCode.NotFound, $"Split '{orderId}' was not found.");
+        await AssertProblemAsync(await DeleteSplitAsync(orderId), ErrorCode.SplitNotFound, $"Split '{orderId}' was not found.");
     }
 
     [Fact]
-    public async Task Delete_on_an_unknown_order_is_404_order_not_found()
+    public async Task Delete_on_an_unknown_order_is_order_not_found()
     {
         var orderId = Guid.NewGuid();
 
-        await AssertProblemAsync(await DeleteSplitAsync(orderId), HttpStatusCode.NotFound, $"Order '{orderId}' was not found.");
+        await AssertProblemAsync(await DeleteSplitAsync(orderId), ErrorCode.OrderNotFound, $"Order '{orderId}' was not found.");
     }
 
     [Fact]
-    public async Task Delete_with_an_empty_guid_order_id_is_404()
+    public async Task Delete_with_an_empty_guid_order_id_is_not_found()
     {
         var response = await _client.DeleteAsync($"/api/orders/{EmptyGuid}/split");
 
-        await AssertProblemAsync(response, HttpStatusCode.NotFound);
+        await AssertProblemAsync(response, ErrorCode.OrderNotFound);
     }
 
     [Theory]
     [InlineData("Paid")]
     [InlineData("Cancelled")]
-    public async Task Delete_on_a_closed_order_with_a_split_is_422_and_keeps_it(string status)
+    public async Task Delete_on_a_closed_order_with_a_split_is_rejected_and_keeps_it(string status)
     {
         var (orderId, lines) = await OrderWithLinesAsync(60.00m, 40.00m);
-        var saved = await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).ReadJsonAsync();
+        var saved = await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).ReadDataAsync();
         await _client.CloseOrderAsync(orderId, status);
 
         var response = await DeleteSplitAsync(orderId);
 
         await AssertProblemAsync(
-            response, HttpStatusCode.UnprocessableEntity, $"The order is {status}; only an open order can be changed.");
-        Assert.Equal(Normalize(saved), Normalize(await (await GetSplitAsync(orderId)).ReadJsonAsync()));
+            response, ErrorCode.OrderNotOpen, $"The order is {status}; only an open order can be changed.");
+        Assert.Equal(Normalize(saved), Normalize(await (await GetSplitAsync(orderId)).ReadDataAsync()));
     }
 
     [Theory]
     [InlineData("Paid")]
     [InlineData("Cancelled")]
-    public async Task Delete_on_a_closed_order_with_no_split_is_404_before_422(string status)
+    public async Task Delete_on_a_closed_order_with_no_split_is_not_found_before_rejected(string status)
     {
         var (orderId, _) = await OrderWithLinesAsync(60.00m, 40.00m);
         await _client.CloseOrderAsync(orderId, status);
 
-        await AssertProblemAsync(await DeleteSplitAsync(orderId), HttpStatusCode.NotFound, $"Split '{orderId}' was not found.");
+        await AssertProblemAsync(await DeleteSplitAsync(orderId), ErrorCode.SplitNotFound, $"Split '{orderId}' was not found.");
     }
 
     [Fact]
     public async Task Parallel_deletes_remove_the_split_once()
     {
         var (orderId, lines) = await OrderWithLinesAsync(60.00m, 40.00m);
-        (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).EnsureSuccessStatusCode();
+        await (await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id])).AssertSuccessAsync();
 
         var results = await ConcurrentlyAsync(Enumerable.Range(0, ConcurrentRequests)
             .Select(_ => (Func<Task<HttpResponseMessage>>)(() => DeleteSplitAsync(orderId))));
 
         var unexpected = results
-            .Where(r => r.Status is not (HttpStatusCode.NoContent or HttpStatusCode.NotFound or HttpStatusCode.Conflict))
+            .Where(r => r.Error is not (null or ErrorCode.SplitNotFound or ErrorCode.ConcurrentChange))
             .ToList();
-        Assert.True(unexpected.Count == 0, $"Expected only 204, 404 or 409, got: {Describe(unexpected)}");
-        Assert.Single(results, r => r.Status == HttpStatusCode.NoContent);
-        Assert.Equal(HttpStatusCode.NotFound, (await GetSplitAsync(orderId)).StatusCode);
+        Assert.True(unexpected.Count == 0, $"Expected only success, SplitNotFound or ConcurrentChange, got: {Describe(unexpected)}");
+        Assert.Single(results, r => r.Error is null);
+        await (await GetSplitAsync(orderId)).AssertErrorAsync(ErrorCode.SplitNotFound);
     }
 
     // ---------------------------------------------------------------- R5: real change clears, no-op keeps
@@ -564,21 +563,21 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
         var (orderId, lines) = await OrderWithLinesAsync(6.00m, 4.00m, 2.00m);
         await PrepareAsync(orderId, change);
         var saved = await PutSplitAsync(orderId, [lines[0].Id], [lines[1].Id, lines[2].Id]);
-        Assert.Equal(HttpStatusCode.OK, saved.StatusCode);
-        var savedBody = await saved.ReadJsonAsync();
+        await saved.AssertSuccessAsync();
+        var savedBody = await saved.ReadDataAsync();
 
         var response = await ChangeAsync(orderId, lines, change);
 
-        Assert.True(response.IsSuccessStatusCode, $"{change}: {(int)response.StatusCode} {await response.Content.ReadAsStringAsync()}");
+        await response.AssertSuccessAsync();
         var split = await GetSplitAsync(orderId);
         if (clears)
         {
-            await AssertProblemAsync(split, HttpStatusCode.NotFound, $"Split '{orderId}' was not found.");
+            await AssertProblemAsync(split, ErrorCode.SplitNotFound, $"Split '{orderId}' was not found.");
         }
         else
         {
-            Assert.Equal(HttpStatusCode.OK, split.StatusCode);
-            Assert.Equal(Normalize(savedBody), Normalize(await split.ReadJsonAsync()));
+            await split.AssertSuccessAsync();
+            Assert.Equal(Normalize(savedBody), Normalize(await split.ReadDataAsync()));
         }
     }
 
@@ -592,7 +591,10 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
             "tip-different" or "tip-same" or "tip-remove-existing" => await _client.SetTipAsync(orderId, 15m),
             _ => null,
         };
-        response?.EnsureSuccessStatusCode();
+        if (response is not null)
+        {
+            await response.AssertSuccessAsync();
+        }
     }
 
     private async Task<HttpResponseMessage> ChangeAsync(Guid orderId, IReadOnlyList<OrderLineRef> lines, string change)
@@ -643,7 +645,7 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
     private sealed record OrderLineRef(Guid Id, Guid MenuItemId);
 
-    private sealed record Result(HttpStatusCode Status, string? MediaType, JsonElement Body);
+    private sealed record Result(ErrorCode? Error, JsonElement Body);
 
     private Task<HttpResponseMessage> GetSplitAsync(Guid orderId) => _client.GetAsync($"/api/orders/{orderId}/split");
 
@@ -680,8 +682,8 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
             var menuItemId = await _client.CreateMenuItemAsync(
                 $"Split item {i} {Guid.NewGuid():N}", prices[i]);
             var response = await _client.AddItemAsync(orderId, menuItemId, 1);
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            var lineId = (await response.ReadJsonAsync()).GetProperty("lines").EnumerateArray()
+            await response.AssertSuccessAsync();
+            var lineId = (await response.ReadDataAsync()).GetProperty("lines").EnumerateArray()
                 .Single(l => l.GetProperty("menuItemId").GetGuid() == menuItemId).GetProperty("id").GetGuid();
             lines.Add(new OrderLineRef(lineId, menuItemId));
         }
@@ -712,13 +714,13 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
     private static async Task<Result> ReadResultAsync(Func<Task<HttpResponseMessage>> send)
     {
         using var response = await send();
-        var text = await response.Content.ReadAsStringAsync();
-        var body = text.Length == 0 ? default : await response.ReadJsonAsync();
-        return new Result(response.StatusCode, response.Content.Headers.ContentType?.MediaType, body);
+        var outcome = await response.OutcomeAsync();
+        var body = outcome is null ? await response.ReadDataAsync() : (await response.ReadJsonAsync()).GetProperty("error");
+        return new Result(outcome, body);
     }
 
     private static string Describe(IEnumerable<Result> results) =>
-        string.Join(", ", results.GroupBy(r => r.Status).Select(g => $"{(int)g.Key} x{g.Count()}"));
+        string.Join(", ", results.GroupBy(r => r.Error).Select(g => $"{g.Key?.ToString() ?? "success"} x{g.Count()}"));
 
     // ---------------------------------------------------------------- assertions
 
@@ -753,17 +755,8 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
             expected.Order(),
             part.GetProperty("lineIds").EnumerateArray().Select(id => id.GetGuid()).Order());
 
-    private static async Task AssertProblemAsync(HttpResponseMessage response, HttpStatusCode status, string? detail = null)
-    {
-        var text = await response.Content.ReadAsStringAsync();
-        Assert.True(status == response.StatusCode, $"Expected {(int)status}, got {(int)response.StatusCode}: {text}");
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
-        if (detail is not null)
-        {
-            using var document = JsonDocument.Parse(text);
-            Assert.Equal(detail, document.RootElement.GetProperty("detail").GetString());
-        }
-    }
+    private static Task AssertProblemAsync(HttpResponseMessage response, ErrorCode code, string? message = null) =>
+        response.AssertErrorAsync(code, message);
 
     /// <summary>Adds up the returned part totals in the test only, to compare with GET /api/orders/{id}.</summary>
     private async Task AssertPartTotalsAddUpToOrderTotalAsync(Guid orderId, JsonElement[] parts)

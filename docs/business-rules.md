@@ -5,15 +5,17 @@ is the source of truth; when this file and the code disagree, fix this file.
 
 ## API conventions
 
-All routes are under `/api`. Errors are ProblemDetails: 400 validation, 404 not found, 409 concurrency conflict
-(Postgres `xmin`), 422 domain rule broken. Money is returned as numbers with exactly 2 decimals, USD only.
+All routes are under `/api`. Every expected answer is HTTP 200 with `{ isSuccess, data, error }`; `error` has an `ErrorCode`:
+`ValidationFailed`; `OrderNotFound`, `MenuItemNotFound`, `OrderLineNotFound`, `SplitNotFound`; `ConcurrentChange` (Postgres
+`xmin`), `DataConflict`; `OrderNotOpen`, `LineNotOnOrder`, `DiscountExceedsSubtotal`, `LineQuantityTooLarge`, `InvalidSplit`.
+Money is returned as numbers with exactly 2 decimals, USD only.
 
-A route id is not validated: an unknown id, including the all-zero GUID, is 404. An empty id in the request body is
-400: `menuItemId`, and each line id in `parts` of save split and preview split.
+A route id is not validated: an unknown id, including the all-zero GUID, is not found. An empty id in the request body
+is `ValidationFailed`: `menuItemId`, and each line id in `parts` of save split and preview split.
 
 ## Order status
 - `Open` → `Paid` or `Cancelled`. Paid and Cancelled are final; `PaidAt` / `CancelledAt` record when.
-- Items, discount, tip, payment method and the saved split change only while the order is open (else 422).
+- Items, discount, tip, payment method and the saved split change only while the order is open (else `OrderNotOpen`).
 - An empty open order can be paid or cancelled.
 
 ## Lines
@@ -35,7 +37,7 @@ total = subtotal − discount + surcharge + tax + tip
 - Tax rate and card surcharge rate come from configuration (`Pricing:TaxRatePercent`, `Pricing:CardSurchargePercent`
   in `src/Pos.Api/appsettings.json`) and are snapshotted on the order when it is created.
 - A percent discount above 100% is rejected. A fixed discount can never be more than the subtotal: applying it, or a
-  line change that would leave a smaller subtotal, is rejected with 422 (change or remove the discount first).
+  line change that would leave a smaller subtotal, is rejected with `DiscountExceedsSubtotal` (change or remove the discount first).
 - A percent discount and the tip follow the subtotal when lines change.
 
 ## Split bill

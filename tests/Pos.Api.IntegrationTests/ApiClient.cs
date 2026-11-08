@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Pos.Domain.Common;
 
 namespace Pos.Api.IntegrationTests;
 
@@ -10,15 +11,13 @@ internal static class ApiClient
     public static async Task<Guid> CreateMenuItemAsync(this HttpClient client, string name, decimal price)
     {
         var response = await client.PostAsJsonAsync("/api/menu-items", new { name, price });
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        return (await response.ReadJsonAsync()).GetProperty("id").GetGuid();
+        return (await response.ReadDataAsync()).GetProperty("id").GetGuid();
     }
 
     public static async Task<Guid> CreateOrderAsync(this HttpClient client)
     {
         var response = await client.PostAsync("/api/orders", null);
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        return (await response.ReadJsonAsync()).GetProperty("id").GetGuid();
+        return (await response.ReadDataAsync()).GetProperty("id").GetGuid();
     }
 
     public static Task<HttpResponseMessage> AddItemAsync(
@@ -63,7 +62,7 @@ internal static class ApiClient
             "Cancelled" => await client.CancelOrderAsync(orderId),
             _ => throw new ArgumentOutOfRangeException(nameof(status), status, "Paid or Cancelled"),
         };
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await response.AssertSuccessAsync();
     }
 
     /// <summary>Body of PUT and preview split: one array of line ids per part, in part order.</summary>
@@ -87,8 +86,40 @@ internal static class ApiClient
     public static async Task<JsonElement> GetOrderAsync(this HttpClient client, Guid orderId)
     {
         var response = await client.GetAsync($"/api/orders/{orderId}");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return await response.ReadJsonAsync();
+        return await response.ReadDataAsync();
+    }
+
+    /// <summary>Null on success, else the error code. Every expected outcome is HTTP 200, so anything else fails here.</summary>
+    public static async Task<ErrorCode?> OutcomeAsync(this HttpResponseMessage response)
+    {
+        Assert.True(response.StatusCode == HttpStatusCode.OK,
+            $"Expected HTTP 200, got {(int)response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
+        var body = await response.ReadJsonAsync();
+        return body.GetProperty("isSuccess").GetBoolean()
+            ? null
+            : Enum.Parse<ErrorCode>(body.GetProperty("error").GetProperty("code").GetString()!);
+    }
+
+    public static async Task AssertSuccessAsync(this HttpResponseMessage response)
+    {
+        var outcome = await response.OutcomeAsync();
+        Assert.True(outcome is null, $"Expected success, got: {await response.Content.ReadAsStringAsync()}");
+    }
+
+    public static async Task AssertErrorAsync(this HttpResponseMessage response, ErrorCode code, string? message = null)
+    {
+        Assert.Equal(code, await response.OutcomeAsync());
+        if (message is not null)
+        {
+            Assert.Equal(message, (await response.ReadJsonAsync()).GetProperty("error").GetProperty("message").GetString());
+        }
+    }
+
+    /// <summary>The <c>data</c> of a successful response; fails on anything else.</summary>
+    public static async Task<JsonElement> ReadDataAsync(this HttpResponseMessage response)
+    {
+        await response.AssertSuccessAsync();
+        return (await response.ReadJsonAsync()).GetProperty("data");
     }
 
     public static async Task<JsonElement> ReadJsonAsync(this HttpResponseMessage response)

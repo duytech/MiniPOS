@@ -1,10 +1,10 @@
-using System.Net;
+using Pos.Domain.Common;
 
 namespace Pos.Api.IntegrationTests;
 
 /// <summary>
-/// Fires parallel requests at one order and checks the stored result: every request either succeeded (200) or was
-/// rejected as a conflict (409), and nothing a 200 reported is lost.
+/// Fires parallel requests at one order and checks the stored result: every request either succeeded or was rejected
+/// as a conflict, and nothing a success reported is lost.
 /// </summary>
 public class OrderConcurrencyTests(PosApiFactory factory) : IClassFixture<PosApiFactory>
 {
@@ -17,12 +17,12 @@ public class OrderConcurrencyTests(PosApiFactory factory) : IClassFixture<PosApi
         var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);
         var orderId = await _client.CreateOrderAsync();
         // Create the line first so the parallel requests all update the same row.
-        Assert.Equal(HttpStatusCode.OK, (await _client.AddItemAsync(orderId, pho, 1)).StatusCode);
+        await (await _client.AddItemAsync(orderId, pho, 1)).AssertSuccessAsync();
 
         var statuses = await FireInParallel(_ => _client.AddItemAsync(orderId, pho, 1));
 
-        Assert.All(statuses, s => Assert.Contains(s, new[] { HttpStatusCode.OK, HttpStatusCode.Conflict }));
-        var succeeded = statuses.Count(s => s == HttpStatusCode.OK);
+        Assert.All(statuses, s => Assert.True(s is null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict, $"Unexpected {s}"));
+        var succeeded = statuses.Count(s => s is null);
         var order = await _client.GetOrderAsync(orderId);
         var line = Assert.Single(order.GetProperty("lines").EnumerateArray());
         Assert.Equal(1 + succeeded, line.GetProperty("quantity").GetInt32());
@@ -38,8 +38,8 @@ public class OrderConcurrencyTests(PosApiFactory factory) : IClassFixture<PosApi
 
         var statuses = await FireInParallel(_ => _client.AddItemAsync(orderId, pho, 1));
 
-        Assert.All(statuses, s => Assert.Contains(s, new[] { HttpStatusCode.OK, HttpStatusCode.Conflict }));
-        var succeeded = statuses.Count(s => s == HttpStatusCode.OK);
+        Assert.All(statuses, s => Assert.True(s is null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict, $"Unexpected {s}"));
+        var succeeded = statuses.Count(s => s is null);
         var lines = (await _client.GetOrderAsync(orderId)).GetProperty("lines").EnumerateArray().ToList();
         Assert.Equal(succeeded, lines.Sum(l => l.GetProperty("quantity").GetInt32()));
         Assert.Single(lines);
@@ -53,8 +53,8 @@ public class OrderConcurrencyTests(PosApiFactory factory) : IClassFixture<PosApi
 
         var statuses = await FireInParallel(i => _client.AddItemAsync(orderId, pho, 1, notes: $"seat {i}"));
 
-        Assert.All(statuses, s => Assert.Contains(s, new[] { HttpStatusCode.OK, HttpStatusCode.Conflict }));
-        var succeeded = statuses.Count(s => s == HttpStatusCode.OK);
+        Assert.All(statuses, s => Assert.True(s is null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict, $"Unexpected {s}"));
+        var succeeded = statuses.Count(s => s is null);
         var lines = (await _client.GetOrderAsync(orderId)).GetProperty("lines").GetArrayLength();
         Assert.Equal(succeeded, lines);
     }
@@ -67,27 +67,27 @@ public class OrderConcurrencyTests(PosApiFactory factory) : IClassFixture<PosApi
         var statuses = await FireInParallel(async _ =>
         {
             var response = await _client.PostAsync("/api/orders", null);
-            if (response.StatusCode == HttpStatusCode.Created)
+            if (await response.OutcomeAsync() is null)
             {
-                numbers.Add((await response.ReadJsonAsync()).GetProperty("number").GetInt32());
+                numbers.Add((await response.ReadDataAsync()).GetProperty("number").GetInt32());
             }
 
             return response;
         });
 
-        Assert.All(statuses, s => Assert.Equal(HttpStatusCode.Created, s));
+        Assert.All(statuses, s => Assert.Null(s));
         Assert.Equal(Requests, numbers.Distinct().Count());
         Assert.All(numbers, n => Assert.True(n > 0));
     }
 
-    private static async Task<HttpStatusCode[]> FireInParallel(Func<int, Task<HttpResponseMessage>> request)
+    private static async Task<ErrorCode?[]> FireInParallel(Func<int, Task<HttpResponseMessage>> request)
     {
         using var start = new SemaphoreSlim(0);
         var tasks = Enumerable.Range(0, Requests).Select(async i =>
         {
             await start.WaitAsync();
             using var response = await request(i);
-            return response.StatusCode;
+            return await response.OutcomeAsync();
         }).ToList();
         start.Release(Requests);
         return await Task.WhenAll(tasks);

@@ -19,9 +19,10 @@ interface ScreenState {
   data: Thing | null;
   loading: boolean;
   error: string | null;
+  notFound: boolean;
 }
 
-const INITIAL_STATE: ScreenState = { data: null, loading: true, error: null };
+const INITIAL_STATE: ScreenState = { data: null, loading: true, error: null, notFound: false };
 
 protected readonly state = toSignal(
   request$.pipe(
@@ -29,7 +30,7 @@ protected readonly state = toSignal(
       this.api.load(query).pipe(
         map((data): Partial<ScreenState> => ({ data, loading: false, error: null })),
         catchError(() => of<Partial<ScreenState>>({ loading: false, error: 'Could not load.' })),
-        startWith<Partial<ScreenState>>({ loading: true, error: null }), // keeps `data`: previous data stays
+        startWith<Partial<ScreenState>>({ loading: true, error: null, notFound: false }), // keeps `data`: previous data stays
       ),
     ),
     scan((state: ScreenState, patch: Partial<ScreenState>) => ({ ...state, ...patch }), INITIAL_STATE),
@@ -41,15 +42,19 @@ protected readonly state = toSignal(
 Writes go through a `Subject` of commands merged into the same pipeline, flattened with `concatMap` or `exhaustMap`
 (not `switchMap`), each mapping the returned order into `data`.
 
-## Reading a ProblemDetails message
+## Reading an API error
+
+`OrdersApi` methods end in `.pipe(unwrap())` (`orders/api-error.ts`): every expected answer is HTTP 200, and a failure
+comes out as an `ApiError` with `code` and `message`. A network error or a 500 stays an `HttpErrorResponse`.
 
 ```ts
-catchError((error: HttpErrorResponse) =>
-  of<Partial<ScreenState>>({ loading: false, error: error.error?.detail ?? 'Something went wrong.' }),
+catchError((error: unknown) =>
+  of<Partial<ScreenState>>(isNotFound(error) ? { loading: false, notFound: true } : { loading: false, error: errorMessage(error) }),
 )
 ```
 
-Only if step 0 agreed to show the API's `detail`.
+`errorMessage` shows the API's message only for a broken rule; anything else is the generic text. Use it only if step 0
+agreed to show the API's message.
 
 ## Test skeleton
 

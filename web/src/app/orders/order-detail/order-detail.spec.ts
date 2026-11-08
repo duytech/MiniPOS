@@ -4,7 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
 import { Order, OrderLine, OrderSplit } from '../order.models';
-import { GENERIC_ERROR } from '../problem-detail';
+import { GENERIC_ERROR } from '../api-error';
 import { CHANGED_MESSAGE, OrderDetail } from './order-detail';
 
 describe('OrderDetail', () => {
@@ -65,24 +65,30 @@ describe('OrderDetail', () => {
     expect(req.request.method).toBe('DELETE');
     return req;
   };
+  const ok = <T>(data: T) => ({ isSuccess: true, data, error: null });
+  const failed = (code: string, message = '') => ({ isSuccess: false, data: null, error: { code, message } });
   /** Each order shown makes the split section read the saved split; answer "no split" unless a test says otherwise. */
   const flushSplitReads = (body: OrderSplit | null = null) => {
     for (const req of http.match((r) => r.method === 'GET' && r.url === SPLIT_URL)) {
       if (body) {
-        req.flush(body);
+        req.flush(ok(body));
       } else {
-        req.flush({ status: 404 }, { status: 404, statusText: 'Not Found' });
+        req.flush(failed('SplitNotFound'));
       }
     }
     fixture.detectChanges();
   };
   const flush = (req: TestRequest, body: Order, split: OrderSplit | null = null) => {
-    req.flush(body);
+    req.flush(ok(body));
     fixture.detectChanges();
     flushSplitReads(split);
   };
-  const fail = (req: TestRequest, status: number, body: object | null = null) => {
-    req.flush(body, { status, statusText: 'Error' });
+  const fail = (req: TestRequest, code: string, message = '') => {
+    req.flush(failed(code, message));
+    fixture.detectChanges();
+  };
+  const failHttp = (req: TestRequest, status: number) => {
+    req.flush(null, { status, statusText: 'Error' });
     fixture.detectChanges();
   };
 
@@ -254,12 +260,12 @@ describe('OrderDetail', () => {
     expect(el('loading')).toBeNull();
   });
 
-  it('shows the ProblemDetails detail on 422 and keeps the order without reloading', () => {
+  it('shows the message of a broken rule and keeps the order without reloading', () => {
     load();
     const detail = 'A quantity of 3 would leave a subtotal of $37.50, less than the discount of $40.00.';
 
     click('increase');
-    fail(expectQuantity(3), 422, { status: 422, detail });
+    fail(expectQuantity(3), 'DiscountExceedsSubtotal', detail);
 
     expect(text('error')).toBe(detail);
     expect(text('line-quantity')).toBe('2');
@@ -267,11 +273,11 @@ describe('OrderDetail', () => {
     http.expectNone(ORDER_URL);
   });
 
-  it('on 409 shows that the order changed and reloads the latest version', () => {
+  it('on a conflict shows that the order changed and reloads the latest version', () => {
     load();
 
     click('remove');
-    fail(expectRemove(), 409, { status: 409, detail: 'Conflict' });
+    fail(expectRemove(), 'ConcurrentChange', 'Conflict');
     flush(expectGet(), order({ lines: [line({ quantity: 6, lineTotal: 75 })], total: 81.19 }));
 
     expect(text('error')).toBe(CHANGED_MESSAGE);
@@ -279,11 +285,11 @@ describe('OrderDetail', () => {
     expect(text('total')).toBe('$81.19');
   });
 
-  it('on 404 for a line (removed by someone else) shows that the order changed and reloads', () => {
+  it('on not found for a line (removed by someone else) shows that the order changed and reloads', () => {
     load();
 
     click('increase');
-    fail(expectQuantity(3), 404, { status: 404 });
+    fail(expectQuantity(3), 'OrderLineNotFound');
     flush(expectGet(), order({ lines: [], subtotal: 0, tax: 0, total: 0 }));
 
     expect(text('error')).toBe(CHANGED_MESSAGE);
@@ -294,7 +300,7 @@ describe('OrderDetail', () => {
     load();
 
     click('increase');
-    fail(expectQuantity(3), 500);
+    failHttp(expectQuantity(3), 500);
 
     expect(text('error')).toBe(GENERIC_ERROR);
     expect(text('line-quantity')).toBe('2');
@@ -315,7 +321,7 @@ describe('OrderDetail', () => {
   it('clears the error after the next successful change', () => {
     load();
     click('increase');
-    fail(expectQuantity(3), 500);
+    failHttp(expectQuantity(3), 500);
 
     click('increase');
     flush(expectQuantity(3), order({ lines: [line({ quantity: 3, lineTotal: 37.5 })] }));
@@ -326,17 +332,25 @@ describe('OrderDetail', () => {
   it('shows Order not found with a link back to the list when the order does not exist', () => {
     fixture.componentRef.setInput('id', 'o1');
     fixture.detectChanges();
-    fail(expectGet(), 404, { status: 404 });
+    fail(expectGet(), 'OrderNotFound');
 
     expect(el('not-found')?.textContent).toContain('Order not found.');
     expect(el('not-found')?.querySelector('a')?.getAttribute('href')).toBe('/orders');
     expect(el('totals')).toBeNull();
   });
 
+  it('shows Order not found when the id is not a GUID and the framework answers 404', () => {
+    fixture.componentRef.setInput('id', 'abc');
+    fixture.detectChanges();
+    failHttp(http.expectOne('/api/orders/abc'), 404);
+
+    expect(el('not-found')?.textContent).toContain('Order not found.');
+  });
+
   it('shows the generic message when the order cannot be loaded for another reason', () => {
     fixture.componentRef.setInput('id', 'o1');
     fixture.detectChanges();
-    fail(expectGet(), 500);
+    failHttp(expectGet(), 500);
 
     expect(text('error')).toBe(GENERIC_ERROR);
     expect(el('not-found')).toBeNull();
@@ -356,7 +370,7 @@ describe('OrderDetail', () => {
 
     click('split-save');
     const save = http.expectOne((r) => r.method === 'PUT' && r.url === SPLIT_URL);
-    fail(save, 409, { status: 409, detail: 'The data was changed by another request. Reload and try again.' });
+    fail(save, 'ConcurrentChange', 'The data was changed by another request. Reload and try again.');
 
     // The reload is pending: the previous order stays with the loading indicator.
     const reload = expectGet();

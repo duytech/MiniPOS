@@ -37,8 +37,7 @@ touch that side of the repo (`src/`, `web/`). The commands are in the Verificati
 
 ## API
 
-- [ ] Errors are ProblemDetails: 400 validation, 404 not found, 409 conflict, 422 domain rule broken; no expected DB
-      error returns 500
+- [ ] Expected answers are HTTP 200 with the envelope and an `ErrorCode`; no expected DB error returns 500
 - [ ] List endpoints are paged (`page`, `pageSize`, `totalCount`) and never cap results silently
 
 ## Frontend

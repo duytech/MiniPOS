@@ -36,15 +36,16 @@ public class OrderLine
     internal bool IsSameAs(Guid menuItemId, Money unitPrice, string? notes) =>
         MenuItemId == menuItemId && UnitPrice == unitPrice && Notes == notes;
 
-    internal void IncreaseQuantity(int quantity)
+    internal Result IncreaseQuantity(int quantity)
     {
         try
         {
             Quantity = checked(Quantity + quantity);
+            return Result.Ok();
         }
         catch (OverflowException)
         {
-            throw new DomainException("The line quantity is too large.");
+            return Result.Fail(new Error(ErrorCode.LineQuantityTooLarge, "The line quantity is too large."));
         }
     }
 

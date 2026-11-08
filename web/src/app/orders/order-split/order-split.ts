@@ -1,12 +1,11 @@
 import { CurrencyPipe } from '@angular/common';
-import { HttpErrorResponse } from '@angular/common/http';
 import { ChangeDetectionStrategy, Component, Signal, computed, inject, input, output } from '@angular/core';
 import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { EMPTY, Observable, Subject, catchError, concat, defer, exhaustMap, map, merge, of, scan, startWith, switchMap } from 'rxjs';
 
 import { Order, OrderSplit, SaveSplitRequest } from '../order.models';
 import { OrdersApi } from '../orders-api';
-import { GENERIC_ERROR, problemDetail } from '../problem-detail';
+import { GENERIC_ERROR, errorMessage, isConflict, isNotFound } from '../api-error';
 
 export const CLEARED_MESSAGE = 'The saved split was cleared because the order changed.';
 export const TOO_FEW_LINES_MESSAGE = 'Add at least 2 lines to split the bill.';
@@ -98,7 +97,7 @@ export class OrderSplitSection {
 
   readonly order = input.required<Order>();
 
-  /** The order changed under us (409 on save or remove, 404 on remove): the parent reloads it. */
+  /** The order changed under us (a conflict on save or remove, not found on remove): the parent reloads it. */
   readonly changed = output();
 
   private readonly edits = new Subject<Draft>();
@@ -185,8 +184,8 @@ export class OrderSplitSection {
             message: null,
           }),
       ),
-      catchError((error: HttpErrorResponse) =>
-        error.status === 404
+      catchError((error: unknown) =>
+        isNotFound(error)
           ? this.noSavedSplit(order)
           : of<Reducer>((state) => ({ ...state, loadingSplit: false, error: GENERIC_ERROR })),
       ),
@@ -200,7 +199,7 @@ export class OrderSplitSection {
     );
   }
 
-  /** 404 from GET split: there is no saved split. If one was shown before, the order change cleared it. */
+  /** Not found from GET split: there is no saved split. If one was shown before, the order change cleared it. */
   private noSavedSplit(order: Order): Observable<Reducer> {
     return defer(() => {
       const draft = this.state().draft;
@@ -236,10 +235,10 @@ export class OrderSplitSection {
         (split): Reducer =>
           (state) => (state.draft === draft ? { ...state, parts: split, previewing: false, error: null } : state),
       ),
-      // 409 is not expected here (preview changes nothing): like any non-422 error, the generic message (R12).
-      catchError((error: HttpErrorResponse) =>
+      // A conflict is not expected here (preview changes nothing): like any error but a broken rule, the generic message (R12).
+      catchError((error: unknown) =>
         of<Reducer>((state) =>
-          state.draft === draft ? { ...state, previewing: false, error: problemDetail(error) } : state,
+          state.draft === draft ? { ...state, previewing: false, error: errorMessage(error) } : state,
         ),
       ),
       startWith<Reducer>((state) => ({ ...state, previewing: true })),
@@ -265,7 +264,7 @@ export class OrderSplitSection {
               message: null,
             }),
         ),
-        catchError((error: HttpErrorResponse) => this.writeFailed(error, false)),
+        catchError((error: unknown) => this.writeFailed(error, false)),
         startWith<Reducer>((state) => ({ ...state, writing: true })),
       );
     });
@@ -279,18 +278,18 @@ export class OrderSplitSection {
       }
       return this.api.removeSplit(order.id).pipe(
         map((): Reducer => (state) => ({ ...state, saved: null, writing: false, error: null, message: null })),
-        catchError((error: HttpErrorResponse) => this.writeFailed(error, true)),
+        catchError((error: unknown) => this.writeFailed(error, true)),
         startWith<Reducer>((state) => ({ ...state, writing: true })),
       );
     });
   }
 
-  private writeFailed(error: HttpErrorResponse, isRemove: boolean): Observable<Reducer> {
-    if (error.status === 409 || (isRemove && error.status === 404)) {
+  private writeFailed(error: unknown, isRemove: boolean): Observable<Reducer> {
+    if (isConflict(error) || (isRemove && isNotFound(error))) {
       // The parent reloads the order and shows its "order changed" message; the new order re-reads the split.
       this.changed.emit();
       return of<Reducer>((state) => ({ ...state, writing: false, error: null }));
     }
-    return of<Reducer>((state) => ({ ...state, writing: false, error: problemDetail(error) }));
+    return of<Reducer>((state) => ({ ...state, writing: false, error: errorMessage(error) }));
   }
 }

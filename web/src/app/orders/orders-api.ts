@@ -2,6 +2,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 
+import { ApiResponse, unwrap } from './api-error';
 import { Order, OrderListQuery, OrderSplit, OrderSummary, PagedResult, SaveSplitRequest } from './order.models';
 
 @Injectable({ providedIn: 'root' })
@@ -16,42 +17,42 @@ export class OrdersApi {
     if (query.status) {
       params = params.set('status', query.status);
     }
-    return this.http.get<PagedResult<OrderSummary>>('/api/orders', { params });
+    return this.http.get<ApiResponse<PagedResult<OrderSummary>>>('/api/orders', { params }).pipe(unwrap());
   }
 
   get(id: string): Observable<Order> {
-    return this.http.get<Order>(`/api/orders/${encodeURIComponent(id)}`);
+    return this.http.get<ApiResponse<Order>>(`/api/orders/${encodeURIComponent(id)}`).pipe(unwrap());
   }
 
   removeLine(orderId: string, lineId: string): Observable<Order> {
-    return this.http.delete<Order>(`/api/orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(lineId)}`);
+    return this.http.delete<ApiResponse<Order>>(`/api/orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(lineId)}`).pipe(unwrap());
   }
 
   changeLineQuantity(orderId: string, lineId: string, quantity: number): Observable<Order> {
-    return this.http.put<Order>(
+    return this.http.put<ApiResponse<Order>>(
       `/api/orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(lineId)}/quantity`,
       { quantity },
-    );
+    ).pipe(unwrap());
   }
 
-  /** The saved split; 404 when the order has none. */
+  /** The saved split; fails with SplitNotFound when the order has none. */
   getSplit(orderId: string): Observable<OrderSplit> {
-    return this.http.get<OrderSplit>(this.splitUrl(orderId));
+    return this.http.get<ApiResponse<OrderSplit>>(this.splitUrl(orderId)).pipe(unwrap());
   }
 
   /** Works out the parts' amounts without saving anything. */
   previewSplit(orderId: string, request: SaveSplitRequest): Observable<OrderSplit> {
-    return this.http.post<OrderSplit>(`${this.splitUrl(orderId)}/preview`, request);
+    return this.http.post<ApiResponse<OrderSplit>>(`${this.splitUrl(orderId)}/preview`, request).pipe(unwrap());
   }
 
   /** Saves the split, replacing a saved one, and returns it. */
   saveSplit(orderId: string, request: SaveSplitRequest): Observable<OrderSplit> {
-    return this.http.put<OrderSplit>(this.splitUrl(orderId), request);
+    return this.http.put<ApiResponse<OrderSplit>>(this.splitUrl(orderId), request).pipe(unwrap());
   }
 
-  /** Removes the saved split (204, no body). */
-  removeSplit(orderId: string): Observable<void> {
-    return this.http.delete<void>(this.splitUrl(orderId));
+  /** Removes the saved split. */
+  removeSplit(orderId: string): Observable<boolean> {
+    return this.http.delete<ApiResponse<boolean>>(this.splitUrl(orderId)).pipe(unwrap());
   }
 
   private splitUrl(orderId: string): string {

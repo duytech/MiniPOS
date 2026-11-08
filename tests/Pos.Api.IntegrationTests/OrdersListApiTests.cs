@@ -1,6 +1,6 @@
 using System.Globalization;
-using System.Net;
 using System.Text.Json;
+using Pos.Domain.Common;
 
 namespace Pos.Api.IntegrationTests;
 
@@ -138,26 +138,25 @@ public class OrdersListApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
     [InlineData("status=Bogus")]
     [InlineData("status=7")]
     [InlineData("page=2147483647&pageSize=100")]
-    public async Task Invalid_list_parameters_are_400(string queryString)
+    public async Task Invalid_list_parameters_are_invalid(string queryString)
     {
         var response = await _client.GetAsync($"/api/orders?{queryString}");
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        Assert.Equal("application/problem+json", response.Content.Headers.ContentType?.MediaType);
+        await response.AssertErrorAsync(ErrorCode.ValidationFailed);
     }
 
     private async Task<JsonElement> ListAsync(string queryString)
     {
         var response = await _client.GetAsync($"/api/orders?{queryString}");
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        return await response.ReadJsonAsync();
+        await response.AssertSuccessAsync();
+        return await response.ReadDataAsync();
     }
 
     private async Task<Guid> CreateOrderWithItemAsync(string itemName)
     {
         var menuItem = await _client.CreateMenuItemAsync(itemName, 5.00m);
         var orderId = await _client.CreateOrderAsync();
-        Assert.Equal(HttpStatusCode.OK, (await _client.AddItemAsync(orderId, menuItem, 1)).StatusCode);
+        await (await _client.AddItemAsync(orderId, menuItem, 1)).AssertSuccessAsync();
         return orderId;
     }
 
