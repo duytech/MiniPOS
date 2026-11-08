@@ -11,8 +11,13 @@ lists each offending member.
   + message) and never throw for them. Check every `Result` before going on: an architecture test fails when one is
   thrown away. Exceptions are left for bugs (constructor guards), which end as a 500. The controller only turns the
   `Result` into the envelope (`ToResponse`).
-- Validators check request shape (required, ranges, formats). Domain entities enforce invariants (status transitions,
-  totals). Don't duplicate one in the other.
+- Domain classes mapped to the database (`Order`, `OrderLine`, `MenuItem`, `SavedSplitPart`, `SavedSplitLine`) hold only
+  `{ get; set; }` properties: no methods, computed properties or constructors with parameters (`EntityShapeTests`).
+  A use case's logic lives in its handler (e.g. `PayOrderHandler` checks the order is open, then sets `Status` and
+  `PaidAt`). What several handlers share stays in Domain as static classes: `OrderPricing` (all amounts, the only
+  place totals are calculated), `OrderSplitting` (split bill) and `OrderRules` (open-only, fixed discount ≤ subtotal).
+- Validators check request shape (required, ranges, formats). Handlers and `OrderRules` enforce the business rules
+  (status transitions, discount limits). Don't duplicate one in the other.
 - Repositories return domain entities. Read models for lists live in Application (query + projection); Infrastructure
   never returns Application DTOs from a repository.
 - Delete template leftovers (e.g. `WeatherForecast`) when you touch that project.

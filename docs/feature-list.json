@@ -72,7 +72,7 @@
       "behavior": "POST /api/orders: create an empty open order. The database assigns the sequential number.",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\""
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.CreateOrderHandlerTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrdersApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.OrderConcurrencyTests.\"",
@@ -149,7 +149,7 @@
       "behavior": "POST /api/orders/{id}/items: add a menu item (quantity, optional notes).",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\""
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.AddOrderItemHandlerTests.\""
@@ -180,7 +180,10 @@
       "behavior": "PUT /api/orders/{id}/lines/{lineId}/quantity: set a line's quantity (at least 1).",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.|FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.|FullyQualifiedName~Pos.Domain.Tests.OrderRulesTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ChangeOrderLineQuantityHandlerTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.ChangeOrderLineQuantityApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\"",
@@ -207,7 +210,10 @@
       "behavior": "DELETE /api/orders/{id}/lines/{lineId}: remove a line.",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.|FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.|FullyQualifiedName~Pos.Domain.Tests.OrderRulesTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.RemoveOrderLineHandlerTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.RemoveOrderLineApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\"",
@@ -234,7 +240,10 @@
       "behavior": "PUT /api/orders/{id}/discount: apply a discount: exactly one of rate (percent of subtotal) or amount (fixed).",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.|FullyQualifiedName~Pos.Domain.Tests.OrderRulesTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ApplyDiscountHandlerTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\""
@@ -268,6 +277,9 @@
           "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
         },
         {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ApplyDiscountHandlerTests.\""
+        },
+        {
           "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.\"",
           "requires": [
             "db"
@@ -293,6 +305,9 @@
       "verification": [
         {
           "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.TipAndPaymentMethodHandlerTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\""
@@ -326,6 +341,9 @@
           "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.\""
         },
         {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.TipAndPaymentMethodHandlerTests.\""
+        },
+        {
           "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.OrderAdjustmentsApiTests.\"",
           "requires": [
             "db"
@@ -351,6 +369,9 @@
       "verification": [
         {
           "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSurchargeTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.TipAndPaymentMethodHandlerTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.ValidatorTests.\""
@@ -381,7 +402,10 @@
       "behavior": "POST /api/orders/{id}/pay: close the order as paid, for the whole order, with the stored payment method.",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\""
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderRulesTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.CloseOrderHandlerTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.CloseOrderApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\"",
@@ -408,7 +432,10 @@
       "behavior": "POST /api/orders/{id}/cancel: close the order as cancelled.",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderTests.\""
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderRulesTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.CloseOrderHandlerTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.CloseOrderApiTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentOrderAdjustmentTests.\"",
@@ -466,7 +493,10 @@
       "behavior": "POST /api/orders/{id}/split/preview: price a split by item without saving it.",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\""
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.SavedSplitHandlerTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.\"",
@@ -493,7 +523,10 @@
       "behavior": "PUT /api/orders/{id}/split: save a split by item, replacing any saved one.",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\""
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.SavedSplitHandlerTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentSplitTests.\"",
@@ -520,7 +553,10 @@
       "behavior": "GET /api/orders/{id}/split: the saved split, priced with the current order; SplitNotFound when there is none.",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\""
+          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSplitTests.\""
+        },
+        {
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.SavedSplitHandlerTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.\"",
@@ -547,7 +583,7 @@
       "behavior": "DELETE /api/orders/{id}/split: remove the saved split.",
       "verification": [
         {
-          "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderSavedSplitTests.\""
+          "run": "dotnet test tests/Pos.Application.Tests --no-build --filter \"FullyQualifiedName~Pos.Application.Tests.SavedSplitHandlerTests.\""
         },
         {
           "run": "dotnet test tests/Pos.Api.IntegrationTests --no-build --filter \"FullyQualifiedName~Pos.Api.IntegrationTests.SplitBillContractTests.|FullyQualifiedName~Pos.Api.IntegrationTests.ConcurrentSplitTests.\"",
@@ -571,7 +607,7 @@
     {
       "id": "F21",
       "area": "domain",
-      "behavior": "Order pricing (Order.CalculateTotals): line total, subtotal, then discount, surcharge, tax and tip, each rounded to cents away from zero before the next step.",
+      "behavior": "Order pricing (OrderPricing.CalculateTotals): line total, subtotal, then discount, surcharge, tax and tip, each rounded to cents away from zero before the next step.",
       "verification": [
         {
           "run": "dotnet test tests/Pos.Domain.Tests --no-build --filter \"FullyQualifiedName~Pos.Domain.Tests.OrderPricingTests.|FullyQualifiedName~Pos.Domain.Tests.OrderSurchargeTests.|FullyQualifiedName~Pos.Domain.Tests.MoneyTests.|FullyQualifiedName~Pos.Domain.Tests.PercentageTests.\""
