@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Pos.Application.Common;
 using Pos.Domain.Common;
 using Pos.Domain.Orders;
@@ -7,7 +8,7 @@ namespace Pos.Application.Orders.RemoveSplit;
 /// <summary>
 /// Checks in this order: missing order, no saved split, order not open. Returns true once the split is removed.
 /// </summary>
-public sealed class RemoveSplitHandler(IOrderRepository orders, IUnitOfWork unitOfWork)
+public sealed class RemoveSplitHandler(IOrderRepository orders, ILogger<RemoveSplitHandler> logger)
     : ICommandHandler<RemoveSplitCommand, bool?>
 {
     public async Task<Result<bool?>> HandleAsync(RemoveSplitCommand command, CancellationToken cancellationToken)
@@ -30,7 +31,16 @@ public sealed class RemoveSplitHandler(IOrderRepository orders, IUnitOfWork unit
 
         order.SavedSplitParts.Clear();
 
-        var saved = await unitOfWork.SaveChangesAsync(cancellationToken);
-        return saved.IsSuccess ? Result.Ok<bool?>(true) : Result.Fail<bool?>(saved.Error);
+        try
+        {
+            await orders.SaveAsync(cancellationToken);
+        }
+        catch (SaveFailedException ex)
+        {
+            logger.OrderSaveFailed(ex, order.Id, ex.Code);
+            return Result.Fail<bool?>(ex.ToError());
+        }
+
+        return Result.Ok<bool?>(true);
     }
 }

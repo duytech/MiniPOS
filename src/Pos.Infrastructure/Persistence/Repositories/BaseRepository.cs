@@ -1,37 +1,43 @@
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Pos.Application.Common;
-using Pos.Domain.Common;
 
-namespace Pos.Infrastructure.Persistence;
+namespace Pos.Infrastructure.Persistence.Repositories;
 
-internal sealed class UnitOfWork(PosDbContext db) : IUnitOfWork
+internal abstract class BaseRepository<TEntity>(PosDbContext db) where TEntity : class
 {
     private const string ChangedByAnotherRequest = "The data was changed by another request. Reload and try again.";
 
-    public async Task<Result> SaveChangesAsync(CancellationToken cancellationToken)
+    protected PosDbContext Db { get; } = db;
+
+    protected DbSet<TEntity> Entities => Db.Set<TEntity>();
+
+    /// <summary>
+    /// Throws <see cref="ConcurrentChangeException"/> or <see cref="DataConflictException"/> for the expected failures;
+    /// anything else is rethrown as it is.
+    /// </summary>
+    protected async Task SaveChangesAsync(CancellationToken cancellationToken)
     {
         try
         {
-            await db.SaveChangesAsync(cancellationToken);
-            return Result.Ok();
+            await Db.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateConcurrencyException)
+        catch (DbUpdateConcurrencyException ex)
         {
-            return Result.Fail(new Error(ErrorCode.ConcurrentChange, ChangedByAnotherRequest));
+            throw new ConcurrentChangeException(ChangedByAnotherRequest, ex);
         }
         catch (DbUpdateException ex) when (ex.InnerException is PostgresException
         {
             SqlState: PostgresErrorCodes.UniqueViolation or PostgresErrorCodes.ForeignKeyViolation
         })
         {
-            return Result.Fail(new Error(ErrorCode.DataConflict, "The change conflicts with existing data."));
+            throw new DataConflictException("The change conflicts with existing data.", ex);
         }
         catch (Exception ex) when (IsDeadlock(ex))
         {
             // Two requests changing the same order took row or index locks in a different order (e.g. inserting the
             // parts of a saved split); Postgres aborts one of them. It lost the race, like a concurrency-token conflict.
-            return Result.Fail(new Error(ErrorCode.ConcurrentChange, ChangedByAnotherRequest));
+            throw new ConcurrentChangeException(ChangedByAnotherRequest, ex);
         }
     }
 

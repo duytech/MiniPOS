@@ -62,7 +62,8 @@ public class UnexpectedErrorTests(PosApiFactory factory) : IClassFixture<PosApiF
         public Task<MenuItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
             throw new InvalidOperationException(OuterSecret, new InvalidOperationException(InnerSecret));
 
-        public void Add(MenuItem menuItem) => throw new NotSupportedException();
+        public Task CreateAsync(MenuItem menuItem, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 
     private sealed record LogEntry(LogLevel Level, Exception? Exception);

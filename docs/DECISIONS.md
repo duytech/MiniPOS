@@ -373,3 +373,27 @@ Important design decisions: what, why, when. Newest first.
 - **Why:** the same id got 400 on routes with a validator and 404 on `GET /api/orders/{id}`. No order or line has that
   id, so 404 is correct and the rule added nothing. A missing body field arrives as an empty GUID, so that is a bad
   request.
+
+## 2026-11-08: Repositories save, no IUnitOfWork (#146)
+- **What:** `IUnitOfWork` is removed. `IOrderRepository.CreateAsync(order)` and `IMenuItemRepository.CreateAsync(menuItem)`
+  add and save; `IOrderRepository.SaveAsync()` saves the changes to orders loaded by `GetByIdAsync`. They return `Result`
+  with the same error mapping as before (`ConcurrentChange`, `DataConflict`), now in `BaseRepository.SaveChangesAsync`.
+- **Why:** the owner's decision: saving is database logic and belongs in the repository, not in the handler.
+- **Trade-off, accepted:** `SaveAsync` saves everything the request's DbContext tracks, not only the order: a use case
+  that changes two aggregates still commits them together, but the name no longer says so.
+
+## 2026-11-08: Repository saves throw, handlers catch and log (#146)
+- **What:** `CreateAsync` / `SaveAsync` return `Task`, not `Result`. `BaseRepository.SaveChangesAsync` turns the expected EF and
+  Postgres failures into `ConcurrentChangeException` / `DataConflictException` (base `SaveFailedException` with an
+  `ErrorCode`, in Application). Each command handler catches `SaveFailedException` around the save, logs it at Error
+  (`SaveFailedLog`, `LoggerMessage` because CA1848 is on) and returns `Result.Fail(ex.ToError())`. Replaces the
+  `Result`-returning saves of the entry above.
+- **Why:** the owner's decision: the database layer does not return `Result`; the handler catches, logs and fails.
+  Handlers cannot catch EF or Npgsql exceptions (`LayerDependencyTests`), so Infrastructure translates them into
+  Application exceptions. Only those two are caught: any other exception stays a bug and a 500, and the codes
+  `ConcurrentChange` / `DataConflict` that clients and the concurrency tests see do not change.
+- **Trade-off, accepted:** each command handler repeats the same `try`/`catch`. A conflict between two requests is
+  expected but logged at Error (the owner's choice), so parallel edits show up as errors in the logs.
+- **Base class, not an extension:** every repository inherits `BaseRepository` (Infrastructure) and saves with its
+  protected `SaveChangesAsync`, the only place that translates save failures. The owner's choice over the earlier
+  `SaveChangesTranslatedAsync` extension on `PosDbContext`.

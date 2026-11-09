@@ -5,12 +5,12 @@ using Pos.Domain.Orders;
 
 namespace Pos.Infrastructure.Persistence.Repositories;
 
-internal sealed class OrderRepository(PosDbContext db) : IOrderRepository
+internal sealed class OrderRepository(PosDbContext db) : BaseRepository<Order>(db), IOrderRepository
 {
     private const string LikeEscape = "\\";
 
     public Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
-        db.Orders
+        Entities
             .Include(o => o.Lines)
             .Include(o => o.SavedSplitParts).ThenInclude(p => p.Lines)
             .AsSplitQuery()
@@ -19,7 +19,7 @@ internal sealed class OrderRepository(PosDbContext db) : IOrderRepository
     public async Task<(IReadOnlyList<Order> Orders, int TotalCount)> ListAsync(
         OrderStatus? status, OrderSearch? search, int page, int pageSize, CancellationToken cancellationToken)
     {
-        var query = db.Orders.AsNoTracking();
+        var query = Entities.AsNoTracking();
         if (status is not null)
         {
             query = query.Where(o => o.Status == status);
@@ -44,7 +44,13 @@ internal sealed class OrderRepository(PosDbContext db) : IOrderRepository
         return (orders, totalCount);
     }
 
-    public void Add(Order order) => db.Orders.Add(order);
+    public Task CreateAsync(Order order, CancellationToken cancellationToken)
+    {
+        Entities.Add(order);
+        return SaveChangesAsync(cancellationToken);
+    }
+
+    public Task SaveAsync(CancellationToken cancellationToken) => SaveChangesAsync(cancellationToken);
 
     /// <summary>Makes '%', '_' and the escape character in user input match themselves in an ILIKE pattern.</summary>
     private static string EscapeLike(string text) =>

@@ -3,10 +3,14 @@ using Pos.Domain.MenuItems;
 
 namespace Pos.Infrastructure.Persistence.Repositories;
 
-internal sealed class MenuItemRepository(PosDbContext db) : IMenuItemRepository
+internal sealed class MenuItemRepository(PosDbContext db) : BaseRepository<MenuItem>(db), IMenuItemRepository
 {
     public async Task<MenuItem?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
-        await db.MenuItems.FindAsync([id], cancellationToken);
+        await Entities.FindAsync([id], cancellationToken);
 
-    public void Add(MenuItem menuItem) => db.MenuItems.Add(menuItem);
+    public Task CreateAsync(MenuItem menuItem, CancellationToken cancellationToken)
+    {
+        Entities.Add(menuItem);
+        return SaveChangesAsync(cancellationToken);
+    }
 }

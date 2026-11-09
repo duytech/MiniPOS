@@ -1,3 +1,5 @@
+using Microsoft.Extensions.Logging;
+using Pos.Application.Common;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Domain.Common;
 using Pos.Domain.MenuItems;
@@ -25,7 +27,7 @@ public class AddOrderItemHandlerTests
         Assert.Equal(Money.Usd(15.40m), line.LineTotal);
         Assert.Equal(Money.Usd(15.40m), result.Subtotal);
         Assert.Equal(Money.Usd(15.40m), result.Total);
-        Assert.Equal(1, _act.UnitOfWork.SaveCount);
+        Assert.Equal(1, _act.Orders.SaveCount);
     }
 
     [Fact]
@@ -34,7 +36,7 @@ public class AddOrderItemHandlerTests
         var result = await _act.AddItem(new Order { Id = Guid.NewGuid() }, Burger, 1);
 
         Assert.Equal(ErrorCode.OrderNotFound, result.Error!.Code);
-        Assert.Equal(0, _act.UnitOfWork.SaveCount);
+        Assert.Equal(0, _act.Orders.SaveCount);
     }
 
     [Fact]
@@ -42,22 +44,28 @@ public class AddOrderItemHandlerTests
     {
         var order = _act.NewOrder();
 
-        var result = await new AddOrderItemHandler(_act.Orders, _act.MenuItems, _act.UnitOfWork)
+        var result = await new AddOrderItemHandler(_act.Orders, _act.MenuItems, _act.Logger<AddOrderItemHandler>())
             .HandleAsync(new AddOrderItemCommand(order.Id, Guid.NewGuid(), 1, null), CancellationToken.None);
 
         Assert.Equal(ErrorCode.MenuItemNotFound, result.Error!.Code);
-        Assert.Equal(0, _act.UnitOfWork.SaveCount);
+        Assert.Equal(0, _act.Orders.SaveCount);
     }
 
     [Fact]
-    public async Task Failed_save_is_returned()
+    public async Task Failed_save_is_logged_and_returned()
     {
         var order = _act.NewOrder();
-        _act.UnitOfWork.SaveResult = Result.Fail(new Error(ErrorCode.ConcurrentChange, "Changed."));
+        var conflict = new ConcurrentChangeException("Changed.", new InvalidOperationException());
+        _act.Orders.SaveException = conflict;
 
         var result = await _act.AddItem(order, Burger, 1);
 
+        Assert.False(result.IsSuccess);
         Assert.Equal(ErrorCode.ConcurrentChange, result.Error!.Code);
+        Assert.Equal("Changed.", result.Error.Message);
+        var log = Assert.Single(_act.Logs);
+        Assert.Equal(LogLevel.Error, log.Level);
+        Assert.Same(conflict, log.Exception);
     }
 
     [Fact]
@@ -127,12 +135,12 @@ public class AddOrderItemHandlerTests
     {
         var order = _act.NewOrder();
         await _act.AddItem(order, Burger, int.MaxValue);
-        var savesBefore = _act.UnitOfWork.SaveCount;
+        var savesBefore = _act.Orders.SaveCount;
 
         var result = await _act.AddItem(order, Burger, 1);
 
         Assert.Equal(ErrorCode.LineQuantityTooLarge, result.Error!.Code);
         Assert.Equal(int.MaxValue, Assert.Single(order.Lines).Quantity);
-        Assert.Equal(savesBefore, _act.UnitOfWork.SaveCount);
+        Assert.Equal(savesBefore, _act.Orders.SaveCount);
     }
 }

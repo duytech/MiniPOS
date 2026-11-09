@@ -36,7 +36,8 @@ Do not pick a limit, default or merge behavior yourself. Not-found ids are a `*N
   (`Money`, `Percentage`), never raw `decimal`.
 - `<UseCase>Handler` (`ICommandHandler<,>` / `IQueryHandler<,>`): load through the repository, on null return
   `Result.Fail<T>(NotFoundErrors.X(id))`; for an order change check `OrderRules.OpenError(order)` first, then apply the
-  use case's logic (set properties, call `OrderPricing` / `OrderRules`), `unitOfWork.SaveChangesAsync` for commands and check
+  use case's logic (set properties, call `OrderPricing` / `OrderRules`), the repository save (`orders.SaveAsync`, `CreateAsync` for a new entity) for commands in a `try` that catches
+  `SaveFailedException`, logs it (`SaveFailedLog`) and returns `Result.Fail(ex.ToError())`, and check
   that too, return `Result.Ok(XxxDto.From(...))`. Throwing away a `Result` fails `ResultUsageTests`.
 - `<UseCase>Validator` (`internal sealed`, FluentValidation), when the request has shape to check: ids in the body not
   empty, ranges, formats. No rule the Domain already enforces. A route id is not validated: the handler answers not found.

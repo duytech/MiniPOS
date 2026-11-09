@@ -43,13 +43,13 @@ public class ChangeOrderLineQuantityHandlerTests
     {
         var order = _act.NewOrder();
         await _act.AddLine(order, 12.99m);
-        var savesBefore = _act.UnitOfWork.SaveCount;
+        var savesBefore = _act.Orders.SaveCount;
 
         var result = await _act.ChangeQuantity(order, Guid.NewGuid(), 3);
 
         Assert.Equal(ErrorCode.OrderLineNotFound, result.Error!.Code);
         Assert.Equal(1, Assert.Single(order.Lines).Quantity);
-        Assert.Equal(savesBefore, _act.UnitOfWork.SaveCount);
+        Assert.Equal(savesBefore, _act.Orders.SaveCount);
     }
 
     [Fact]
