@@ -8,7 +8,7 @@ public class OrderRulesTests
     [Fact]
     public void An_open_order_can_change()
     {
-        Assert.Null(OrderRules.OpenError(TestOrders.New()));
+        Assert.True(OrderRules.IsOpen(TestOrders.New()));
     }
 
     [Theory]
@@ -19,9 +19,16 @@ public class OrderRulesTests
         var order = TestOrders.New();
         order.Status = status;
 
-        var error = OrderRules.OpenError(order);
+        Assert.False(OrderRules.IsOpen(order));
+    }
 
-        Assert.NotNull(error);
+    [Theory]
+    [InlineData(OrderStatus.Paid)]
+    [InlineData(OrderStatus.Cancelled)]
+    public void The_not_open_error_names_the_status(OrderStatus status)
+    {
+        var error = OrderErrors.NotOpen(status);
+
         Assert.Equal(ErrorCode.OrderNotOpen, error.Code);
         Assert.Equal($"The order is {status}; only an open order can be changed.", error.Message);
     }

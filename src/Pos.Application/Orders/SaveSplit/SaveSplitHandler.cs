@@ -20,9 +20,9 @@ public sealed class SaveSplitHandler(IOrderRepository orders, ILogger<SaveSplitH
             return Result.Fail<OrderSplitDto>(NotFoundErrors.Order(command.OrderId));
         }
 
-        if (OrderRules.OpenError(order) is { } notOpen)
+        if (!OrderRules.IsOpen(order))
         {
-            return Result.Fail<OrderSplitDto>(notOpen);
+            return Result.Fail<OrderSplitDto>(OrderErrors.NotOpen(order.Status));
         }
 
         var itemIdsPerPart = command.Parts!.Select(p => (IReadOnlyCollection<Guid>)p!).ToList();

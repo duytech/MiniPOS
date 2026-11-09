@@ -34,7 +34,7 @@ public static class OrderSplitting
             {
                 if (!linesById.TryGetValue(itemId, out var item))
                 {
-                    return Result.Fail<IReadOnlyList<SplitPart>>(OrderRules.ItemNotOnOrder(itemId));
+                    return Result.Fail<IReadOnlyList<SplitPart>>(OrderErrors.ItemNotOnOrder(itemId));
                 }
 
                 if (!assignedItemIds.Add(itemId))

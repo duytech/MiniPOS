@@ -17,7 +17,12 @@ public sealed class ApplyDiscountHandler(IOrderRepository orders, ILogger<ApplyD
             return Result.Fail<OrderDto>(NotFoundErrors.Order(command.OrderId));
         }
 
-        if ((OrderRules.OpenError(order) ?? DiscountError(order, command)) is { } error)
+        if (!OrderRules.IsOpen(order))
+        {
+            return Result.Fail<OrderDto>(OrderErrors.NotOpen(order.Status));
+        }
+
+        if (DiscountError(order, command) is { } error)
         {
             return Result.Fail<OrderDto>(error);
         }

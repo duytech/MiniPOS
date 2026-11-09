@@ -28,7 +28,12 @@ public sealed class ChangeOrderMenuItemQuantityHandler(IOrderRepository orders,
             return Result.Fail<OrderDto>(NotFoundErrors.OrderMenuItem(command.ItemId));
         }
 
-        if ((OrderRules.OpenError(order) ?? ChangeQuantity(order, item, command.Quantity)) is { } error)
+        if (!OrderRules.IsOpen(order))
+        {
+            return Result.Fail<OrderDto>(OrderErrors.NotOpen(order.Status));
+        }
+
+        if (ChangeQuantity(order, item, command.Quantity) is { } error)
         {
             return Result.Fail<OrderDto>(error);
         }

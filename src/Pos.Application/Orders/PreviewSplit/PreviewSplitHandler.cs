@@ -15,9 +15,9 @@ public sealed class PreviewSplitHandler(IOrderRepository orders) : IQueryHandler
             return Result.Fail<OrderSplitDto>(NotFoundErrors.Order(query.OrderId));
         }
 
-        if (OrderRules.OpenError(order) is { } notOpen)
+        if (!OrderRules.IsOpen(order))
         {
-            return Result.Fail<OrderSplitDto>(notOpen);
+            return Result.Fail<OrderSplitDto>(OrderErrors.NotOpen(order.Status));
         }
 
         var parts = OrderSplitting.Split(order, query.Parts!.Select(p => (IReadOnlyCollection<Guid>)p!).ToList());

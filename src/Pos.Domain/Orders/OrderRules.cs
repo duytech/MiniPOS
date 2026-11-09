@@ -7,14 +7,9 @@ public static class OrderRules
 {
     /// <summary>
     /// Items, discount, tip and payment method can only change while the order is open, and only an open order can be
-    /// paid or cancelled: Paid and Cancelled are final.
+    /// paid or cancelled: Paid and Cancelled are final. When it is not, fail with <see cref="OrderErrors.NotOpen"/>.
     /// </summary>
-    public static Error? OpenError(Order order) => order.Status == OrderStatus.Open
-        ? null
-        : new Error(ErrorCode.OrderNotOpen, $"The order is {order.Status}; only an open order can be changed.");
-
-    public static Error ItemNotOnOrder(Guid itemId) =>
-        new(ErrorCode.ItemNotOnOrder, $"Item {itemId} is not on this order.");
+    public static bool IsOpen(Order order) => order.Status == OrderStatus.Open;
 
     /// <summary>
     /// A fixed discount can never be more than the subtotal. <paramref name="change"/> names the item change that would
