@@ -6,8 +6,8 @@ using Pos.Domain.Orders;
 namespace Pos.Application.Orders.SaveSplit;
 
 /// <summary>
-/// Saves the split by item, replacing any saved one. Only the line assignment is stored; its amounts are recomputed on
-/// every read. Only an open order. A real change to the order's lines, discount, tip or payment method clears it.
+/// Saves the split by item, replacing any saved one. Only the item assignment is stored; its amounts are recomputed on
+/// every read. Only an open order. A real change to the order's items, discount, tip or payment method clears it.
 /// </summary>
 public sealed class SaveSplitHandler(IOrderRepository orders, ILogger<SaveSplitHandler> logger)
     : ICommandHandler<SaveSplitCommand, OrderSplitDto>
@@ -25,20 +25,20 @@ public sealed class SaveSplitHandler(IOrderRepository orders, ILogger<SaveSplitH
             return Result.Fail<OrderSplitDto>(notOpen);
         }
 
-        var lineIdsPerPart = command.Parts!.Select(p => (IReadOnlyCollection<Guid>)p!).ToList();
-        var parts = OrderSplitting.Split(order, lineIdsPerPart);
+        var itemIdsPerPart = command.Parts!.Select(p => (IReadOnlyCollection<Guid>)p!).ToList();
+        var parts = OrderSplitting.Split(order, itemIdsPerPart);
         if (!parts.IsSuccess)
         {
             return Result.Fail<OrderSplitDto>(parts.Error);
         }
 
         order.SavedSplitParts.Clear();
-        order.SavedSplitParts.AddRange(lineIdsPerPart.Select((lineIds, position) => new SavedSplitPart
+        order.SavedSplitParts.AddRange(itemIdsPerPart.Select((itemIds, position) => new SavedSplitPart
         {
             Id = Guid.NewGuid(),
             Position = position,
-            Lines = lineIds
-                .Select((lineId, linePosition) => new SavedSplitLine { LineId = lineId, Position = linePosition })
+            Items = itemIds
+                .Select((itemId, itemPosition) => new SavedSplitMenuItem { OrderMenuItemId = itemId, Position = itemPosition })
                 .ToList(),
         }));
 

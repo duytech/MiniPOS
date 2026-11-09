@@ -9,7 +9,7 @@ using Pos.Application.Orders;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Application.Orders.ApplyDiscount;
 using Pos.Application.Orders.CancelOrder;
-using Pos.Application.Orders.ChangeOrderLineQuantity;
+using Pos.Application.Orders.ChangeOrderMenuItemQuantity;
 using Pos.Application.Orders.CreateOrder;
 using Pos.Application.Orders.GetOrder;
 using Pos.Application.Orders.GetSplit;
@@ -17,7 +17,7 @@ using Pos.Application.Orders.ListOrders;
 using Pos.Application.Orders.PayOrder;
 using Pos.Application.Orders.PreviewSplit;
 using Pos.Application.Orders.RemoveDiscount;
-using Pos.Application.Orders.RemoveOrderLine;
+using Pos.Application.Orders.RemoveOrderMenuItem;
 using Pos.Application.Orders.RemoveSplit;
 using Pos.Application.Orders.RemoveTip;
 using Pos.Application.Orders.SaveSplit;
@@ -39,8 +39,8 @@ public static class DependencyInjection
 
         services.AddCommandHandler<CreateOrderCommand, OrderDto, CreateOrderHandler>();
         services.AddCommandHandler<AddOrderItemCommand, OrderDto, AddOrderItemHandler>();
-        services.AddCommandHandler<RemoveOrderLineCommand, OrderDto, RemoveOrderLineHandler>();
-        services.AddCommandHandler<ChangeOrderLineQuantityCommand, OrderDto, ChangeOrderLineQuantityHandler>();
+        services.AddCommandHandler<RemoveOrderMenuItemCommand, OrderDto, RemoveOrderMenuItemHandler>();
+        services.AddCommandHandler<ChangeOrderMenuItemQuantityCommand, OrderDto, ChangeOrderMenuItemQuantityHandler>();
         services.AddCommandHandler<ApplyDiscountCommand, OrderDto, ApplyDiscountHandler>();
         services.AddCommandHandler<RemoveDiscountCommand, OrderDto, RemoveDiscountHandler>();
         services.AddCommandHandler<SetTipCommand, OrderDto, SetTipHandler>();

@@ -121,7 +121,7 @@ namespace Pos.Infrastructure.Persistence.Migrations
                     b.ToTable("orders", (string)null);
                 });
 
-            modelBuilder.Entity("Pos.Domain.Orders.OrderLine", b =>
+            modelBuilder.Entity("Pos.Domain.Orders.OrderMenuItem", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
@@ -158,28 +158,28 @@ namespace Pos.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OrderId");
 
-                    b.ToTable("order_lines", (string)null);
+                    b.ToTable("order_menu_items", (string)null);
                 });
 
-            modelBuilder.Entity("Pos.Domain.Orders.SavedSplitLine", b =>
+            modelBuilder.Entity("Pos.Domain.Orders.SavedSplitMenuItem", b =>
                 {
                     b.Property<Guid>("PartId")
                         .HasColumnType("uuid")
                         .HasColumnName("part_id");
 
-                    b.Property<Guid>("LineId")
+                    b.Property<Guid>("OrderMenuItemId")
                         .HasColumnType("uuid")
-                        .HasColumnName("line_id");
+                        .HasColumnName("order_menu_item_id");
 
                     b.Property<int>("Position")
                         .HasColumnType("integer")
                         .HasColumnName("position");
 
-                    b.HasKey("PartId", "LineId");
+                    b.HasKey("PartId", "OrderMenuItemId");
 
-                    b.HasIndex("LineId");
+                    b.HasIndex("OrderMenuItemId");
 
-                    b.ToTable("order_split_part_lines", (string)null);
+                    b.ToTable("order_split_part_menu_items", (string)null);
                 });
 
             modelBuilder.Entity("Pos.Domain.Orders.SavedSplitPart", b =>
@@ -203,7 +203,7 @@ namespace Pos.Infrastructure.Persistence.Migrations
                     b.ToTable("order_split_parts", (string)null);
                 });
 
-            modelBuilder.Entity("Pos.Domain.Orders.OrderLine", b =>
+            modelBuilder.Entity("Pos.Domain.Orders.OrderMenuItem", b =>
                 {
                     b.HasOne("Pos.Domain.MenuItems.MenuItem", null)
                         .WithMany()
@@ -212,22 +212,22 @@ namespace Pos.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.HasOne("Pos.Domain.Orders.Order", null)
-                        .WithMany("Lines")
+                        .WithMany("Items")
                         .HasForeignKey("OrderId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Pos.Domain.Orders.SavedSplitLine", b =>
+            modelBuilder.Entity("Pos.Domain.Orders.SavedSplitMenuItem", b =>
                 {
-                    b.HasOne("Pos.Domain.Orders.OrderLine", null)
+                    b.HasOne("Pos.Domain.Orders.OrderMenuItem", null)
                         .WithMany()
-                        .HasForeignKey("LineId")
+                        .HasForeignKey("OrderMenuItemId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("Pos.Domain.Orders.SavedSplitPart", null)
-                        .WithMany("Lines")
+                        .WithMany("Items")
                         .HasForeignKey("PartId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -244,14 +244,14 @@ namespace Pos.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("Pos.Domain.Orders.Order", b =>
                 {
-                    b.Navigation("Lines");
+                    b.Navigation("Items");
 
                     b.Navigation("SavedSplitParts");
                 });
 
             modelBuilder.Entity("Pos.Domain.Orders.SavedSplitPart", b =>
                 {
-                    b.Navigation("Lines");
+                    b.Navigation("Items");
                 });
 #pragma warning restore 612, 618
         }

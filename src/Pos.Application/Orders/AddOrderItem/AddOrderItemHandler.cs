@@ -44,17 +44,17 @@ public sealed class AddOrderItemHandler(IOrderRepository orders, IMenuItemReposi
     }
 
     /// <summary>
-    /// Adds the menu item at its current price. A line with the same menu item, snapshotted unit price and notes
-    /// gets its quantity increased; anything different becomes a new line.
+    /// Adds the menu item at its current price. An item with the same menu item, snapshotted unit price and notes
+    /// gets its quantity increased; anything different becomes a new item.
     /// </summary>
     private static Error? AddItem(Order order, MenuItem menuItem, int quantity, string? notes)
     {
         var normalizedNotes = string.IsNullOrWhiteSpace(notes) ? null : notes.Trim();
-        var line = order.Lines.FirstOrDefault(l =>
+        var item = order.Items.FirstOrDefault(l =>
             l.MenuItemId == menuItem.Id && l.UnitPrice == menuItem.Price && l.Notes == normalizedNotes);
-        if (line is null)
+        if (item is null)
         {
-            order.Lines.Add(new OrderLine
+            order.Items.Add(new OrderMenuItem
             {
                 Id = Guid.NewGuid(),
                 MenuItemId = menuItem.Id,
@@ -68,11 +68,11 @@ public sealed class AddOrderItemHandler(IOrderRepository orders, IMenuItemReposi
         {
             try
             {
-                line.Quantity = checked(line.Quantity + quantity);
+                item.Quantity = checked(item.Quantity + quantity);
             }
             catch (OverflowException)
             {
-                return new Error(ErrorCode.LineQuantityTooLarge, "The line quantity is too large.");
+                return new Error(ErrorCode.ItemQuantityTooLarge, "The item quantity is too large.");
             }
         }
 

@@ -4,7 +4,7 @@ using Pos.Domain.Orders;
 namespace Pos.Application.Orders;
 
 public sealed record SplitPartDto(
-    IReadOnlyList<Guid> LineIds,
+    IReadOnlyList<Guid> ItemIds,
     Money Subtotal,
     Money Discount,
     Money Surcharge,
@@ -13,5 +13,5 @@ public sealed record SplitPartDto(
     Money Total)
 {
     public static SplitPartDto From(SplitPart part) =>
-        new(part.LineIds, part.Subtotal, part.Discount, part.Surcharge, part.Tax, part.Tip, part.Total);
+        new(part.ItemIds, part.Subtotal, part.Discount, part.Surcharge, part.Tax, part.Tip, part.Total);
 }

@@ -11,7 +11,7 @@ public sealed record OrderDto(
     DateTimeOffset? PaidAt,
     DateTimeOffset? CancelledAt,
     PaymentMethod PaymentMethod,
-    IReadOnlyList<OrderLineDto> Lines,
+    IReadOnlyList<OrderMenuItemDto> Items,
     Money Subtotal,
     Money Discount,
     Money Surcharge,
@@ -30,7 +30,7 @@ public sealed record OrderDto(
             order.PaidAt,
             order.CancelledAt,
             order.PaymentMethod,
-            order.Lines.Select(OrderLineDto.From).ToList(),
+            order.Items.Select(OrderMenuItemDto.From).ToList(),
             totals.Subtotal,
             totals.Discount,
             totals.Surcharge,
@@ -40,15 +40,15 @@ public sealed record OrderDto(
     }
 }
 
-public sealed record OrderLineDto(
+public sealed record OrderMenuItemDto(
     Guid Id,
     Guid MenuItemId,
     string Name,
     Money UnitPrice,
     int Quantity,
     string? Notes,
-    Money LineTotal)
+    Money ItemTotal)
 {
-    public static OrderLineDto From(OrderLine line) =>
-        new(line.Id, line.MenuItemId, line.Name, line.UnitPrice, line.Quantity, line.Notes, OrderPricing.LineTotal(line));
+    public static OrderMenuItemDto From(OrderMenuItem item) =>
+        new(item.Id, item.MenuItemId, item.Name, item.UnitPrice, item.Quantity, item.Notes, OrderPricing.ItemTotal(item));
 }

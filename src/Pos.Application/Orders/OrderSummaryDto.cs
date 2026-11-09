@@ -17,6 +17,6 @@ public sealed record OrderSummaryDto(
         order.Number,
         order.Status,
         order.CreatedAt,
-        order.Lines.Select(l => l.Name).Distinct().ToList(),
+        order.Items.Select(l => l.Name).Distinct().ToList(),
         OrderPricing.CalculateTotals(order).Total);
 }

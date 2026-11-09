@@ -6,51 +6,51 @@ namespace Pos.Domain.Orders;
 public static class OrderSplitting
 {
     /// <summary>
-    /// Splits the bill by item: each part is a set of whole lines and every line is in exactly one part.
+    /// Splits the bill by item: each part is a set of whole items and every item is in exactly one part.
     /// The order's discount, surcharge, tax and tip are each shared by the part's share of the subtotal, rounded down
     /// to the cent; the leftover cents go to the part with the largest subtotal (the earlier part on a tie).
     /// So every amount of the parts adds up exactly to the order's amount, and the part totals to the order total.
     /// A split needs at least two parts. Nothing is stored and any status is allowed.
     /// </summary>
-    public static Result<IReadOnlyList<SplitPart>> Split(Order order, IReadOnlyList<IReadOnlyCollection<Guid>> lineIdsPerPart)
+    public static Result<IReadOnlyList<SplitPart>> Split(Order order, IReadOnlyList<IReadOnlyCollection<Guid>> itemIdsPerPart)
     {
-        if (lineIdsPerPart.Count < 2)
+        if (itemIdsPerPart.Count < 2)
         {
             return InvalidSplit("A split needs at least two parts.");
         }
 
-        var linesById = order.Lines.ToDictionary(l => l.Id);
-        var assignedLineIds = new HashSet<Guid>();
+        var linesById = order.Items.ToDictionary(l => l.Id);
+        var assignedItemIds = new HashSet<Guid>();
         var partSubtotals = new List<Money>();
-        foreach (var lineIds in lineIdsPerPart)
+        foreach (var itemIds in itemIdsPerPart)
         {
-            if (lineIds.Count == 0)
+            if (itemIds.Count == 0)
             {
-                return InvalidSplit("Every part of a split needs at least one line.");
+                return InvalidSplit("Every part of a split needs at least one item.");
             }
 
             var partSubtotal = Money.Zero(order.Currency);
-            foreach (var lineId in lineIds)
+            foreach (var itemId in itemIds)
             {
-                if (!linesById.TryGetValue(lineId, out var line))
+                if (!linesById.TryGetValue(itemId, out var item))
                 {
-                    return Result.Fail<IReadOnlyList<SplitPart>>(OrderRules.LineNotOnOrder(lineId));
+                    return Result.Fail<IReadOnlyList<SplitPart>>(OrderRules.ItemNotOnOrder(itemId));
                 }
 
-                if (!assignedLineIds.Add(lineId))
+                if (!assignedItemIds.Add(itemId))
                 {
-                    return InvalidSplit($"Line {lineId} is in more than one part.");
+                    return InvalidSplit($"Item {itemId} is in more than one part.");
                 }
 
-                partSubtotal += OrderPricing.LineTotal(line);
+                partSubtotal += OrderPricing.ItemTotal(item);
             }
 
             partSubtotals.Add(partSubtotal);
         }
 
-        if (assignedLineIds.Count != order.Lines.Count)
+        if (assignedItemIds.Count != order.Items.Count)
         {
-            return InvalidSplit("Every line of the order must be in a part of the split.");
+            return InvalidSplit("Every item of the order must be in a part of the split.");
         }
 
         var totals = OrderPricing.CalculateTotals(order);
@@ -59,8 +59,8 @@ public static class OrderSplitting
         var taxes = Allocate(totals.Tax, partSubtotals, totals.Subtotal);
         var tips = Allocate(totals.Tip, partSubtotals, totals.Subtotal);
 
-        return Result.Ok<IReadOnlyList<SplitPart>>(lineIdsPerPart.Select((lineIds, i) => new SplitPart(
-                lineIds.ToList(),
+        return Result.Ok<IReadOnlyList<SplitPart>>(itemIdsPerPart.Select((itemIds, i) => new SplitPart(
+                itemIds.ToList(),
                 partSubtotals[i],
                 discounts[i],
                 surcharges[i],
@@ -70,17 +70,17 @@ public static class OrderSplitting
             .ToList());
     }
 
-    /// <summary>The line ids of the order's saved split, per part, in saved order.</summary>
-    public static IReadOnlyList<IReadOnlyCollection<Guid>> SavedSplitLineIds(Order order) => order.SavedSplitParts
+    /// <summary>The item ids of the order's saved split, per part, in saved order.</summary>
+    public static IReadOnlyList<IReadOnlyCollection<Guid>> SavedSplitItemIds(Order order) => order.SavedSplitParts
         .OrderBy(p => p.Position)
-        .Select(p => (IReadOnlyCollection<Guid>)p.Lines.OrderBy(l => l.Position).Select(l => l.LineId).ToList())
+        .Select(p => (IReadOnlyCollection<Guid>)p.Items.OrderBy(l => l.Position).Select(l => l.OrderMenuItemId).ToList())
         .ToList();
 
     /// <summary>
     /// Splits the bill evenly between <paramref name="parts"/> people. The order is priced first; then its subtotal,
     /// discount, surcharge, tax and tip are each divided by the number of parts, rounded down to the cent, and the
     /// leftover cents of each amount go to the first part. So every amount of the parts adds up exactly to the order's
-    /// amount, and the part totals to the order total. Parts hold no lines.
+    /// amount, and the part totals to the order total. Parts hold no items.
     /// </summary>
     public static Result<IReadOnlyList<SplitPart>> SplitEvenly(Order order, int parts)
     {
