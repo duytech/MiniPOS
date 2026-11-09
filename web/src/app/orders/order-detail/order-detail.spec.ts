@@ -3,7 +3,7 @@ import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@a
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 
-import { Order, OrderLine, OrderSplit } from '../order.models';
+import { Order, OrderMenuItem, OrderSplit } from '../order.models';
 import { GENERIC_ERROR } from '../api-error';
 import { CHANGED_MESSAGE, OrderDetail } from './order-detail';
 
@@ -14,14 +14,14 @@ describe('OrderDetail', () => {
   const ORDER_URL = '/api/orders/o1';
   const SPLIT_URL = `${ORDER_URL}/split`;
 
-  const line = (overrides: Partial<OrderLine> = {}): OrderLine => ({
+  const item = (overrides: Partial<OrderMenuItem> = {}): OrderMenuItem => ({
     id: 'l1',
     menuItemId: 'm1',
     name: 'Pho',
     unitPrice: 12.5,
     quantity: 2,
     notes: null,
-    lineTotal: 25,
+    itemTotal: 25,
     ...overrides,
   });
 
@@ -31,7 +31,7 @@ describe('OrderDetail', () => {
     status: 'Open',
     createdAt: '2026-10-26T07:30:00+00:00',
     paymentMethod: 'Cash',
-    lines: [line()],
+    items: [item()],
     subtotal: 25,
     discount: 0,
     surcharge: 0,
@@ -55,13 +55,13 @@ describe('OrderDetail', () => {
     return req;
   };
   const expectQuantity = (quantity: number): TestRequest => {
-    const req = http.expectOne(`${ORDER_URL}/lines/l1/quantity`);
+    const req = http.expectOne(`${ORDER_URL}/items/l1/quantity`);
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({ quantity });
     return req;
   };
   const expectRemove = (): TestRequest => {
-    const req = http.expectOne(`${ORDER_URL}/lines/l1`);
+    const req = http.expectOne(`${ORDER_URL}/items/l1`);
     expect(req.request.method).toBe('DELETE');
     return req;
   };
@@ -122,10 +122,10 @@ describe('OrderDetail', () => {
     expect(el('initial-loading')).toBeNull();
   });
 
-  it('shows the order number, status, lines and the six totals exactly as the API sent them', () => {
+  it('shows the order number, status, items and the six totals exactly as the API sent them', () => {
     load(
       order({
-        lines: [line({ name: 'Pho', unitPrice: 7.7, quantity: 2, notes: 'No onions', lineTotal: 15.4 })],
+        items: [item({ name: 'Pho', unitPrice: 7.7, quantity: 2, notes: 'No onions', itemTotal: 15.4 })],
         subtotal: 15.4,
         discount: 1.5,
         surcharge: 0.46,
@@ -137,11 +137,11 @@ describe('OrderDetail', () => {
 
     expect(text('order-number')).toBe('Order #12');
     expect(text('order-status')).toBe('Open');
-    expect(text('line-name')).toBe('Pho');
-    expect(text('line-notes')).toBe('No onions');
-    expect(text('line-unit-price')).toBe('$7.70');
-    expect(text('line-quantity')).toBe('2');
-    expect(text('line-total')).toBe('$15.40');
+    expect(text('item-name')).toBe('Pho');
+    expect(text('item-notes')).toBe('No onions');
+    expect(text('item-unit-price')).toBe('$7.70');
+    expect(text('item-quantity')).toBe('2');
+    expect(text('item-total')).toBe('$15.40');
     expect(text('subtotal')).toBe('$15.40');
     expect(text('discount')).toBe('$1.50');
     expect(text('surcharge')).toBe('$0.46');
@@ -154,7 +154,7 @@ describe('OrderDetail', () => {
   // is another one: a derived row such as "before tip" (total − tip = $41.38) shows a value the API never sent.
   it('shows no money value the API did not send', () => {
     const sent = {
-      lines: [line({ unitPrice: 20, quantity: 2, lineTotal: 40 })],
+      items: [item({ unitPrice: 20, quantity: 2, itemTotal: 40 })],
       subtotal: 40,
       discount: 3.1,
       surcharge: 1.11,
@@ -168,7 +168,7 @@ describe('OrderDetail', () => {
     page.querySelector('app-order-split')?.remove(); // the split section has its own spec
     const shown = page.textContent?.match(/\$[\d,]+\.\d{2}/g) ?? [];
     const apiValues = [
-      ...sent.lines.flatMap((l) => [l.unitPrice, l.lineTotal]),
+      ...sent.items.flatMap((l) => [l.unitPrice, l.itemTotal]),
       sent.subtotal,
       sent.discount,
       sent.surcharge,
@@ -186,64 +186,64 @@ describe('OrderDetail', () => {
     expect(el('back')?.getAttribute('href')).toBe('/orders');
   });
 
-  it('removes a line and shows the order the API returned', () => {
-    load(order({ lines: [line(), line({ id: 'l2', name: 'Iced tea' })] }));
+  it('removes an item and shows the order the API returned', () => {
+    load(order({ items: [item(), item({ id: 'l2', name: 'Iced tea' })] }));
 
     click('remove');
-    flush(expectRemove(), order({ lines: [line({ id: 'l2', name: 'Iced tea' })], subtotal: 3, total: 3.25 }));
+    flush(expectRemove(), order({ items: [item({ id: 'l2', name: 'Iced tea' })], subtotal: 3, total: 3.25 }));
 
-    expect(text('line-name')).toBe('Iced tea');
+    expect(text('item-name')).toBe('Iced tea');
     expect(text('subtotal')).toBe('$3.00');
     expect(text('total')).toBe('$3.25');
   });
 
-  it('sends one request for two quick clicks on Remove of the same line', () => {
+  it('sends one request for two quick clicks on Remove of the same item', () => {
     load();
 
     click('remove');
     click('remove');
-    flush(expectRemove(), order({ lines: [], subtotal: 0, tax: 0, total: 0 }));
+    flush(expectRemove(), order({ items: [], subtotal: 0, tax: 0, total: 0 }));
 
     expect(el('empty')).not.toBeNull();
     expect(text('total')).toBe('$0.00');
   });
 
   it('counts every click on + in order (concatMap): three quick clicks add 3', () => {
-    load(order({ lines: [line({ quantity: 2 })] }));
+    load(order({ items: [item({ quantity: 2 })] }));
 
     click('increase');
     click('increase');
     click('increase');
 
     // One request at a time; each starts from the quantity the previous response returned.
-    flush(expectQuantity(3), order({ lines: [line({ quantity: 3, lineTotal: 37.5 })], total: 40.59 }));
-    flush(expectQuantity(4), order({ lines: [line({ quantity: 4, lineTotal: 50 })], total: 54.13 }));
-    flush(expectQuantity(5), order({ lines: [line({ quantity: 5, lineTotal: 62.5 })], total: 67.66 }));
+    flush(expectQuantity(3), order({ items: [item({ quantity: 3, itemTotal: 37.5 })], total: 40.59 }));
+    flush(expectQuantity(4), order({ items: [item({ quantity: 4, itemTotal: 50 })], total: 54.13 }));
+    flush(expectQuantity(5), order({ items: [item({ quantity: 5, itemTotal: 62.5 })], total: 67.66 }));
 
-    expect(text('line-quantity')).toBe('5');
-    expect(text('line-total')).toBe('$62.50');
+    expect(text('item-quantity')).toBe('5');
+    expect(text('item-total')).toBe('$62.50');
     expect(text('total')).toBe('$67.66');
   });
 
   it('decreases with − and disables − at quantity 1', () => {
-    load(order({ lines: [line({ quantity: 2 })] }));
+    load(order({ items: [item({ quantity: 2 })] }));
     expect((el('decrease') as HTMLButtonElement).disabled).toBe(false);
 
     click('decrease');
-    flush(expectQuantity(1), order({ lines: [line({ quantity: 1, lineTotal: 12.5 })] }));
+    flush(expectQuantity(1), order({ items: [item({ quantity: 1, itemTotal: 12.5 })] }));
 
-    expect(text('line-quantity')).toBe('1');
+    expect(text('item-quantity')).toBe('1');
     expect((el('decrease') as HTMLButtonElement).disabled).toBe(true);
   });
 
   it('does not send quantity 0 when − is clicked twice quickly at quantity 2', () => {
-    load(order({ lines: [line({ quantity: 2 })] }));
+    load(order({ items: [item({ quantity: 2 })] }));
 
     click('decrease');
     click('decrease');
-    flush(expectQuantity(1), order({ lines: [line({ quantity: 1, lineTotal: 12.5 })] }));
+    flush(expectQuantity(1), order({ items: [item({ quantity: 1, itemTotal: 12.5 })] }));
 
-    http.expectNone(`${ORDER_URL}/lines/l1/quantity`);
+    http.expectNone(`${ORDER_URL}/items/l1/quantity`);
   });
 
   it('keeps the order on screen with a loading indicator while a change is in flight', () => {
@@ -253,10 +253,10 @@ describe('OrderDetail', () => {
     click('increase');
 
     expect(el('loading')).not.toBeNull();
-    expect(text('line-quantity')).toBe('2');
+    expect(text('item-quantity')).toBe('2');
     expect(text('total')).toBe('$27.06');
 
-    flush(expectQuantity(3), order({ lines: [line({ quantity: 3, lineTotal: 37.5 })] }));
+    flush(expectQuantity(3), order({ items: [item({ quantity: 3, itemTotal: 37.5 })] }));
     expect(el('loading')).toBeNull();
   });
 
@@ -268,7 +268,7 @@ describe('OrderDetail', () => {
     fail(expectQuantity(3), 'DiscountExceedsSubtotal', detail);
 
     expect(text('error')).toBe(detail);
-    expect(text('line-quantity')).toBe('2');
+    expect(text('item-quantity')).toBe('2');
     expect(text('total')).toBe('$27.06');
     http.expectNone(ORDER_URL);
   });
@@ -278,19 +278,19 @@ describe('OrderDetail', () => {
 
     click('remove');
     fail(expectRemove(), 'ConcurrentChange', 'Conflict');
-    flush(expectGet(), order({ lines: [line({ quantity: 6, lineTotal: 75 })], total: 81.19 }));
+    flush(expectGet(), order({ items: [item({ quantity: 6, itemTotal: 75 })], total: 81.19 }));
 
     expect(text('error')).toBe(CHANGED_MESSAGE);
-    expect(text('line-quantity')).toBe('6');
+    expect(text('item-quantity')).toBe('6');
     expect(text('total')).toBe('$81.19');
   });
 
-  it('on not found for a line (removed by someone else) shows that the order changed and reloads', () => {
+  it('on not found for an item (removed by someone else) shows that the order changed and reloads', () => {
     load();
 
     click('increase');
-    fail(expectQuantity(3), 'OrderLineNotFound');
-    flush(expectGet(), order({ lines: [], subtotal: 0, tax: 0, total: 0 }));
+    fail(expectQuantity(3), 'OrderItemNotFound');
+    flush(expectGet(), order({ items: [], subtotal: 0, tax: 0, total: 0 }));
 
     expect(text('error')).toBe(CHANGED_MESSAGE);
     expect(el('empty')).not.toBeNull();
@@ -303,7 +303,7 @@ describe('OrderDetail', () => {
     failHttp(expectQuantity(3), 500);
 
     expect(text('error')).toBe(GENERIC_ERROR);
-    expect(text('line-quantity')).toBe('2');
+    expect(text('item-quantity')).toBe('2');
     expect(text('total')).toBe('$27.06');
   });
 
@@ -315,7 +315,7 @@ describe('OrderDetail', () => {
     fixture.detectChanges();
 
     expect(text('error')).toBe(GENERIC_ERROR);
-    expect(text('line-name')).toBe('Pho');
+    expect(text('item-name')).toBe('Pho');
   });
 
   it('clears the error after the next successful change', () => {
@@ -324,7 +324,7 @@ describe('OrderDetail', () => {
     failHttp(expectQuantity(3), 500);
 
     click('increase');
-    flush(expectQuantity(3), order({ lines: [line({ quantity: 3, lineTotal: 37.5 })] }));
+    flush(expectQuantity(3), order({ items: [item({ quantity: 3, itemTotal: 37.5 })] }));
 
     expect(el('error')).toBeNull();
   });
@@ -357,16 +357,16 @@ describe('OrderDetail', () => {
   });
 
   it('reloads the order when the split section reports a change, keeping the previous order on screen meanwhile', () => {
-    const lines = [line(), line({ id: 'l2', name: 'Iced tea', unitPrice: 3, quantity: 1, lineTotal: 3 })];
+    const items = [item(), item({ id: 'l2', name: 'Iced tea', unitPrice: 3, quantity: 1, itemTotal: 3 })];
     const split: OrderSplit = {
       parts: [
-        { lineIds: ['l1'], subtotal: 25, discount: 0, surcharge: 0, tax: 2.06, tip: 0, total: 27.06 },
-        { lineIds: ['l2'], subtotal: 3, discount: 0, surcharge: 0, tax: 0.25, tip: 0, total: 3.25 },
+        { itemIds: ['l1'], subtotal: 25, discount: 0, surcharge: 0, tax: 2.06, tip: 0, total: 27.06 },
+        { itemIds: ['l2'], subtotal: 3, discount: 0, surcharge: 0, tax: 0.25, tip: 0, total: 3.25 },
       ],
     };
     fixture.componentRef.setInput('id', 'o1');
     fixture.detectChanges();
-    flush(expectGet(), order({ lines, subtotal: 28, tax: 2.31, total: 30.31 }), split);
+    flush(expectGet(), order({ items, subtotal: 28, tax: 2.31, total: 30.31 }), split);
 
     click('split-save');
     const save = http.expectOne((r) => r.method === 'PUT' && r.url === SPLIT_URL);
@@ -377,7 +377,7 @@ describe('OrderDetail', () => {
     expect(el('loading')).not.toBeNull();
     expect(text('total')).toBe('$30.31');
 
-    flush(reload, order({ lines, subtotal: 28, tax: 2.31, tip: 5, total: 35.31 }), split);
+    flush(reload, order({ items, subtotal: 28, tax: 2.31, tip: 5, total: 35.31 }), split);
 
     expect(text('error')).toBe(CHANGED_MESSAGE);
     expect(text('tip')).toBe('$5.00');
@@ -386,13 +386,13 @@ describe('OrderDetail', () => {
   });
 
   it('keeps the split amounts out of the order totals block', () => {
-    const lines = [line(), line({ id: 'l2', name: 'Iced tea', unitPrice: 3, quantity: 1, lineTotal: 3 })];
+    const items = [item(), item({ id: 'l2', name: 'Iced tea', unitPrice: 3, quantity: 1, itemTotal: 3 })];
     fixture.componentRef.setInput('id', 'o1');
     fixture.detectChanges();
-    flush(expectGet(), order({ lines, subtotal: 28, total: 30.31 }), {
+    flush(expectGet(), order({ items, subtotal: 28, total: 30.31 }), {
       parts: [
-        { lineIds: ['l1'], subtotal: 25, discount: 0, surcharge: 0, tax: 2.06, tip: 0, total: 27.06 },
-        { lineIds: ['l2'], subtotal: 3, discount: 0, surcharge: 0, tax: 0.25, tip: 0, total: 3.25 },
+        { itemIds: ['l1'], subtotal: 25, discount: 0, surcharge: 0, tax: 2.06, tip: 0, total: 27.06 },
+        { itemIds: ['l2'], subtotal: 3, discount: 0, surcharge: 0, tax: 0.25, tip: 0, total: 3.25 },
       ],
     });
 
@@ -404,7 +404,7 @@ describe('OrderDetail', () => {
   it.each(['Paid', 'Cancelled'] as const)('is read-only when the order is %s', (status) => {
     load(order({ status }));
 
-    expect(el('line-row')).not.toBeNull();
+    expect(el('item-row')).not.toBeNull();
     expect(el('remove')).toBeNull();
     expect(el('increase')).toBeNull();
     expect(el('decrease')).toBeNull();

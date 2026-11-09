@@ -7,7 +7,7 @@ import { getOrder, type ApiOrder } from './pages';
 // ids (split-*) and labels from R14 ("Part N", "Unassigned", "Save split", "Remove split").
 
 export interface ApiSplitPart {
-  lineIds: string[];
+  itemIds: string[];
   subtotal: number;
   discount: number;
   surcharge: number;
@@ -22,11 +22,11 @@ export interface ApiSplit {
 
 export const SPLIT_MONEY = ['subtotal', 'discount', 'surcharge', 'tax', 'tip', 'total'] as const;
 
-export const TOO_FEW_LINES_MESSAGE = 'Add at least 2 lines to split the bill.';
+export const TOO_FEW_ITEMS_MESSAGE = 'Add at least 2 items to split the bill.';
 export const CLEARED_MESSAGE = 'The saved split was cleared because the order changed.';
 
-/** An open order with one line per item, each from its own menu item named `<prefix> <letter>`; lines in API order. */
-export async function orderWithLines(
+/** An open order with one item per price, each from its own menu item named `<prefix> <letter>`; items in API order. */
+export async function orderWithItems(
   api: APIRequestContext,
   prefix: string,
   prices: number[],
@@ -41,12 +41,12 @@ export async function orderWithLines(
   return { orderId, order: await getOrder(api, orderId), names };
 }
 
-/** Line ids of `order` in the order of `names`. */
-export function lineIdsOf(order: ApiOrder, names: string[]): string[] {
+/** Item ids of `order` in the order of `names`. */
+export function itemIdsOf(order: ApiOrder, names: string[]): string[] {
   return names.map((name) => {
-    const line = order.lines.find((l) => l.name === name);
-    expect(line, `line "${name}" on order ${order.id}`).toBeDefined();
-    return (line as { id: string }).id;
+    const item = order.items.find((l) => l.name === name);
+    expect(item, `item "${name}" on order ${order.id}`).toBeDefined();
+    return (item as { id: string }).id;
   });
 }
 
@@ -58,7 +58,7 @@ export async function getSplit(api: APIRequestContext, orderId: string): Promise
 }
 
 export async function saveSplit(api: APIRequestContext, orderId: string, parts: string[][]): Promise<ApiSplit> {
-  const response = await api.put(`/api/orders/${orderId}/split`, { data: { parts: parts.map((lineIds) => ({ lineIds })) } });
+  const response = await api.put(`/api/orders/${orderId}/split`, { data: { parts: parts.map((itemIds) => ({ itemIds })) } });
   return dataOf<ApiSplit>(response);
 }
 
@@ -79,12 +79,12 @@ export function splitSection(page: Page): Locator {
 }
 
 /**
- * The "Part N" select of the line named `name`: the `split-line-part` select whose nearest ancestor that shows a line
- * name shows exactly this one. The plan does not say how a select is tied to its line, so it is found by the text
+ * The "Part N" select of the item named `name`: the `split-item-part` select whose nearest ancestor that shows an item
+ * name shows exactly this one. The plan does not say how a select is tied to its item, so it is found by the text
  * around it.
  */
-export async function linePartSelect(page: Page, name: string, allNames: string[]): Promise<Locator> {
-  const selects = splitSection(page).getByTestId('split-line-part');
+export async function itemPartSelect(page: Page, name: string, allNames: string[]): Promise<Locator> {
+  const selects = splitSection(page).getByTestId('split-item-part');
   const owners = await selects.evaluateAll(
     (elements, names) =>
       elements.map((el) => {
@@ -98,7 +98,7 @@ export async function linePartSelect(page: Page, name: string, allNames: string[
     allNames,
   );
   const index = owners.indexOf(name);
-  expect(index, `a split-line-part select next to "${name}"; owners ${JSON.stringify(owners)}`).toBeGreaterThanOrEqual(0);
+  expect(index, `a split-item-part select next to "${name}"; owners ${JSON.stringify(owners)}`).toBeGreaterThanOrEqual(0);
   return selects.nth(index);
 }
 
@@ -107,8 +107,8 @@ export async function selectedLabel(select: Locator): Promise<string> {
   return select.evaluate((el) => ((el as HTMLSelectElement).selectedOptions[0]?.textContent ?? '').trim());
 }
 
-export async function assignLine(page: Page, name: string, allNames: string[], part: number): Promise<void> {
-  await (await linePartSelect(page, name, allNames)).selectOption({ label: `Part ${part}` });
+export async function assignItem(page: Page, name: string, allNames: string[], part: number): Promise<void> {
+  await (await itemPartSelect(page, name, allNames)).selectOption({ label: `Part ${part}` });
 }
 
 export async function setPartCount(page: Page, count: number): Promise<void> {

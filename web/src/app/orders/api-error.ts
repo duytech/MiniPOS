@@ -27,9 +27,9 @@ export function unwrap<T>(): OperatorFunction<ApiResponse<T>, T> {
   });
 }
 
-const NOT_FOUND_CODES = ['OrderNotFound', 'MenuItemNotFound', 'OrderLineNotFound', 'SplitNotFound'];
+const NOT_FOUND_CODES = ['OrderNotFound', 'MenuItemNotFound', 'OrderItemNotFound', 'SplitNotFound'];
 const CONFLICT_CODES = ['ConcurrentChange', 'DataConflict'];
-const RULE_CODES = ['OrderNotOpen', 'LineNotOnOrder', 'DiscountExceedsSubtotal', 'LineQuantityTooLarge', 'InvalidSplit'];
+const RULE_CODES = ['OrderNotOpen', 'ItemNotOnOrder', 'DiscountExceedsSubtotal', 'ItemQuantityTooLarge', 'InvalidSplit'];
 
 const hasCode = (error: unknown, codes: string[]): error is ApiError =>
   error instanceof ApiError && codes.includes(error.code);

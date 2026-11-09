@@ -10,12 +10,12 @@ import {
   searchOrders,
 } from '../support/pages';
 
-// Bad data: one order with 200 different lines (200 menu items), prices with cents (0.05, 12.35, ...), quantity > 1
-// on some lines. No rule covers layout or paging of 200 lines, so only CLAUDE.md rules are asserted: every shown
+// Bad data: one order with 200 different items (200 menu items), prices with cents (0.05, 12.35, ...), quantity > 1
+// on some items. No rule covers layout or paging of 200 items, so only CLAUDE.md rules are asserted: every shown
 // amount equals the API to the cent as $x.xx, the list total equals the detail total, and at 375 px no horizontal
 // page scroll with money and Remove buttons on screen.
 
-const LINES = 200;
+const ITEMS = 200;
 const PRICE_CENTS = [5, 1235, 1, 99, 310, 1995, 770, 4555, 15, 125, 105, 999];
 
 function priceOf(i: number): number {
@@ -30,7 +30,7 @@ function quantityOf(i: number): number {
 
 async function createBigOrder(api: APIRequestContext, stamp: string): Promise<string> {
   const items = await Promise.all(
-    Array.from({ length: LINES }, (_, i) => createMenuItem(api, `Bulk ${stamp} line ${i + 1}`, priceOf(i))),
+    Array.from({ length: ITEMS }, (_, i) => createMenuItem(api, `Bulk ${stamp} item ${i + 1}`, priceOf(i))),
   );
   const orderId = await createOrder(api);
   // Sequential: parallel adds to one order may legitimately conflict.
@@ -40,7 +40,7 @@ async function createBigOrder(api: APIRequestContext, stamp: string): Promise<st
   return orderId;
 }
 
-test.describe('order with 200 lines', () => {
+test.describe('order with 200 items', () => {
   let orderId: string;
   let stamp: string;
 
@@ -53,13 +53,13 @@ test.describe('order with 200 lines', () => {
 
   test('order detail shows all amounts equal to the API and fits at 375 px', async ({ page, request }) => {
     const order = await getOrder(request, orderId);
-    expect(order.lines).toHaveLength(LINES);
+    expect(order.items).toHaveLength(ITEMS);
     await page.goto(`/orders/${orderId}`);
     await expectDetailMatchesApi(page, order);
     if (isPhone(page)) {
       await expectDetailFitsPhone(page);
     }
-    await page.screenshot({ path: test.info().outputPath('detail-200-lines.png') });
+    await page.screenshot({ path: test.info().outputPath('detail-200-items.png') });
   });
 
   test('order list total equals the API total and fits at 375 px', async ({ page, request }) => {
@@ -70,6 +70,6 @@ test.describe('order with 200 lines', () => {
     if (isPhone(page)) {
       await expectListFitsPhone(page);
     }
-    await page.screenshot({ path: test.info().outputPath('list-200-lines.png') });
+    await page.screenshot({ path: test.info().outputPath('list-200-items.png') });
   });
 });

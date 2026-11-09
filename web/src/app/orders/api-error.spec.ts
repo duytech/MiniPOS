@@ -33,7 +33,7 @@ describe('api-error', () => {
   });
 
   it('shows the message of a broken rule only', () => {
-    for (const code of ['OrderNotOpen', 'LineNotOnOrder', 'DiscountExceedsSubtotal', 'LineQuantityTooLarge', 'InvalidSplit']) {
+    for (const code of ['OrderNotOpen', 'ItemNotOnOrder', 'DiscountExceedsSubtotal', 'ItemQuantityTooLarge', 'InvalidSplit']) {
       expect(errorMessage(new ApiError(code, 'Why.'))).toBe('Why.');
     }
     for (const code of ['ValidationFailed', 'OrderNotFound', 'ConcurrentChange', 'SomethingNew']) {

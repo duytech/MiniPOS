@@ -79,8 +79,8 @@ describe('OrdersApi', () => {
     status: 'Open',
     createdAt: '2026-10-26T07:30:00+00:00',
     paymentMethod: 'Cash',
-    lines: [
-      { id: 'l1', menuItemId: 'm1', name: 'Pho', unitPrice: 12.5, quantity: 2, notes: null, lineTotal: 25 },
+    items: [
+      { id: 'l1', menuItemId: 'm1', name: 'Pho', unitPrice: 12.5, quantity: 2, notes: null, itemTotal: 25 },
     ],
     subtotal: 25,
     discount: 0,
@@ -101,22 +101,22 @@ describe('OrdersApi', () => {
     expect(received).toEqual(order);
   });
 
-  it('removes a line with DELETE and returns the order the API sent back', () => {
+  it('removes an item with DELETE and returns the order the API sent back', () => {
     let received: unknown;
-    api.removeLine('o1', 'l1').subscribe((result) => (received = result));
+    api.removeItem('o1', 'l1').subscribe((result) => (received = result));
 
-    const req = http.expectOne('/api/orders/o1/lines/l1');
+    const req = http.expectOne('/api/orders/o1/items/l1');
     expect(req.request.method).toBe('DELETE');
     req.flush(ok(order));
 
     expect(received).toEqual(order);
   });
 
-  it('changes a line quantity with PUT { quantity } and returns the order the API sent back', () => {
+  it('changes an item quantity with PUT { quantity } and returns the order the API sent back', () => {
     let received: unknown;
-    api.changeLineQuantity('o1', 'l1', 3).subscribe((result) => (received = result));
+    api.changeItemQuantity('o1', 'l1', 3).subscribe((result) => (received = result));
 
-    const req = http.expectOne('/api/orders/o1/lines/l1/quantity');
+    const req = http.expectOne('/api/orders/o1/items/l1/quantity');
     expect(req.request.method).toBe('PUT');
     expect(req.request.body).toEqual({ quantity: 3 });
     req.flush(ok(order));
@@ -126,11 +126,11 @@ describe('OrdersApi', () => {
 
   const split: OrderSplit = {
     parts: [
-      { lineIds: ['l1'], subtotal: 60, discount: 0, surcharge: 0, tax: 5.33, tip: 0, total: 65.33 },
-      { lineIds: ['l2'], subtotal: 40, discount: 0, surcharge: 0, tax: 3.55, tip: 0, total: 43.55 },
+      { itemIds: ['l1'], subtotal: 60, discount: 0, surcharge: 0, tax: 5.33, tip: 0, total: 65.33 },
+      { itemIds: ['l2'], subtotal: 40, discount: 0, surcharge: 0, tax: 3.55, tip: 0, total: 43.55 },
     ],
   };
-  const splitRequest: SaveSplitRequest = { parts: [{ lineIds: ['l1'] }, { lineIds: ['l2', 'l3'] }] };
+  const splitRequest: SaveSplitRequest = { parts: [{ itemIds: ['l1'] }, { itemIds: ['l2', 'l3'] }] };
 
   it('gets the saved split with GET and returns it unchanged', () => {
     let received: unknown;
@@ -150,7 +150,7 @@ describe('OrdersApi', () => {
 
     const req = http.expectOne('/api/orders/o1/split/preview');
     expect(req.request.method).toBe('POST');
-    expect(req.request.body).toEqual({ parts: [{ lineIds: ['l1'] }, { lineIds: ['l2', 'l3'] }] });
+    expect(req.request.body).toEqual({ parts: [{ itemIds: ['l1'] }, { itemIds: ['l2', 'l3'] }] });
     req.flush(ok(split));
 
     expect(received).toEqual(split);
@@ -162,7 +162,7 @@ describe('OrdersApi', () => {
 
     const req = http.expectOne('/api/orders/o1/split');
     expect(req.request.method).toBe('PUT');
-    expect(req.request.body).toEqual({ parts: [{ lineIds: ['l1'] }, { lineIds: ['l2', 'l3'] }] });
+    expect(req.request.body).toEqual({ parts: [{ itemIds: ['l1'] }, { itemIds: ['l2', 'l3'] }] });
     req.flush(ok(split));
 
     expect(received).toEqual(split);

@@ -8,18 +8,18 @@ import { apiCents, expectAllOnScreen, expectNoHorizontalPageScroll, shownCents }
 export const RELOAD_INDICATOR = '[data-testid="loading"]';
 export const INITIAL_LOADING = '[data-testid="initial-loading"]';
 
-export interface ApiLine {
+export interface ApiItem {
   id: string;
   name: string;
   unitPrice: number;
   quantity: number;
-  lineTotal: number;
+  itemTotal: number;
 }
 
 export interface ApiOrder {
   id: string;
   number: number;
-  lines: ApiLine[];
+  items: ApiItem[];
   subtotal: number;
   discount: number;
   surcharge: number;
@@ -69,7 +69,7 @@ async function shownRows(rows: Locator): Promise<ShownRow[]> {
   );
 }
 
-/** The row whose item cell shows `name` followed by nothing or by whitespace (so "line 1" does not match "line 10"). */
+/** The row whose item cell shows `name` followed by nothing or by whitespace (so "item 1" does not match "item 10"). */
 function rowFor(rows: ShownRow[], name: string): { row: ShownRow; rest: string } | undefined {
   for (const row of rows) {
     const item = row.cells[0]?.text ?? '';
@@ -90,35 +90,35 @@ function shownUnitPrice(found: { row: ShownRow; rest: string }, unitIdx: number)
   return match ? match[1] : `<no visible unit price; item cell rest "${found.rest}">`;
 }
 
-/** Each line's unit price and line total, and every summary amount, equal GET /api/orders/{id} to the cent. */
+/** Each item's unit price and item total, and every summary amount, equal GET /api/orders/{id} to the cent. */
 export async function expectDetailMatchesApi(page: Page, order: ApiOrder): Promise<void> {
   const table = page.getByRole('table').first();
   const rows = table.locator('tbody tr');
-  await expect(rows).toHaveCount(order.lines.length);
+  await expect(rows).toHaveCount(order.items.length);
 
   const headers = (await table.locator('thead th').allTextContents()).map((t) => t.trim());
   const unitIdx = headers.indexOf('Unit price');
-  const totalIdx = await columnIndex(table, 'Line total');
+  const totalIdx = await columnIndex(table, 'Item total');
   const shown = await shownRows(rows);
 
   const mismatches: string[] = [];
-  for (const line of order.lines) {
-    const label = line.name.slice(0, 40);
-    const found = rowFor(shown, line.name);
+  for (const item of order.items) {
+    const label = item.name.slice(0, 40);
+    const found = rowFor(shown, item.name);
     if (!found) {
       mismatches.push(`no row whose item cell shows "${label}..."`);
       continue;
     }
     const unit = shownUnitPrice(found, unitIdx);
-    if (shownCents(unit) !== apiCents(line.unitPrice)) {
-      mismatches.push(`${label} unit price shown ${unit} API ${line.unitPrice}`);
+    if (shownCents(unit) !== apiCents(item.unitPrice)) {
+      mismatches.push(`${label} unit price shown ${unit} API ${item.unitPrice}`);
     }
     const total = found.row.cells[totalIdx]?.text ?? '';
-    if (shownCents(total) !== apiCents(line.lineTotal)) {
-      mismatches.push(`${label} line total shown ${total} API ${line.lineTotal}`);
+    if (shownCents(total) !== apiCents(item.itemTotal)) {
+      mismatches.push(`${label} item total shown ${total} API ${item.itemTotal}`);
     }
   }
-  expect(mismatches, 'detail lines equal the API to the cent').toEqual([]);
+  expect(mismatches, 'detail items equal the API to the cent').toEqual([]);
 
   for (const [term, field] of SUMMARY) {
     const value = summaryValue(page, term);
@@ -129,17 +129,17 @@ export async function expectDetailMatchesApi(page: Page, order: ApiOrder): Promi
   }
 }
 
-/** At 375 px: no horizontal page scroll; prices, line totals, summary amounts and Remove buttons on screen. */
+/** At 375 px: no horizontal page scroll; prices, item totals, summary amounts and Remove buttons on screen. */
 export async function expectDetailFitsPhone(page: Page): Promise<void> {
   await expectNoHorizontalPageScroll(page);
   const table = page.getByRole('table').first();
   const unitIdx = await columnIndex(table, 'Unit price');
-  const totalIdx = await columnIndex(table, 'Line total');
+  const totalIdx = await columnIndex(table, 'Item total');
   const rows = table.locator('tbody tr');
   // The unit price is either its own column or, when that column is hidden, "$x.xx each" under the item name.
   const unitPrices = rows.locator(`td:nth-child(${unitIdx + 1})`).or(rows.getByText(/^\S+ each$/));
   await expectAllOnScreen(page, unitPrices, 'unit prices');
-  await expectAllOnScreen(page, rows.locator(`td:nth-child(${totalIdx + 1})`), 'line total cells');
+  await expectAllOnScreen(page, rows.locator(`td:nth-child(${totalIdx + 1})`), 'item total cells');
   await expectAllOnScreen(page, page.getByRole('button', { name: /^Remove / }), 'Remove buttons', 'aria-label');
   await expectAllOnScreen(page, page.locator('dd'), 'summary amounts');
 }
