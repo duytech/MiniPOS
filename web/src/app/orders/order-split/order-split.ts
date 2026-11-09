@@ -8,12 +8,12 @@ import { OrdersApi } from '../orders-api';
 import { GENERIC_ERROR, errorMessage, isConflict, isNotFound } from '../api-error';
 
 export const CLEARED_MESSAGE = 'The saved split was cleared because the order changed.';
-export const TOO_FEW_LINES_MESSAGE = 'Add at least 2 lines to split the bill.';
+export const TOO_FEW_ITEMS_MESSAGE = 'Add at least 2 items to split the bill.';
 
 /** The smallest number of parts a split can have (R7). */
 const MIN_PARTS = 2;
 
-/** The builder's assignment: line id → part index (0-based), or null when the line is unassigned. */
+/** The builder's assignment: item id → part index (0-based), or null when the item is unassigned. */
 interface Draft {
   partCount: number;
   assignments: Readonly<Record<string, number | null>>;
@@ -48,40 +48,40 @@ const INITIAL_STATE: SplitState = {
 /** Each event folds into the state as a function, so a late response can check it still belongs to the draft. */
 type Reducer = (state: SplitState) => SplitState;
 
-/** Keeps the assignments of lines still on the order (if their part still exists); new lines start unassigned. */
+/** Keeps the assignments of items still on the order (if their part still exists); new items start unassigned. */
 function reconcile(order: Order, draft: Draft): Draft {
-  const partCount = Math.min(draft.partCount, Math.max(MIN_PARTS, order.lines.length));
+  const partCount = Math.min(draft.partCount, Math.max(MIN_PARTS, order.items.length));
   const assignments: Record<string, number | null> = {};
-  for (const line of order.lines) {
-    const part = draft.assignments[line.id] ?? null;
-    assignments[line.id] = part !== null && part < partCount ? part : null;
+  for (const item of order.items) {
+    const part = draft.assignments[item.id] ?? null;
+    assignments[item.id] = part !== null && part < partCount ? part : null;
   }
   return { partCount, assignments };
 }
 
 function fromSaved(order: Order, split: OrderSplit): Draft {
   const assignments: Record<string, number | null> = {};
-  for (const line of order.lines) {
-    const index = split.parts.findIndex((part) => part.lineIds.includes(line.id));
-    assignments[line.id] = index < 0 ? null : index;
+  for (const item of order.items) {
+    const index = split.parts.findIndex((part) => part.itemIds.includes(item.id));
+    assignments[item.id] = index < 0 ? null : index;
   }
   return { partCount: split.parts.length, assignments };
 }
 
-/** Preview runs only when the order can be split and every line has a part (R13). */
+/** Preview runs only when the order can be split and every item has a part (R13). */
 function isComplete(order: Order, draft: Draft): boolean {
   return (
     order.status === 'Open' &&
-    order.lines.length >= MIN_PARTS &&
-    order.lines.every((line) => (draft.assignments[line.id] ?? null) !== null)
+    order.items.length >= MIN_PARTS &&
+    order.items.every((item) => (draft.assignments[item.id] ?? null) !== null)
   );
 }
 
-/** Parts in order 1..N, each with its lines in the order's line order. */
+/** Parts in order 1..N, each with its items in the order's item order. */
 function toRequest(order: Order, draft: Draft): SaveSplitRequest {
   return {
     parts: Array.from({ length: draft.partCount }, (_, part) => ({
-      lineIds: order.lines.filter((line) => draft.assignments[line.id] === part).map((line) => line.id),
+      itemIds: order.items.filter((item) => draft.assignments[item.id] === part).map((item) => item.id),
     })),
   };
 }
@@ -120,45 +120,45 @@ export class OrderSplitSection {
   );
 
   protected readonly isOpen = computed(() => this.order().status === 'Open');
-  protected readonly tooFewLines = computed(() => this.isOpen() && this.order().lines.length < MIN_PARTS);
+  protected readonly tooFewItems = computed(() => this.isOpen() && this.order().items.length < MIN_PARTS);
   /** Open: always shown. Paid or Cancelled: only a saved split is shown, read-only (R14). */
   protected readonly visible = computed(
     () => this.isOpen() || this.state().saved !== null || this.state().error !== null,
   );
-  protected readonly editable = computed(() => this.isOpen() && !this.tooFewLines());
+  protected readonly editable = computed(() => this.isOpen() && !this.tooFewItems());
   protected readonly busy = computed(() => {
     const state = this.state();
     return state.loadingSplit || state.previewing || state.writing;
   });
-  /** Part count choices: 2 to the number of lines (R13). */
+  /** Part count choices: 2 to the number of items (R13). */
   protected readonly partCountChoices = computed(() =>
-    Array.from({ length: Math.max(MIN_PARTS, this.order().lines.length) - 1 }, (_, i) => i + MIN_PARTS),
+    Array.from({ length: Math.max(MIN_PARTS, this.order().items.length) - 1 }, (_, i) => i + MIN_PARTS),
   );
   protected readonly partChoices = computed(() => Array.from({ length: this.state().draft.partCount }, (_, i) => i));
-  protected readonly lineNames = computed(() => new Map(this.order().lines.map((line) => [line.id, line.name])));
+  protected readonly itemNames = computed(() => new Map(this.order().items.map((item) => [item.id, item.name])));
 
   protected setPartCount(value: string): void {
     const partCount = Number(value);
     const { assignments } = this.state().draft;
     const kept: Record<string, number | null> = {};
-    for (const [lineId, part] of Object.entries(assignments)) {
-      kept[lineId] = part !== null && part < partCount ? part : null; // lines of removed parts become unassigned
+    for (const [itemId, part] of Object.entries(assignments)) {
+      kept[itemId] = part !== null && part < partCount ? part : null; // items of removed parts become unassigned
     }
     this.edits.next({ partCount, assignments: kept });
   }
 
-  protected assign(lineId: string, value: string): void {
+  protected assign(itemId: string, value: string): void {
     const draft = this.state().draft;
-    this.edits.next({ ...draft, assignments: { ...draft.assignments, [lineId]: value === '' ? null : Number(value) } });
+    this.edits.next({ ...draft, assignments: { ...draft.assignments, [itemId]: value === '' ? null : Number(value) } });
   }
 
-  protected partOf(lineId: string): number | null {
-    return this.state().draft.assignments[lineId] ?? null;
+  protected partOf(itemId: string): number | null {
+    return this.state().draft.assignments[itemId] ?? null;
   }
 
-  protected namesOf(lineIds: string[]): string {
-    const names = this.lineNames();
-    return lineIds.map((id) => names.get(id) ?? id).join(', ');
+  protected namesOf(itemIds: string[]): string {
+    const names = this.itemNames();
+    return itemIds.map((id) => names.get(id) ?? id).join(', ');
   }
 
   protected save(): void {
@@ -189,7 +189,7 @@ export class OrderSplitSection {
           ? this.noSavedSplit(order)
           : of<Reducer>((state) => ({ ...state, loadingSplit: false, error: GENERIC_ERROR })),
       ),
-      // Lines may have changed: keep the assignments of remaining lines now; the previous parts stay on screen.
+      // Items may have changed: keep the assignments of remaining items now; the previous parts stay on screen.
       startWith<Reducer>((state) => ({
         ...state,
         draft: reconcile(order, state.draft),

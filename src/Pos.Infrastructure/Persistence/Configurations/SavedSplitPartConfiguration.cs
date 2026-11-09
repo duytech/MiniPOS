@@ -18,8 +18,8 @@ internal sealed class SavedSplitPartConfiguration : IEntityTypeConfiguration<Sav
         // racing saves fail on it first (409 with the wrong detail, or a deadlock).
         builder.Property(p => p.Position).HasColumnName("position");
 
-        builder.HasMany(p => p.Lines).WithOne()
-            .HasForeignKey(SavedSplitLineConfiguration.PartIdProperty)
+        builder.HasMany(p => p.Items).WithOne()
+            .HasForeignKey(SavedSplitMenuItemConfiguration.PartIdProperty)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

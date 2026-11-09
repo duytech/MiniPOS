@@ -13,11 +13,11 @@ public static class OrderRules
         ? null
         : new Error(ErrorCode.OrderNotOpen, $"The order is {order.Status}; only an open order can be changed.");
 
-    public static Error LineNotOnOrder(Guid lineId) =>
-        new(ErrorCode.LineNotOnOrder, $"Line {lineId} is not on this order.");
+    public static Error ItemNotOnOrder(Guid itemId) =>
+        new(ErrorCode.ItemNotOnOrder, $"Item {itemId} is not on this order.");
 
     /// <summary>
-    /// A fixed discount can never be more than the subtotal. <paramref name="change"/> names the line change that would
+    /// A fixed discount can never be more than the subtotal. <paramref name="change"/> names the item change that would
     /// leave <paramref name="subtotal"/>, or is null when the discount itself is being applied.
     /// </summary>
     public static Error? FixedDiscountError(Money? fixedDiscount, Money subtotal, string? change)

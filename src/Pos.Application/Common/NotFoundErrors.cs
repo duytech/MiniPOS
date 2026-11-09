@@ -8,7 +8,7 @@ internal static class NotFoundErrors
 
     public static Error MenuItem(Guid id) => new(ErrorCode.MenuItemNotFound, Message("Menu item", id));
 
-    public static Error OrderLine(Guid id) => new(ErrorCode.OrderLineNotFound, Message("Order line", id));
+    public static Error OrderMenuItem(Guid id) => new(ErrorCode.OrderItemNotFound, Message("Order item", id));
 
     public static Error Split(Guid id) => new(ErrorCode.SplitNotFound, Message("Split", id));
 

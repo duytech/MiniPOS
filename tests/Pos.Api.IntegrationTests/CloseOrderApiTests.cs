@@ -57,7 +57,7 @@ public class CloseOrderApiTests(PosApiFactory factory) : IClassFixture<PosApiFac
         await response.AssertSuccessAsync();
         var order = await response.ReadDataAsync();
         Assert.Equal(status, order.GetProperty("status").GetString());
-        Assert.Equal(0, order.GetProperty("lines").GetArrayLength());
+        Assert.Equal(0, order.GetProperty("items").GetArrayLength());
         Assert.Equal("0.00", order.Money("total"));
     }
 

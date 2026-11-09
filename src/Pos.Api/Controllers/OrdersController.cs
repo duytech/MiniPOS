@@ -6,7 +6,7 @@ using Pos.Application.Orders;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Application.Orders.ApplyDiscount;
 using Pos.Application.Orders.CancelOrder;
-using Pos.Application.Orders.ChangeOrderLineQuantity;
+using Pos.Application.Orders.ChangeOrderMenuItemQuantity;
 using Pos.Application.Orders.CreateOrder;
 using Pos.Application.Orders.GetOrder;
 using Pos.Application.Orders.GetSplit;
@@ -14,7 +14,7 @@ using Pos.Application.Orders.ListOrders;
 using Pos.Application.Orders.PayOrder;
 using Pos.Application.Orders.PreviewSplit;
 using Pos.Application.Orders.RemoveDiscount;
-using Pos.Application.Orders.RemoveOrderLine;
+using Pos.Application.Orders.RemoveOrderMenuItem;
 using Pos.Application.Orders.RemoveSplit;
 using Pos.Application.Orders.RemoveTip;
 using Pos.Application.Orders.SaveSplit;
@@ -71,8 +71,8 @@ public sealed class OrdersController : ControllerBase
         await handler.HandleAsync(new GetSplitQuery(id), cancellationToken);
 
     /// <summary>
-    /// Saves the split by item (at least two parts, every line in exactly one part), replacing any saved one. Only
-    /// the line assignment is stored; a real change to the order clears it.
+    /// Saves the split by item (at least two parts, every item in exactly one part), replacing any saved one. Only
+    /// the item assignment is stored; a real change to the order clears it.
     /// </summary>
     [HttpPut("{id:guid}/split")]
     public async Task<Result<OrderSplitDto>> SaveSplit(
@@ -80,7 +80,7 @@ public sealed class OrdersController : ControllerBase
         SaveSplitRequest request,
         [FromServices] ICommandHandler<SaveSplitCommand, OrderSplitDto> handler,
         CancellationToken cancellationToken) =>
-        await handler.HandleAsync(new SaveSplitCommand(id, request.Parts?.Select(p => p?.LineIds).ToList()), cancellationToken);
+        await handler.HandleAsync(new SaveSplitCommand(id, request.Parts?.Select(p => p?.ItemIds).ToList()), cancellationToken);
 
     /// <summary>Prices a split by item like <see cref="SaveSplit"/> without saving anything.</summary>
     [HttpPost("{id:guid}/split/preview")]
@@ -89,7 +89,7 @@ public sealed class OrdersController : ControllerBase
         SaveSplitRequest request,
         [FromServices] IQueryHandler<PreviewSplitQuery, OrderSplitDto> handler,
         CancellationToken cancellationToken) =>
-        await handler.HandleAsync(new PreviewSplitQuery(id, request.Parts?.Select(p => p?.LineIds).ToList()), cancellationToken);
+        await handler.HandleAsync(new PreviewSplitQuery(id, request.Parts?.Select(p => p?.ItemIds).ToList()), cancellationToken);
 
     /// <summary>Removes the saved split: fails on a missing order, no saved split, or an order that is not open.</summary>
     [HttpDelete("{id:guid}/split")]
@@ -109,27 +109,27 @@ public sealed class OrdersController : ControllerBase
             new AddOrderItemCommand(id, request.MenuItemId, request.Quantity, request.Notes),
             cancellationToken);
 
-    /// <summary>Removes a line. Fails when a fixed discount is larger than the new subtotal.</summary>
-    [HttpDelete("{id:guid}/lines/{lineId:guid}")]
-    public async Task<Result<OrderDto>> RemoveLine(
+    /// <summary>Removes an item. Fails when a fixed discount is larger than the new subtotal.</summary>
+    [HttpDelete("{id:guid}/items/{itemId:guid}")]
+    public async Task<Result<OrderDto>> RemoveItem(
         Guid id,
-        Guid lineId,
-        [FromServices] ICommandHandler<RemoveOrderLineCommand, OrderDto> handler,
+        Guid itemId,
+        [FromServices] ICommandHandler<RemoveOrderMenuItemCommand, OrderDto> handler,
         CancellationToken cancellationToken) =>
-        await handler.HandleAsync(new RemoveOrderLineCommand(id, lineId), cancellationToken);
+        await handler.HandleAsync(new RemoveOrderMenuItemCommand(id, itemId), cancellationToken);
 
     /// <summary>
-    /// Sets a line's quantity (at least 1). Fails when a fixed discount is larger than the new subtotal.
+    /// Sets an item's quantity (at least 1). Fails when a fixed discount is larger than the new subtotal.
     /// </summary>
-    [HttpPut("{id:guid}/lines/{lineId:guid}/quantity")]
-    public async Task<Result<OrderDto>> ChangeLineQuantity(
+    [HttpPut("{id:guid}/items/{itemId:guid}/quantity")]
+    public async Task<Result<OrderDto>> ChangeItemQuantity(
         Guid id,
-        Guid lineId,
-        ChangeLineQuantityRequest request,
-        [FromServices] ICommandHandler<ChangeOrderLineQuantityCommand, OrderDto> handler,
+        Guid itemId,
+        ChangeItemQuantityRequest request,
+        [FromServices] ICommandHandler<ChangeOrderMenuItemQuantityCommand, OrderDto> handler,
         CancellationToken cancellationToken) =>
         await handler.HandleAsync(
-            new ChangeOrderLineQuantityCommand(id, lineId, request.Quantity!.Value),
+            new ChangeOrderMenuItemQuantityCommand(id, itemId, request.Quantity!.Value),
             cancellationToken);
 
     [HttpPut("{id:guid}/discount")]
@@ -187,7 +187,7 @@ public sealed class OrdersController : ControllerBase
 
 public sealed record AddOrderItemRequest(Guid MenuItemId, int Quantity, string? Notes);
 
-public sealed record ChangeLineQuantityRequest([Required] int? Quantity);
+public sealed record ChangeItemQuantityRequest([Required] int? Quantity);
 
 /// <summary>Exactly one of <paramref name="Rate"/> (percent of subtotal) or <paramref name="Amount"/> (fixed).</summary>
 public sealed record ApplyDiscountRequest(Percentage? Rate, Money? Amount);
@@ -196,7 +196,7 @@ public sealed record SetTipRequest([Required] Percentage? Rate);
 
 public sealed record SetPaymentMethodRequest([Required] PaymentMethod? PaymentMethod);
 
-/// <summary>A split by item: the line ids of each part, in part order. Used by PUT and preview.</summary>
+/// <summary>A split by item: the item ids of each part, in part order. Used by PUT and preview.</summary>
 public sealed record SaveSplitRequest(IReadOnlyList<SplitPartRequest?>? Parts);
 
-public sealed record SplitPartRequest(IReadOnlyList<Guid>? LineIds);
+public sealed record SplitPartRequest(IReadOnlyList<Guid>? ItemIds);

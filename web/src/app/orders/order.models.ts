@@ -39,15 +39,15 @@ export interface OrderListQuery {
 
 export type PaymentMethod = 'Cash' | 'Card';
 
-/** One line of an order (`OrderLineDto`). `unitPrice` and `lineTotal` are computed by the API; the UI only displays them. */
-export interface OrderLine {
+/** One item of an order (`OrderMenuItemDto`). `unitPrice` and `itemTotal` are computed by the API; the UI only displays them. */
+export interface OrderMenuItem {
   id: string;
   menuItemId: string;
   name: string;
   unitPrice: number;
   quantity: number;
   notes: string | null;
-  lineTotal: number;
+  itemTotal: number;
 }
 
 /** An order (`OrderDto`). Every money field is computed by the API; the UI only displays them. */
@@ -57,7 +57,7 @@ export interface Order {
   status: OrderStatus;
   createdAt: string;
   paymentMethod: PaymentMethod;
-  lines: OrderLine[];
+  items: OrderMenuItem[];
   subtotal: number;
   discount: number;
   surcharge: number;
@@ -68,7 +68,7 @@ export interface Order {
 
 /** One part of a split (`SplitPartDto`). Every money field is computed by the API; the UI only displays them. */
 export interface SplitPart {
-  lineIds: string[];
+  itemIds: string[];
   subtotal: number;
   discount: number;
   surcharge: number;
@@ -82,7 +82,7 @@ export interface OrderSplit {
   parts: SplitPart[];
 }
 
-/** Body of `PUT /api/orders/{id}/split` and `POST /api/orders/{id}/split/preview`: the line ids of each part, in order. */
+/** Body of `PUT /api/orders/{id}/split` and `POST /api/orders/{id}/split/preview`: the item ids of each part, in order. */
 export interface SaveSplitRequest {
-  parts: { lineIds: string[] }[];
+  parts: { itemIds: string[] }[];
 }

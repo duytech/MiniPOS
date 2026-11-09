@@ -5,13 +5,13 @@ using Pos.Domain.Orders;
 
 namespace Pos.Infrastructure.Persistence.Configurations;
 
-internal sealed class OrderLineConfiguration : IEntityTypeConfiguration<OrderLine>
+internal sealed class OrderMenuItemConfiguration : IEntityTypeConfiguration<OrderMenuItem>
 {
     public const string OrderIdProperty = "OrderId";
 
-    public void Configure(EntityTypeBuilder<OrderLine> builder)
+    public void Configure(EntityTypeBuilder<OrderMenuItem> builder)
     {
-        builder.ToTable("order_lines");
+        builder.ToTable("order_menu_items");
         builder.HasKey(l => l.Id);
         builder.Property(l => l.Id).HasColumnName("id").ValueGeneratedNever();
         builder.Property<Guid>(OrderIdProperty).HasColumnName("order_id");

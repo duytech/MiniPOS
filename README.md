@@ -10,7 +10,7 @@ and CI gates a change passes before it reaches `main`.
 
 ## What the app does
 
-Orders with lines, tax, tip, discount, card surcharge (dual pricing) and split bill (evenly or by item), with exact
+Orders with items, tax, tip, discount, card surcharge (dual pricing) and split bill (evenly or by item), with exact
 cents everywhere. Business rules: [`docs/business-rules.md`](docs/business-rules.md). Every API route and page, and
 the tests that verify it: [`docs/feature-list.json`](docs/feature-list.json).
 
@@ -94,7 +94,7 @@ Roslyn analyzers at `latest-recommended`; Sonar S3776 cognitive complexity, max 
 **Web** ([`web/`](web)): ESLint with `sonarjs/cognitive-complexity` (max 15), Angular strict mode and `ngc`, Vitest.
 
 **End to end**: Playwright on desktop and phone width ([`tests/e2e`](tests/e2e)), including bad data: 300-character
-names, an order with 200 lines, a throttled network.
+names, an order with 200 items, a throttled network.
 
 **Feature verifier**: `node scripts/verify-features.mjs [id ...]` runs the verification steps of each entry in
 [`docs/feature-list.json`](docs/feature-list.json), starts the services a step needs (Docker Desktop, Postgres, the

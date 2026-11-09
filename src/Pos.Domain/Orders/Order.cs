@@ -40,10 +40,10 @@ public class Order
     /// <summary>Discount as a fixed amount; at most one of this and <see cref="DiscountRate"/> is set.</summary>
     public Money? DiscountAmount { get; set; }
 
-    public List<OrderLine> Lines { get; set; } = [];
+    public List<OrderMenuItem> Items { get; set; } = [];
 
     /// <summary>
-    /// The saved split by item (line assignment only, in part order); empty when there is none. A saved split only
+    /// The saved split by item (item assignment only, in part order); empty when there is none. A saved split only
     /// fits the order it was made for: every real change of the order clears it.
     /// </summary>
     public List<SavedSplitPart> SavedSplitParts { get; set; } = [];

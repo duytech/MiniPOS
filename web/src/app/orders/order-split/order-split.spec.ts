@@ -2,9 +2,9 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, TestRequest, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { Order, OrderLine, OrderSplit, SplitPart } from '../order.models';
+import { Order, OrderMenuItem, OrderSplit, SplitPart } from '../order.models';
 import { GENERIC_ERROR } from '../api-error';
-import { CLEARED_MESSAGE, OrderSplitSection, TOO_FEW_LINES_MESSAGE } from './order-split';
+import { CLEARED_MESSAGE, OrderSplitSection, TOO_FEW_ITEMS_MESSAGE } from './order-split';
 
 describe('OrderSplitSection', () => {
   let fixture: ComponentFixture<OrderSplitSection>;
@@ -14,17 +14,17 @@ describe('OrderSplitSection', () => {
   const SPLIT_URL = '/api/orders/o1/split';
   const PREVIEW_URL = `${SPLIT_URL}/preview`;
 
-  const line = (id: string, name: string, lineTotal: number): OrderLine => ({
+  const item = (id: string, name: string, itemTotal: number): OrderMenuItem => ({
     id,
     menuItemId: `m-${id}`,
     name,
-    unitPrice: lineTotal,
+    unitPrice: itemTotal,
     quantity: 1,
     notes: null,
-    lineTotal,
+    itemTotal,
   });
 
-  const LINES = [line('l1', 'Pho', 60), line('l2', 'Banh mi', 40), line('l3', 'Iced tea', 3)];
+  const ITEMS = [item('l1', 'Pho', 60), item('l2', 'Banh mi', 40), item('l3', 'Iced tea', 3)];
 
   const order = (overrides: Partial<Order> = {}): Order => ({
     id: 'o1',
@@ -32,7 +32,7 @@ describe('OrderSplitSection', () => {
     status: 'Open',
     createdAt: '2026-10-26T07:30:00+00:00',
     paymentMethod: 'Cash',
-    lines: LINES,
+    items: ITEMS,
     subtotal: 103,
     discount: 0,
     surcharge: 0,
@@ -42,8 +42,8 @@ describe('OrderSplitSection', () => {
     ...overrides,
   });
 
-  const part = (lineIds: string[], overrides: Partial<SplitPart> = {}): SplitPart => ({
-    lineIds,
+  const part = (itemIds: string[], overrides: Partial<SplitPart> = {}): SplitPart => ({
+    itemIds,
     subtotal: 60,
     discount: 0,
     surcharge: 0,
@@ -59,8 +59,8 @@ describe('OrderSplitSection', () => {
     Array.from(fixture.nativeElement.querySelectorAll(`[data-testid="${testId}"]`)) as HTMLElement[];
   const text = (testId: string) => el(testId)?.textContent?.trim() ?? null;
   const texts = (testId: string) => all(testId).map((e) => e.textContent?.trim());
-  const lineSelects = () => all('split-line-part') as HTMLSelectElement[];
-  const assignments = () => lineSelects().map((s) => s.value);
+  const itemSelects = () => all('split-item-part') as HTMLSelectElement[];
+  const assignments = () => itemSelects().map((s) => s.value);
   const partCountOptions = () =>
     Array.from((el('split-part-count') as HTMLSelectElement).options).map((o) => o.value);
 
@@ -71,7 +71,7 @@ describe('OrderSplitSection', () => {
     fixture.detectChanges();
   };
   const assign = (index: number, partNumber: number | null) =>
-    choose(lineSelects()[index], partNumber === null ? '' : String(partNumber - 1));
+    choose(itemSelects()[index], partNumber === null ? '' : String(partNumber - 1));
   const click = (testId: string) => {
     (el(testId) as HTMLButtonElement).click();
     fixture.detectChanges();
@@ -121,13 +121,13 @@ describe('OrderSplitSection', () => {
     }
   };
 
-  /** Lines l1, l2 → part 1; l3 → part 2: the preview fires on the last assignment. */
+  /** Items l1, l2 → part 1; l3 → part 2: the preview fires on the last assignment. */
   const assignAll = () => {
     assign(0, 1);
     assign(1, 1);
     assign(2, 2);
   };
-  const ALL_ASSIGNED_BODY = { parts: [{ lineIds: ['l1', 'l2'] }, { lineIds: ['l3'] }] };
+  const ALL_ASSIGNED_BODY = { parts: [{ itemIds: ['l1', 'l2'] }, { itemIds: ['l3'] }] };
   const PREVIEW: OrderSplit = {
     parts: [
       part(['l1', 'l2'], { subtotal: 100, tax: 8.87, total: 108.87 }),
@@ -153,14 +153,14 @@ describe('OrderSplitSection', () => {
     vi.useRealTimers();
   });
 
-  it('with no saved split shows 2 parts, every line unassigned and sends no preview', () => {
+  it('with no saved split shows 2 parts, every item unassigned and sends no preview', () => {
     load();
 
     expect(el('split-section')).not.toBeNull();
     expect((el('split-part-count') as HTMLSelectElement).value).toBe('2');
     expect(partCountOptions()).toEqual(['2', '3']);
     expect(assignments()).toEqual(['', '', '']);
-    expect(Array.from(lineSelects()[0].options).map((o) => o.textContent?.trim())).toEqual([
+    expect(Array.from(itemSelects()[0].options).map((o) => o.textContent?.trim())).toEqual([
       'Unassigned',
       'Part 1',
       'Part 2',
@@ -177,12 +177,12 @@ describe('OrderSplitSection', () => {
     expect((el('split-part-count') as HTMLSelectElement).value).toBe('3');
     expect(assignments()).toEqual(['0', '1', '2']);
     expect(all('split-part-row')).toHaveLength(3);
-    expect(texts('split-part-lines')).toEqual(['Pho', 'Banh mi', 'Iced tea']);
+    expect(texts('split-part-items')).toEqual(['Pho', 'Banh mi', 'Iced tea']);
     expect(el('split-remove')).not.toBeNull();
     noPreview();
   });
 
-  it('previews only once every line has a part, with the parts in order', () => {
+  it('previews only once every item has a part, with the parts in order', () => {
     load();
 
     assign(0, 1);
@@ -192,7 +192,7 @@ describe('OrderSplitSection', () => {
 
     flush(expectPreview(ALL_ASSIGNED_BODY), PREVIEW);
     expect(all('split-part-row')).toHaveLength(2);
-    expect(texts('split-part-lines')).toEqual(['Pho, Banh mi', 'Iced tea']);
+    expect(texts('split-part-items')).toEqual(['Pho, Banh mi', 'Iced tea']);
   });
 
   it('cancels the pending preview when the assignment changes again (switchMap)', () => {
@@ -201,11 +201,11 @@ describe('OrderSplitSection', () => {
     const first = expectPreview(ALL_ASSIGNED_BODY);
 
     assign(2, 1);
-    const second = expectPreview({ parts: [{ lineIds: ['l1', 'l2', 'l3'] }, { lineIds: [] }] });
+    const second = expectPreview({ parts: [{ itemIds: ['l1', 'l2', 'l3'] }, { itemIds: [] }] });
 
     expect(first.cancelled).toBe(true);
-    fail(second, 'InvalidSplit', 'Every part of a split needs at least one line.');
-    expect(text('split-error')).toBe('Every part of a split needs at least one line.');
+    fail(second, 'InvalidSplit', 'Every part of a split needs at least one item.');
+    expect(text('split-error')).toBe('Every part of a split needs at least one item.');
   });
 
   it('shows each part amount exactly as the API sent it', () => {
@@ -234,7 +234,7 @@ describe('OrderSplitSection', () => {
     expect(el('split-loading')).toBeNull();
 
     assign(1, 2);
-    const pending = expectPreview({ parts: [{ lineIds: ['l1'] }, { lineIds: ['l2', 'l3'] }] });
+    const pending = expectPreview({ parts: [{ itemIds: ['l1'] }, { itemIds: ['l2', 'l3'] }] });
 
     expect(el('split-loading')).not.toBeNull();
     expect(texts('split-part-total')).toEqual(['$108.87', '$3.27']);
@@ -262,32 +262,32 @@ describe('OrderSplitSection', () => {
     expect(el('split-loading')).toBeNull();
   });
 
-  it('lowering the part count unassigns the lines of the removed parts', () => {
+  it('lowering the part count unassigns the items of the removed parts', () => {
     load(order(), SAVED);
 
     choose(el('split-part-count'), '2');
 
     expect(assignments()).toEqual(['0', '1', '']);
-    expect(Array.from(lineSelects()[0].options).map((o) => o.value)).toEqual(['', '0', '1']);
-    expect(all('split-part-row')).toHaveLength(0); // not every line has a part: no amounts to show
+    expect(Array.from(itemSelects()[0].options).map((o) => o.value)).toEqual(['', '0', '1']);
+    expect(all('split-part-row')).toHaveLength(0); // not every item has a part: no amounts to show
     noPreview();
   });
 
-  it('raising the part count keeps the assignments and previews if every line still has a part', () => {
+  it('raising the part count keeps the assignments and previews if every item still has a part', () => {
     load();
     assign(0, 1);
     assign(1, 2);
     choose(el('split-part-count'), '3');
     assign(2, 3);
 
-    flush(expectPreview({ parts: [{ lineIds: ['l1'] }, { lineIds: ['l2'] }, { lineIds: ['l3'] }] }), SAVED);
+    flush(expectPreview({ parts: [{ itemIds: ['l1'] }, { itemIds: ['l2'] }, { itemIds: ['l3'] }] }), SAVED);
     expect(assignments()).toEqual(['0', '1', '2']);
   });
 
-  it('shows the message instead of the builder when an open order has fewer than 2 lines', () => {
-    load(order({ lines: [LINES[0]] }));
+  it('shows the message instead of the builder when an open order has fewer than 2 items', () => {
+    load(order({ items: [ITEMS[0]] }));
 
-    expect(text('split-too-few-lines')).toBe(TOO_FEW_LINES_MESSAGE);
+    expect(text('split-too-few-items')).toBe(TOO_FEW_ITEMS_MESSAGE);
     expect(el('split-part-count')).toBeNull();
     expect(el('split-save')).toBeNull();
   });
@@ -298,7 +298,7 @@ describe('OrderSplitSection', () => {
     expect(el('split-section')).not.toBeNull();
     expect(texts('split-part-total')).toEqual(['$65.33', '$43.55', '$65.33']);
     expect(el('split-part-count')).toBeNull();
-    expect(el('split-line-part')).toBeNull();
+    expect(el('split-item-part')).toBeNull();
     expect(el('split-save')).toBeNull();
     expect(el('split-remove')).toBeNull();
   });
@@ -309,11 +309,11 @@ describe('OrderSplitSection', () => {
     expect(el('split-section')).toBeNull();
   });
 
-  it('after a line change clears the saved split, says so and keeps the draft of the remaining lines', () => {
+  it('after an item change clears the saved split, says so and keeps the draft of the remaining items', () => {
     load(order(), SAVED);
 
     // l2 was removed and l4 added: the API cleared the split (R5).
-    show(order({ lines: [LINES[0], LINES[2], line('l4', 'Spring rolls', 8)] }));
+    show(order({ items: [ITEMS[0], ITEMS[2], item('l4', 'Spring rolls', 8)] }));
     // While the GET runs, the draft is already reconciled.
     expect(assignments()).toEqual(['0', '2', '']);
     fail(expectGet(), 'SplitNotFound');
@@ -325,36 +325,36 @@ describe('OrderSplitSection', () => {
     noPreview();
   });
 
-  it('after a line change with every remaining line still assigned, previews the new amounts', () => {
+  it('after an item change with every remaining item still assigned, previews the new amounts', () => {
     load(order(), { parts: [part(['l1', 'l3']), part(['l2'])] });
 
-    show(order({ lines: [LINES[0], LINES[1]] }));
+    show(order({ items: [ITEMS[0], ITEMS[1]] }));
     fail(expectGet(), 'SplitNotFound');
 
     expect(text('split-message')).toBe(CLEARED_MESSAGE);
     expect((el('split-part-count') as HTMLSelectElement).value).toBe('2');
-    flush(expectPreview({ parts: [{ lineIds: ['l1'] }, { lineIds: ['l2'] }] }), {
+    flush(expectPreview({ parts: [{ itemIds: ['l1'] }, { itemIds: ['l2'] }] }), {
       parts: [part(['l1']), part(['l2'], { total: 43.55 })],
     });
     expect(texts('split-part-total')).toEqual(['$65.33', '$43.55']);
   });
 
-  it('drops the part count to the number of lines when lines are removed', () => {
+  it('drops the part count to the number of items when items are removed', () => {
     load(order(), SAVED);
 
-    show(order({ lines: [LINES[0], LINES[1]] }));
+    show(order({ items: [ITEMS[0], ITEMS[1]] }));
     fail(expectGet(), 'SplitNotFound');
 
     expect((el('split-part-count') as HTMLSelectElement).value).toBe('2');
     expect(partCountOptions()).toEqual(['2']);
     expect(assignments()).toEqual(['0', '1']);
-    flush(expectPreview({ parts: [{ lineIds: ['l1'] }, { lineIds: ['l2'] }] }), PREVIEW);
+    flush(expectPreview({ parts: [{ itemIds: ['l1'] }, { itemIds: ['l2'] }] }), PREVIEW);
   });
 
   it('does not show the cleared message when no split was saved', () => {
     load();
 
-    show(order({ lines: [LINES[0], LINES[1]] }));
+    show(order({ items: [ITEMS[0], ITEMS[1]] }));
     fail(expectGet(), 'SplitNotFound');
 
     expect(el('split-message')).toBeNull();
@@ -380,10 +380,10 @@ describe('OrderSplitSection', () => {
 
     click('split-save');
     const save = expectSave();
-    expect(save.request.body).toEqual({ parts: [{ lineIds: ['l1'] }, { lineIds: [] }] });
-    fail(save, 'InvalidSplit', 'Every line of the order must be in a part of the split.');
+    expect(save.request.body).toEqual({ parts: [{ itemIds: ['l1'] }, { itemIds: [] }] });
+    fail(save, 'InvalidSplit', 'Every item of the order must be in a part of the split.');
 
-    expect(text('split-error')).toBe('Every line of the order must be in a part of the split.');
+    expect(text('split-error')).toBe('Every item of the order must be in a part of the split.');
   });
 
   it('on a conflict when saving emits changed for the parent to reload', () => {
@@ -451,9 +451,9 @@ describe('OrderSplitSection', () => {
     load();
     assignAll();
 
-    fail(expectPreview(), 'LineNotOnOrder', 'Line l3 is not on this order.');
+    fail(expectPreview(), 'ItemNotOnOrder', 'Item l3 is not on this order.');
 
-    expect(text('split-error')).toBe('Line l3 is not on this order.');
+    expect(text('split-error')).toBe('Item l3 is not on this order.');
   });
 
   it('removes the saved split and hides Remove split; a second click while removing is ignored', () => {

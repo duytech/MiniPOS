@@ -24,13 +24,13 @@ export class OrdersApi {
     return this.http.get<ApiResponse<Order>>(`/api/orders/${encodeURIComponent(id)}`).pipe(unwrap());
   }
 
-  removeLine(orderId: string, lineId: string): Observable<Order> {
-    return this.http.delete<ApiResponse<Order>>(`/api/orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(lineId)}`).pipe(unwrap());
+  removeItem(orderId: string, itemId: string): Observable<Order> {
+    return this.http.delete<ApiResponse<Order>>(`/api/orders/${encodeURIComponent(orderId)}/items/${encodeURIComponent(itemId)}`).pipe(unwrap());
   }
 
-  changeLineQuantity(orderId: string, lineId: string, quantity: number): Observable<Order> {
+  changeItemQuantity(orderId: string, itemId: string, quantity: number): Observable<Order> {
     return this.http.put<ApiResponse<Order>>(
-      `/api/orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(lineId)}/quantity`,
+      `/api/orders/${encodeURIComponent(orderId)}/items/${encodeURIComponent(itemId)}/quantity`,
       { quantity },
     ).pipe(unwrap());
   }

@@ -15,7 +15,7 @@ Before any code, list every behavior the task does not state and ask the user in
   `error.message`, a fixed text, a reload?
 - Confirmation before destructive actions (delete, cancel)?
 - What refreshes after a change, and what happens to a second click while a change is in flight? If clicks queue,
-  also: what happens to a queued click that is no longer valid when its turn comes (a second Remove of the same line,
+  also: what happens to a queued click that is no longer valid when its turn comes (a second Remove of the same item,
   − below the minimum)?
 - Where the page is reached from and where it goes back to; what is shown or disabled when an action isn't allowed
   (e.g. a closed order).

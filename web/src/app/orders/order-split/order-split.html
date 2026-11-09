@@ -30,12 +30,12 @@
       </div>
     }
 
-    @if (tooFewLines()) {
+    @if (tooFewItems()) {
       <p
-        data-testid="split-too-few-lines"
+        data-testid="split-too-few-items"
         class="rounded-md border border-slate-200 bg-white px-4 py-6 text-center text-sm text-slate-600"
       >
-        Add at least 2 lines to split the bill.
+        Add at least 2 items to split the bill.
       </p>
     } @else {
       @if (editable()) {
@@ -55,21 +55,21 @@
           </label>
 
           <ul class="divide-y divide-slate-100 text-sm">
-            @for (line of order().lines; track line.id) {
+            @for (item of order().items; track item.id) {
               <li class="py-2">
                 <label class="flex items-center justify-between gap-3">
                   <span class="min-w-0 wrap-anywhere text-slate-900">
-                    {{ line.name }} <span class="text-slate-500">× {{ line.quantity }}</span>
+                    {{ item.name }} <span class="text-slate-500">× {{ item.quantity }}</span>
                   </span>
                   <select
-                    #linePart
-                    data-testid="split-line-part"
-                    (change)="assign(line.id, linePart.value)"
+                    #itemPart
+                    data-testid="split-item-part"
+                    (change)="assign(item.id, itemPart.value)"
                     class="shrink-0 rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm shadow-sm focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 focus:outline-none"
                   >
-                    <option value="" [selected]="partOf(line.id) === null">Unassigned</option>
+                    <option value="" [selected]="partOf(item.id) === null">Unassigned</option>
                     @for (part of partChoices(); track part) {
-                      <option [value]="part" [selected]="partOf(line.id) === part">Part {{ part + 1 }}</option>
+                      <option [value]="part" [selected]="partOf(item.id) === part">Part {{ part + 1 }}</option>
                     }
                   </select>
                 </label>
@@ -102,8 +102,8 @@
                 <tr data-testid="split-part-row" class="max-sm:block max-sm:py-2">
                   <td class="px-2 py-3 sm:px-4 max-sm:block max-sm:py-1">
                     <div class="font-medium text-slate-900">Part {{ $index + 1 }}</div>
-                    <div class="text-xs wrap-anywhere text-slate-500" data-testid="split-part-lines">
-                      {{ namesOf(part.lineIds) }}
+                    <div class="text-xs wrap-anywhere text-slate-500" data-testid="split-part-items">
+                      {{ namesOf(part.itemIds) }}
                     </div>
                   </td>
                   <td class="px-2 py-3 text-right text-slate-600 sm:px-4 max-sm:flex max-sm:justify-between max-sm:py-1 max-sm:before:font-normal max-sm:before:text-slate-500 max-sm:before:content-[attr(data-label)]" data-testid="split-part-subtotal" data-label="Subtotal">

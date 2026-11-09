@@ -9,7 +9,7 @@ namespace Pos.Api.IntegrationTests;
 /// <summary>
 /// Saving and removing a split go through the order's concurrency token (the orders row is touched), so they race
 /// each other and add-item like any order change. The invariant: no 5xx, and the stored split rows are exactly one
-/// accepted request's split, or none, and never name lines the order does not have or miss one it has.
+/// accepted request's split, or none, and never name items the order does not have or miss one it has.
 /// </summary>
 public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiFactory>
 {
@@ -41,13 +41,13 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
     }
 
     /// <summary>
-    /// Every PUT names the first four lines only. All requests load the order before any commits
+    /// Every PUT names the first four items only. All requests load the order before any commits
     /// (<see cref="OrderRace"/>), so a PUT whose split an add would make stale must lose on the token. Whatever
-    /// wins, no add is lost and a stored split covers exactly the stored lines. A PUT that loads the order after an add
-    /// committed (a line left out) is covered by the split contract tests.
+    /// wins, no add is lost and a stored split covers exactly the stored items. A PUT that loads the order after an add
+    /// committed (an item left out) is covered by the split contract tests.
     /// </summary>
     [Fact]
-    public async Task Puts_racing_add_items_lose_no_line_and_never_store_a_stale_split()
+    public async Task Puts_racing_add_items_lose_no_item_and_never_store_a_stale_split()
     {
         var (orderId, l) = await OrderWithLinesAsync(4);
         var newMenuItemIds = new List<Guid>();
@@ -76,15 +76,15 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
         Assert.Single(AssertOnly(results, null, ErrorCode.ConcurrentChange, ErrorCode.DataConflict));
         var acceptedAdds = results.Count(r => r is (null, "add"));
         Assert.Equal(4 + acceptedAdds, await StoredAsync<int>(
-            orderId, "(SELECT COUNT(*)::int FROM order_lines WHERE order_id = o.id)"));
-        var storedSplitLines = await StoredAsync<string>(orderId,
-            "(SELECT COALESCE(string_agg(spl.line_id::text, ',' ORDER BY spl.line_id::text COLLATE \"C\"), '') " +
-            "FROM order_split_parts sp JOIN order_split_part_lines spl ON spl.part_id = sp.id WHERE sp.order_id = o.id)");
-        if (storedSplitLines.Length > 0)
+            orderId, "(SELECT COUNT(*)::int FROM order_menu_items WHERE order_id = o.id)"));
+        var storedSplitItems = await StoredAsync<string>(orderId,
+            "(SELECT COALESCE(string_agg(spl.order_menu_item_id::text, ',' ORDER BY spl.order_menu_item_id::text COLLATE \"C\"), '') " +
+            "FROM order_split_parts sp JOIN order_split_part_menu_items spl ON spl.part_id = sp.id WHERE sp.order_id = o.id)");
+        if (storedSplitItems.Length > 0)
         {
             Assert.Equal(await StoredAsync<string>(orderId,
-                "(SELECT string_agg(id::text, ',' ORDER BY id::text COLLATE \"C\") FROM order_lines WHERE order_id = o.id)"),
-                storedSplitLines);
+                "(SELECT string_agg(id::text, ',' ORDER BY id::text COLLATE \"C\") FROM order_menu_items WHERE order_id = o.id)"),
+                storedSplitItems);
         }
     }
 
@@ -128,31 +128,31 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
         }
     }
 
-    /// <summary>Parts in order, separated by '|'; the line ids of a part sorted, to match the sorted SQL read of the stored rows (line order is checked in SplitBillContractTests).</summary>
+    /// <summary>Parts in order, separated by '|'; the item ids of a part sorted, to match the sorted SQL read of the stored rows (item order is checked in SplitBillContractTests).</summary>
     private static string Describe(IEnumerable<IEnumerable<Guid>> parts) =>
         string.Join("|", parts.Select(part => string.Join(",", part.Select(id => id.ToString()).Order(StringComparer.Ordinal))));
 
     /// <summary>The stored split in the same form as <see cref="Describe"/>; empty when there is none.</summary>
     private Task<string> StoredSplitAsync(Guid orderId) => StoredAsync<string>(orderId,
-        "(SELECT COALESCE(string_agg(p.lines, '|' ORDER BY p.position), '') FROM (" +
-        "SELECT sp.position, (SELECT string_agg(spl.line_id::text, ',' ORDER BY spl.line_id::text COLLATE \"C\") " +
-        "FROM order_split_part_lines spl WHERE spl.part_id = sp.id) AS lines " +
+        "(SELECT COALESCE(string_agg(p.items, '|' ORDER BY p.position), '') FROM (" +
+        "SELECT sp.position, (SELECT string_agg(spl.order_menu_item_id::text, ',' ORDER BY spl.order_menu_item_id::text COLLATE \"C\") " +
+        "FROM order_split_part_menu_items spl WHERE spl.part_id = sp.id) AS items " +
         "FROM order_split_parts sp WHERE sp.order_id = o.id) p)");
 
-    private async Task<(Guid OrderId, Guid[] LineIds)> OrderWithLinesAsync(int count)
+    private async Task<(Guid OrderId, Guid[] ItemIds)> OrderWithLinesAsync(int count)
     {
         var orderId = await _client.CreateOrderAsync();
-        var lineIds = new List<Guid>();
+        var itemIds = new List<Guid>();
         for (var i = 0; i < count; i++)
         {
             var menuItemId = await _client.CreateMenuItemAsync($"Side {i}", 1.25m);
             var response = await _client.AddItemAsync(orderId, menuItemId, 1);
             await response.AssertSuccessAsync();
-            lineIds.Add((await response.ReadDataAsync()).GetProperty("lines").EnumerateArray()
-                .Single(line => line.GetProperty("menuItemId").GetGuid() == menuItemId).GetProperty("id").GetGuid());
+            itemIds.Add((await response.ReadDataAsync()).GetProperty("items").EnumerateArray()
+                .Single(item => item.GetProperty("menuItemId").GetGuid() == menuItemId).GetProperty("id").GetGuid());
         }
 
-        return (orderId, [.. lineIds]);
+        return (orderId, [.. itemIds]);
     }
 
     /// <summary>Fails on any outcome not listed (null is a success); returns the label of every successful request.</summary>

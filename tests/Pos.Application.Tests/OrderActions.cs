@@ -3,12 +3,12 @@ using Pos.Application.Orders;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Application.Orders.ApplyDiscount;
 using Pos.Application.Orders.CancelOrder;
-using Pos.Application.Orders.ChangeOrderLineQuantity;
+using Pos.Application.Orders.ChangeOrderMenuItemQuantity;
 using Pos.Application.Orders.GetSplit;
 using Pos.Application.Orders.PayOrder;
 using Pos.Application.Orders.PreviewSplit;
 using Pos.Application.Orders.RemoveDiscount;
-using Pos.Application.Orders.RemoveOrderLine;
+using Pos.Application.Orders.RemoveOrderMenuItem;
 using Pos.Application.Orders.RemoveSplit;
 using Pos.Application.Orders.RemoveTip;
 using Pos.Application.Orders.SaveSplit;
@@ -59,20 +59,20 @@ internal sealed class OrderActions
             .HandleAsync(new AddOrderItemCommand(order.Id, menuItem.Id, quantity, notes), CancellationToken.None);
     }
 
-    /// <summary>Adds a new line of a new menu item and returns its id.</summary>
-    public async Task<Guid> AddLine(Order order, decimal price, int quantity = 1)
+    /// <summary>Adds a new item of a new menu item and returns its id.</summary>
+    public async Task<Guid> AddPricedItem(Order order, decimal price, int quantity = 1)
     {
-        var added = await AddItem(order, Item($"Item {order.Lines.Count}", price), quantity);
-        return added.Data!.Lines[^1].Id;
+        var added = await AddItem(order, Item($"Item {order.Items.Count}", price), quantity);
+        return added.Data!.Items[^1].Id;
     }
 
-    public Task<Result<OrderDto>> RemoveLine(Order order, Guid lineId) =>
-        new RemoveOrderLineHandler(Orders, Logger<RemoveOrderLineHandler>())
-            .HandleAsync(new RemoveOrderLineCommand(order.Id, lineId), CancellationToken.None);
+    public Task<Result<OrderDto>> RemoveItem(Order order, Guid itemId) =>
+        new RemoveOrderMenuItemHandler(Orders, Logger<RemoveOrderMenuItemHandler>())
+            .HandleAsync(new RemoveOrderMenuItemCommand(order.Id, itemId), CancellationToken.None);
 
-    public Task<Result<OrderDto>> ChangeQuantity(Order order, Guid lineId, int quantity) =>
-        new ChangeOrderLineQuantityHandler(Orders, Logger<ChangeOrderLineQuantityHandler>())
-            .HandleAsync(new ChangeOrderLineQuantityCommand(order.Id, lineId, quantity), CancellationToken.None);
+    public Task<Result<OrderDto>> ChangeQuantity(Order order, Guid itemId, int quantity) =>
+        new ChangeOrderMenuItemQuantityHandler(Orders, Logger<ChangeOrderMenuItemQuantityHandler>())
+            .HandleAsync(new ChangeOrderMenuItemQuantityCommand(order.Id, itemId, quantity), CancellationToken.None);
 
     public Task<Result<OrderDto>> ApplyPercentDiscount(Order order, decimal percent) =>
         new ApplyDiscountHandler(Orders, Logger<ApplyDiscountHandler>())

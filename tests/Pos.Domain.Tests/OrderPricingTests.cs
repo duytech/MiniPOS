@@ -15,7 +15,7 @@ public class OrderPricingTests
     private static Order OrderWith(decimal subtotal, Percentage taxRate)
     {
         var order = TestOrders.New(taxRate);
-        TestOrders.AddLine(order, subtotal);
+        TestOrders.AddPricedItem(order, subtotal);
         return order;
     }
 
@@ -29,19 +29,19 @@ public class OrderPricingTests
     }
 
     [Fact]
-    public void Line_total_is_unit_price_times_quantity()
+    public void Item_total_is_unit_price_times_quantity()
     {
-        var line = TestOrders.AddLine(TestOrders.New(), 3.35m, 3);
+        var item = TestOrders.AddPricedItem(TestOrders.New(), 3.35m, 3);
 
-        Assert.Equal(Money.Usd(10.05m), OrderPricing.LineTotal(line));
+        Assert.Equal(Money.Usd(10.05m), OrderPricing.ItemTotal(item));
     }
 
     [Fact]
-    public void Subtotal_is_the_sum_of_line_totals_and_total_equals_subtotal()
+    public void Subtotal_is_the_sum_of_item_totals_and_total_equals_subtotal()
     {
         var order = TestOrders.New();
-        TestOrders.AddLine(order, 12.99m, 2); // 25.98
-        TestOrders.AddLine(order, 3.35m, 3); // 10.05
+        TestOrders.AddPricedItem(order, 12.99m, 2); // 25.98
+        TestOrders.AddPricedItem(order, 3.35m, 3); // 10.05
 
         var totals = OrderPricing.CalculateTotals(order);
 
@@ -53,18 +53,18 @@ public class OrderPricingTests
     public void Sums_without_floating_point_drift()
     {
         var order = TestOrders.New();
-        TestOrders.AddLine(order, 0.10m);
-        TestOrders.AddLine(order, 0.20m);
+        TestOrders.AddPricedItem(order, 0.10m);
+        TestOrders.AddPricedItem(order, 0.20m);
 
         Assert.Equal(Money.Usd(0.30m), OrderPricing.CalculateTotals(order).Total);
     }
 
     [Fact]
-    public void Subtotal_with_quantity_replaces_only_that_line_and_leaves_the_order_unchanged()
+    public void Subtotal_with_quantity_replaces_only_that_item_and_leaves_the_order_unchanged()
     {
         var order = TestOrders.New();
-        var burger = TestOrders.AddLine(order, 12.99m, 2); // 25.98
-        TestOrders.AddLine(order, 10.03m);
+        var burger = TestOrders.AddPricedItem(order, 12.99m, 2); // 25.98
+        TestOrders.AddPricedItem(order, 10.03m);
 
         Assert.Equal(Money.Usd(10.03m), OrderPricing.SubtotalWithQuantity(order, burger, 0));
         Assert.Equal(Money.Usd(23.02m), OrderPricing.SubtotalWithQuantity(order, burger, 1));

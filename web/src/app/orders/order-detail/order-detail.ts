@@ -4,7 +4,7 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Observable, Subject, catchError, concatMap, defer, map, merge, of, scan, startWith, switchMap } from 'rxjs';
 
-import { Order, OrderLine, statusClass } from '../order.models';
+import { Order, OrderMenuItem, statusClass } from '../order.models';
 import { OrderSplitSection } from '../order-split/order-split';
 import { OrdersApi } from '../orders-api';
 import { GENERIC_ERROR, errorMessage, isConflict, isNotFound } from '../api-error';
@@ -12,7 +12,7 @@ import { GENERIC_ERROR, errorMessage, isConflict, isNotFound } from '../api-erro
 export const CHANGED_MESSAGE = 'The order changed. Showing the latest version.';
 
 /** What the cashier asked for. The quantity to send is worked out when the write runs, from the latest order. */
-type LineWrite = { kind: 'remove'; lineId: string } | { kind: 'step'; lineId: string; step: 1 | -1 };
+type ItemWrite = { kind: 'remove'; itemId: string } | { kind: 'step'; itemId: string; step: 1 | -1 };
 
 interface DetailState {
   order: Order | null;
@@ -37,7 +37,7 @@ export class OrderDetail {
   /** The `:id` route parameter (bound with `withComponentInputBinding`). */
   readonly id = input.required<string>();
 
-  private readonly writes = new Subject<LineWrite>();
+  private readonly writes = new Subject<ItemWrite>();
   private readonly reloads = new Subject<void>();
 
   /**
@@ -69,16 +69,16 @@ export class OrderDetail {
   protected readonly isOpen = computed(() => this.order()?.status === 'Open');
   protected readonly statusClass = statusClass;
 
-  protected removeLine(line: OrderLine): void {
-    this.writes.next({ kind: 'remove', lineId: line.id });
+  protected removeItem(item: OrderMenuItem): void {
+    this.writes.next({ kind: 'remove', itemId: item.id });
   }
 
-  protected increase(line: OrderLine): void {
-    this.writes.next({ kind: 'step', lineId: line.id, step: 1 });
+  protected increase(item: OrderMenuItem): void {
+    this.writes.next({ kind: 'step', itemId: item.id, step: 1 });
   }
 
-  protected decrease(line: OrderLine): void {
-    this.writes.next({ kind: 'step', lineId: line.id, step: -1 });
+  protected decrease(item: OrderMenuItem): void {
+    this.writes.next({ kind: 'step', itemId: item.id, step: -1 });
   }
 
   /** The split section saw a conflict (or its split vanished): show the latest order and say why. */
@@ -92,7 +92,7 @@ export class OrderDetail {
       catchError((error: unknown) =>
         of<Patch>(isNotFound(error) ? { loading: false, notFound: true } : { loading: false, error: GENERIC_ERROR }),
       ),
-      // A different order: start from an empty screen, not the previous order's lines.
+      // A different order: start from an empty screen, not the previous order's items.
       startWith<Patch>(INITIAL_STATE),
     );
   }
@@ -105,24 +105,24 @@ export class OrderDetail {
     );
   }
 
-  private runWrite(id: string, write: LineWrite): Observable<Patch> {
+  private runWrite(id: string, write: ItemWrite): Observable<Patch> {
     return defer(() => {
       // The latest order on screen: the one the previous write (or reload) returned.
       const order = this.state().order;
-      const line = order?.lines.find((l) => l.id === write.lineId);
-      if (!order || order.status !== 'Open' || !line) {
-        return EMPTY; // the line is already gone (e.g. a second click on Remove) or the order is read-only
+      const item = order?.items.find((l) => l.id === write.itemId);
+      if (!order || order.status !== 'Open' || !item) {
+        return EMPTY; // the item is already gone (e.g. a second click on Remove) or the order is read-only
       }
 
       let request: Observable<Order>;
       if (write.kind === 'remove') {
-        request = this.api.removeLine(id, line.id);
+        request = this.api.removeItem(id, item.id);
       } else {
-        const quantity = line.quantity + write.step;
+        const quantity = item.quantity + write.step;
         if (quantity < 1) {
-          return EMPTY; // − stops at 1; removing a line is only done with Remove
+          return EMPTY; // − stops at 1; removing an item is only done with Remove
         }
-        request = this.api.changeLineQuantity(id, line.id, quantity);
+        request = this.api.changeItemQuantity(id, item.id, quantity);
       }
 
       return request.pipe(
@@ -135,7 +135,7 @@ export class OrderDetail {
 
   private writeFailed(id: string, error: unknown): Observable<Patch> {
     if (isConflict(error) || isNotFound(error)) {
-      // Someone else changed the order (or removed the line): show the latest version.
+      // Someone else changed the order (or removed the item): show the latest version.
       return this.reload(id);
     }
     return of<Patch>({ loading: false, error: errorMessage(error) });

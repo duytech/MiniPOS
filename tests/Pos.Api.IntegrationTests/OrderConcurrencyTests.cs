@@ -16,7 +16,7 @@ public class OrderConcurrencyTests(PosApiFactory factory) : IClassFixture<PosApi
     {
         var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);
         var orderId = await _client.CreateOrderAsync();
-        // Create the line first so the parallel requests all update the same row.
+        // Create the item first so the parallel requests all update the same row.
         await (await _client.AddItemAsync(orderId, pho, 1)).AssertSuccessAsync();
 
         var statuses = await FireInParallel(_ => _client.AddItemAsync(orderId, pho, 1));
@@ -24,14 +24,14 @@ public class OrderConcurrencyTests(PosApiFactory factory) : IClassFixture<PosApi
         Assert.All(statuses, s => Assert.True(s is null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict, $"Unexpected {s}"));
         var succeeded = statuses.Count(s => s is null);
         var order = await _client.GetOrderAsync(orderId);
-        var line = Assert.Single(order.GetProperty("lines").EnumerateArray());
-        Assert.Equal(1 + succeeded, line.GetProperty("quantity").GetInt32());
+        var item = Assert.Single(order.GetProperty("items").EnumerateArray());
+        Assert.Equal(1 + succeeded, item.GetProperty("quantity").GetInt32());
         Assert.Equal((7.70m * (1 + succeeded)).ToString("0.00", System.Globalization.CultureInfo.InvariantCulture),
             order.Money("subtotal"));
     }
 
     [Fact]
-    public async Task Parallel_first_adds_to_an_empty_order_never_lose_lines()
+    public async Task Parallel_first_adds_to_an_empty_order_never_lose_items()
     {
         var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);
         var orderId = await _client.CreateOrderAsync();
@@ -40,13 +40,13 @@ public class OrderConcurrencyTests(PosApiFactory factory) : IClassFixture<PosApi
 
         Assert.All(statuses, s => Assert.True(s is null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict, $"Unexpected {s}"));
         var succeeded = statuses.Count(s => s is null);
-        var lines = (await _client.GetOrderAsync(orderId)).GetProperty("lines").EnumerateArray().ToList();
-        Assert.Equal(succeeded, lines.Sum(l => l.GetProperty("quantity").GetInt32()));
-        Assert.Single(lines);
+        var items = (await _client.GetOrderAsync(orderId)).GetProperty("items").EnumerateArray().ToList();
+        Assert.Equal(succeeded, items.Sum(l => l.GetProperty("quantity").GetInt32()));
+        Assert.Single(items);
     }
 
     [Fact]
-    public async Task Parallel_adds_of_different_lines_never_lose_lines()
+    public async Task Parallel_adds_of_different_items_never_lose_items()
     {
         var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);
         var orderId = await _client.CreateOrderAsync();
@@ -55,8 +55,8 @@ public class OrderConcurrencyTests(PosApiFactory factory) : IClassFixture<PosApi
 
         Assert.All(statuses, s => Assert.True(s is null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict, $"Unexpected {s}"));
         var succeeded = statuses.Count(s => s is null);
-        var lines = (await _client.GetOrderAsync(orderId)).GetProperty("lines").GetArrayLength();
-        Assert.Equal(succeeded, lines);
+        var items = (await _client.GetOrderAsync(orderId)).GetProperty("items").GetArrayLength();
+        Assert.Equal(succeeded, items);
     }
 
     [Fact]

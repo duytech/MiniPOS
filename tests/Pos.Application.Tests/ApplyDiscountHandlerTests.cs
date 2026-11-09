@@ -11,7 +11,7 @@ public class ApplyDiscountHandlerTests
     private async Task<Order> OrderWith(decimal subtotal)
     {
         var order = _act.NewOrder();
-        await _act.AddLine(order, subtotal);
+        await _act.AddPricedItem(order, subtotal);
         return order;
     }
 

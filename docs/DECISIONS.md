@@ -31,7 +31,7 @@ Important design decisions: what, why, when. Newest first.
   `Result<bool>` has `false`), so use `bool?` when null matters.
 
 ## 2026-11-08: Mapped Domain entities hold only properties (#140)
-- **What:** `Order`, `OrderLine`, `MenuItem`, `SavedSplitPart` and `SavedSplitLine` are `{ get; set; }` properties only.
+- **What:** `Order`, `OrderMenuItem`, `MenuItem`, `SavedSplitPart` and `SavedSplitMenuItem` are `{ get; set; }` properties only.
   Each use case's logic moved from the entity into its handler (e.g. `Order.Pay` → `PayOrderHandler`). Pricing and
   splitting stay in Domain as static `OrderPricing` and `OrderSplitting`, so totals are still computed in one place in
   Domain; the rules several handlers share are in static `OrderRules`. Value objects and records not mapped to tables
@@ -404,3 +404,12 @@ Important design decisions: what, why, when. Newest first.
 - **Base class, not an extension:** every repository inherits `BaseRepository` (Infrastructure) and saves with its
   protected `SaveChangesAsync`, the only place that translates save failures. The owner's choice over the earlier
   `SaveChangesTranslatedAsync` extension on `PosDbContext`.
+
+## 2026-11-09: OrderLine is OrderMenuItem; the API says items (#150)
+- **What:** the entity `OrderLine` is `OrderMenuItem` (table `order_menu_items`), `SavedSplitLine` is
+  `SavedSplitMenuItem` (table `order_split_part_menu_items`, column `order_menu_item_id`). The API, JSON and error codes
+  say items: `/api/orders/{id}/items/{itemId}`, `items`, `itemIds`, `itemTotal`, `OrderItemNotFound`, `ItemNotOnOrder`,
+  `ItemQuantityTooLarge`. The migration renames tables, column, indexes and constraints; it does not drop and create.
+- **Why:** the owner found "line" hard to understand. The API does not say `menu-items` because an `OrderMenuItem`
+  already has a `menuItemId`: `/menu-items/{id}` would not tell which id it is. Breaking API change, accepted: the only
+  client is the web app in this repo, changed in the same PR.

@@ -33,8 +33,8 @@ Content-Type: application/json
 
 { "rate": 18 }
 
-### Remove the line added above (422 while a fixed discount is more than the new subtotal)
-DELETE {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}/lines/{{addItem.response.body.$.lines[0].id}}
+### Remove the item added above (422 while a fixed discount is more than the new subtotal)
+DELETE {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}/items/{{addItem.response.body.$.items[0].id}}
 
 ### Remove the tip
 DELETE {{Pos.Api_HostAddress}}/api/orders/{{order.response.body.$.id}}/tip

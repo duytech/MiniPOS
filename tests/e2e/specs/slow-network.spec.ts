@@ -100,7 +100,7 @@ test.describe('slow network', () => {
     await expectDetailMatchesApi(page, order);
   });
 
-  test('changing a line on /orders/{id} keeps the lines visible with a loading indicator', async ({
+  test('changing an item on /orders/{id} keeps the items visible with a loading indicator', async ({
     page,
     request,
   }) => {
@@ -117,7 +117,7 @@ test.describe('slow network', () => {
 
     await expect(page.locator(RELOAD_INDICATOR), 'small loading indicator while reloading').toBeVisible();
     await expect(table, 'table stays while reloading').toBeVisible();
-    await expect(row, 'line stays while reloading').toBeVisible();
+    await expect(row, 'item stays while reloading').toBeVisible();
     await expect(page.locator(INITIAL_LOADING), 'no full spinner while reloading').toHaveCount(0);
     await page.screenshot({ path: test.info().outputPath('detail-change-reloading.png') });
 

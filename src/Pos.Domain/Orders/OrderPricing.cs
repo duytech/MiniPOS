@@ -6,19 +6,19 @@ namespace Pos.Domain.Orders;
 public static class OrderPricing
 {
     /// <summary>Unit price × quantity. Both are exact (whole cents × integer), so no rounding is involved.</summary>
-    public static Money LineTotal(OrderLine line) => line.UnitPrice * line.Quantity;
+    public static Money ItemTotal(OrderMenuItem item) => item.UnitPrice * item.Quantity;
 
     public static Money Subtotal(Order order) =>
-        order.Lines.Aggregate(Money.Zero(order.Currency), (sum, line) => sum + LineTotal(line));
+        order.Items.Aggregate(Money.Zero(order.Currency), (sum, item) => sum + ItemTotal(item));
 
-    /// <summary>The subtotal the order would have with <paramref name="line"/> at <paramref name="quantity"/> (0 = removed).</summary>
-    public static Money SubtotalWithQuantity(Order order, OrderLine line, int quantity) =>
-        Subtotal(order) - LineTotal(line) + line.UnitPrice * quantity;
+    /// <summary>The subtotal the order would have with <paramref name="item"/> at <paramref name="quantity"/> (0 = removed).</summary>
+    public static Money SubtotalWithQuantity(Order order, OrderMenuItem item, int quantity) =>
+        Subtotal(order) - ItemTotal(item) + item.UnitPrice * quantity;
 
     /// <summary>
     /// Each step is rounded to cents (MidpointRounding.AwayFromZero) before the next step uses it.
-    /// 1. line total = unit price × quantity (exact cents)
-    /// 2. subtotal = sum of line totals
+    /// 1. item total = unit price × quantity (exact cents)
+    /// 2. subtotal = sum of item totals
     /// 3. discount = percentage of subtotal, or a fixed amount
     /// 4. surcharge = card surcharge rate × (subtotal − discount) when paying by card, otherwise zero
     /// 5. tax = tax rate × (subtotal − discount + surcharge), i.e. the surcharge is taxed

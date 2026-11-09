@@ -33,8 +33,8 @@ public class EnvelopeContractTests(PosApiFactory factory) : IClassFixture<PosApi
         var orderId = await _client.CreateOrderAsync();
         await (await _client.AddItemAsync(orderId, pho, 1)).AssertSuccessAsync();
         var order = await (await _client.AddItemAsync(orderId, tea, 1)).ReadDataAsync();
-        var lineIds = order.GetProperty("lines").EnumerateArray().Select(l => l.GetProperty("id").GetGuid()).ToArray();
-        await (await _client.SaveSplitAsync(orderId, ApiClient.SplitBody([lineIds[0]], [lineIds[1]]))).AssertSuccessAsync();
+        var itemIds = order.GetProperty("items").EnumerateArray().Select(l => l.GetProperty("id").GetGuid()).ToArray();
+        await (await _client.SaveSplitAsync(orderId, ApiClient.SplitBody([itemIds[0]], [itemIds[1]]))).AssertSuccessAsync();
 
         var response = await _client.RemoveSplitAsync(orderId);
 

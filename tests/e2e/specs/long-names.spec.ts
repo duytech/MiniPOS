@@ -10,7 +10,7 @@ import {
   searchOrders,
 } from '../support/pages';
 
-// Bad data: menu item names of ~300 characters on an order line. No rule says how long names are displayed
+// Bad data: menu item names of ~300 characters on an order item. No rule says how long names are displayed
 // (wrap / truncate), so only CLAUDE.md rules are asserted: amounts equal the API to the cent, shown as $x.xx, and at
 // 375 px no horizontal page scroll with money and row actions on screen.
 

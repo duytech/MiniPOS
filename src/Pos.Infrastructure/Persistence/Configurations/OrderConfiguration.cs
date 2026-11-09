@@ -34,8 +34,8 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         // Postgres system column that changes on every update of the row: the optimistic concurrency token.
         builder.Property<uint>("xmin").HasColumnName("xmin").HasColumnType("xid").IsRowVersion();
 
-        builder.HasMany(o => o.Lines).WithOne()
-            .HasForeignKey(OrderLineConfiguration.OrderIdProperty)
+        builder.HasMany(o => o.Items).WithOne()
+            .HasForeignKey(OrderMenuItemConfiguration.OrderIdProperty)
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(o => o.SavedSplitParts).WithOne()

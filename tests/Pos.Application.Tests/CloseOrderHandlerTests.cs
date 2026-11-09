@@ -22,7 +22,7 @@ public class CloseOrderHandlerTests
         {
             foreach (var change in new[]
                      {
-                         "remove-line", "change-quantity", "add-item", "apply-percent-discount", "apply-fixed-discount",
+                         "remove-item", "change-quantity", "add-item", "apply-percent-discount", "apply-fixed-discount",
                          "remove-discount", "set-tip", "remove-tip", "set-payment-method",
                      })
             {
@@ -46,8 +46,8 @@ public class CloseOrderHandlerTests
 
         var result = change switch
         {
-            "remove-line" => await _act.RemoveLine(order, order.Lines[0].Id),
-            "change-quantity" => await _act.ChangeQuantity(order, order.Lines[0].Id, 3),
+            "remove-item" => await _act.RemoveItem(order, order.Items[0].Id),
+            "change-quantity" => await _act.ChangeQuantity(order, order.Items[0].Id, 3),
             "add-item" => await _act.AddItem(order, Burger, 1),
             "apply-percent-discount" => await _act.ApplyPercentDiscount(order, 10m),
             "apply-fixed-discount" => await _act.ApplyFixedDiscount(order, 1.00m),
@@ -59,7 +59,7 @@ public class CloseOrderHandlerTests
 
         Assert.Equal(ErrorCode.OrderNotOpen, result.Error!.Code);
         Assert.Equal($"The order is {status}; only an open order can be changed.", result.Error!.Message);
-        Assert.Equal(1, Assert.Single(order.Lines).Quantity);
+        Assert.Equal(1, Assert.Single(order.Items).Quantity);
         Assert.Equal(totalsBefore, OrderPricing.CalculateTotals(order));
         Assert.Equal(PaymentMethod.Cash, order.PaymentMethod);
         Assert.Equal(savesBefore, _act.Orders.SaveCount);
@@ -71,7 +71,7 @@ public class CloseOrderHandlerTests
     public async Task Closing_an_open_order_sets_the_status_and_its_time_and_keeps_the_totals(OrderStatus status)
     {
         var order = _act.NewOrder(new Percentage(8.875m), new Percentage(3m));
-        await _act.AddLine(order, 0.70m);
+        await _act.AddPricedItem(order, 0.70m);
         await _act.ApplyPercentDiscount(order, 15m);
         await _act.SetTip(order, 15m);
         await _act.SetPaymentMethod(order, PaymentMethod.Card);
@@ -101,7 +101,7 @@ public class CloseOrderHandlerTests
         var result = (await _act.Close(order, status)).Data!;
 
         Assert.Equal(status, order.Status);
-        Assert.Empty(order.Lines);
+        Assert.Empty(order.Items);
         Assert.Equal(Money.Usd(0.00m), result.Total);
     }
 

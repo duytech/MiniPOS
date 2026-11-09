@@ -3,17 +3,17 @@ using Pos.Application.Common;
 using Pos.Domain.Common;
 using Pos.Domain.Orders;
 
-namespace Pos.Application.Orders.RemoveOrderLine;
+namespace Pos.Application.Orders.RemoveOrderMenuItem;
 
 /// <summary>
-/// Removes the line from the order; removing the last line leaves the order open and empty. A percent discount
+/// Removes the item from the order; removing the last item leaves the order open and empty. A percent discount
 /// follows the new subtotal. A fixed discount must not be more than the new subtotal: the removal is rejected and
 /// the discount has to be changed or removed first.
 /// </summary>
-public sealed class RemoveOrderLineHandler(IOrderRepository orders, ILogger<RemoveOrderLineHandler> logger)
-    : ICommandHandler<RemoveOrderLineCommand, OrderDto>
+public sealed class RemoveOrderMenuItemHandler(IOrderRepository orders, ILogger<RemoveOrderMenuItemHandler> logger)
+    : ICommandHandler<RemoveOrderMenuItemCommand, OrderDto>
 {
-    public async Task<Result<OrderDto>> HandleAsync(RemoveOrderLineCommand command, CancellationToken cancellationToken)
+    public async Task<Result<OrderDto>> HandleAsync(RemoveOrderMenuItemCommand command, CancellationToken cancellationToken)
     {
         var order = await orders.GetByIdAsync(command.OrderId, cancellationToken);
         if (order is null)
@@ -21,20 +21,20 @@ public sealed class RemoveOrderLineHandler(IOrderRepository orders, ILogger<Remo
             return Result.Fail<OrderDto>(NotFoundErrors.Order(command.OrderId));
         }
 
-        var line = order.Lines.FirstOrDefault(l => l.Id == command.LineId);
-        if (line is null)
+        var item = order.Items.FirstOrDefault(l => l.Id == command.ItemId);
+        if (item is null)
         {
-            return Result.Fail<OrderDto>(NotFoundErrors.OrderLine(command.LineId));
+            return Result.Fail<OrderDto>(NotFoundErrors.OrderMenuItem(command.ItemId));
         }
 
-        var newSubtotal = OrderPricing.SubtotalWithQuantity(order, line, quantity: 0);
+        var newSubtotal = OrderPricing.SubtotalWithQuantity(order, item, quantity: 0);
         if ((OrderRules.OpenError(order)
-             ?? OrderRules.FixedDiscountError(order.DiscountAmount, newSubtotal, "Removing the line")) is { } error)
+             ?? OrderRules.FixedDiscountError(order.DiscountAmount, newSubtotal, "Removing the item")) is { } error)
         {
             return Result.Fail<OrderDto>(error);
         }
 
-        order.Lines.Remove(line);
+        order.Items.Remove(item);
         order.SavedSplitParts.Clear();
 
         try

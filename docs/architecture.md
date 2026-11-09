@@ -12,7 +12,7 @@ lists each offending member.
   The one expected exception is a repository save's `SaveFailedException` (below). Other exceptions are left for bugs
   (constructor guards), which end as a 500. The controller returns the
   `Result` as it is: it serializes as the envelope.
-- Domain classes mapped to the database (`Order`, `OrderLine`, `MenuItem`, `SavedSplitPart`, `SavedSplitLine`) hold only
+- Domain classes mapped to the database (`Order`, `OrderMenuItem`, `MenuItem`, `SavedSplitPart`, `SavedSplitMenuItem`) hold only
   `{ get; set; }` properties: no methods, computed properties or constructors with parameters (`EntityShapeTests`).
   A use case's logic lives in its handler (e.g. `PayOrderHandler` checks the order is open, then sets `Status` and
   `PaidAt`). What several handlers share stays in Domain as static classes: `OrderPricing` (all amounts, the only

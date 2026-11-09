@@ -17,25 +17,25 @@ internal static class TestOrders
         PaymentMethod = PaymentMethod.Cash,
     };
 
-    public static OrderLine AddLine(Order order, decimal unitPrice, int quantity = 1)
+    public static OrderMenuItem AddPricedItem(Order order, decimal unitPrice, int quantity = 1)
     {
-        var line = new OrderLine
+        var item = new OrderMenuItem
         {
             Id = Guid.NewGuid(),
             MenuItemId = Guid.NewGuid(),
-            Name = $"Item {order.Lines.Count}",
+            Name = $"Item {order.Items.Count}",
             UnitPrice = Money.Usd(unitPrice),
             Quantity = quantity,
         };
-        order.Lines.Add(line);
-        return line;
+        order.Items.Add(item);
+        return item;
     }
 
-    /// <summary>An order with one line per price; returns the line ids in order.</summary>
-    public static (Order Order, Guid[] LineIds) WithLines(Percentage taxRate, Percentage cardSurchargeRate, params decimal[] prices)
+    /// <summary>An order with one item per price; returns the item ids in order.</summary>
+    public static (Order Order, Guid[] ItemIds) WithItems(Percentage taxRate, Percentage cardSurchargeRate, params decimal[] prices)
     {
         var order = New(taxRate, cardSurchargeRate);
-        var lineIds = prices.Select(price => AddLine(order, price).Id).ToArray();
-        return (order, lineIds);
+        var itemIds = prices.Select(price => AddPricedItem(order, price).Id).ToArray();
+        return (order, itemIds);
     }
 }
