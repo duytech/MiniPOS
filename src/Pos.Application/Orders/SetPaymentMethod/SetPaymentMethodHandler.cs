@@ -16,9 +16,9 @@ public sealed class SetPaymentMethodHandler(IOrderRepository orders, ILogger<Set
             return Result.Fail<OrderDto>(NotFoundErrors.Order(command.OrderId));
         }
 
-        if (OrderRules.OpenError(order) is { } notOpen)
+        if (!OrderRules.IsOpen(order))
         {
-            return Result.Fail<OrderDto>(notOpen);
+            return Result.Fail<OrderDto>(OrderErrors.NotOpen(order.Status));
         }
 
         if (order.PaymentMethod != command.PaymentMethod)

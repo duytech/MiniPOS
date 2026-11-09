@@ -24,9 +24,9 @@ public sealed class RemoveSplitHandler(IOrderRepository orders, ILogger<RemoveSp
             return Result.Fail<bool?>(NotFoundErrors.Split(command.OrderId));
         }
 
-        if (OrderRules.OpenError(order) is { } notOpen)
+        if (!OrderRules.IsOpen(order))
         {
-            return Result.Fail<bool?>(notOpen);
+            return Result.Fail<bool?>(OrderErrors.NotOpen(order.Status));
         }
 
         order.SavedSplitParts.Clear();

@@ -88,6 +88,8 @@ public class ValidatorTests
 
     [Theory]
     [InlineData("15", null, true)]
+    [InlineData("100", null, true)]
+    [InlineData("100.0001", null, false)]
     [InlineData(null, "2.50", true)]
     [InlineData(null, "0.00", true)]
     [InlineData(null, "9999999999.99", true)]
@@ -95,7 +97,7 @@ public class ValidatorTests
     [InlineData("15", "2.50", false)]
     [InlineData(null, "-0.01", false)]
     [InlineData(null, "10000000000.00", false)]
-    public void Discount_has_exactly_one_of_rate_or_amount_and_the_amount_fits(string? rate, string? amount, bool valid)
+    public void Discount_has_exactly_one_of_rate_up_to_100_or_amount_and_the_amount_fits(string? rate, string? amount, bool valid)
     {
         var result = Validator<ApplyDiscountCommand>().Validate(new ApplyDiscountCommand(
             Guid.NewGuid(),

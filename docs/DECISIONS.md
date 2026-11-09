@@ -413,3 +413,14 @@ Important design decisions: what, why, when. Newest first.
 - **Why:** the owner found "line" hard to understand. The API does not say `menu-items` because an `OrderMenuItem`
   already has a `menuItemId`: `/menu-items/{id}` would not tell which id it is. Breaking API change, accepted: the only
   client is the web app in this repo, changed in the same PR.
+
+## 2026-11-09: Order rules check with bool; OrderErrors builds the errors (#152)
+- **What:** `OrderRules.IsOpen(order)` returns `bool`; the handler fails with `OrderErrors.NotOpen(order.Status)`.
+  `OrderErrors` (Domain) holds the order errors shared by several use cases (`NotOpen`, `ItemNotOnOrder`).
+  `OrderRules.FixedDiscountFits(discount, subtotal)` is a `bool` too; `OrderErrors.DiscountExceedsSubtotal` (applying
+  the discount) and `DiscountExceedsNewSubtotal` (an item change) build its two messages.
+- **Why:** the owner's choice: a check reads as a question (`IsOpen`), and building the error stays in one place.
+  `IsOpen` is not a property of `Order` because mapped entities hold only auto-properties (`EntityShapeTests`).
+  Trade-off, accepted: handlers no longer chain the open check with `??`.
+- **Percent discount ≤ 100% is checked by `ApplyDiscountValidator`:** the owner's choice; it needs nothing from the
+  order. API change, accepted: a rate above 100 now answers `ValidationFailed`, not `DiscountExceedsSubtotal`.

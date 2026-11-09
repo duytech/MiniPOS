@@ -25,7 +25,12 @@ public sealed class AddOrderItemHandler(IOrderRepository orders, IMenuItemReposi
             return Result.Fail<OrderDto>(NotFoundErrors.MenuItem(command.MenuItemId));
         }
 
-        if ((OrderRules.OpenError(order) ?? AddItem(order, menuItem, command.Quantity, command.Notes)) is { } error)
+        if (!OrderRules.IsOpen(order))
+        {
+            return Result.Fail<OrderDto>(OrderErrors.NotOpen(order.Status));
+        }
+
+        if (AddItem(order, menuItem, command.Quantity, command.Notes) is { } error)
         {
             return Result.Fail<OrderDto>(error);
         }

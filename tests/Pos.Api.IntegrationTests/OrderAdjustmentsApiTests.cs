@@ -71,7 +71,7 @@ public class OrderAdjustmentsApiTests(PosApiFactory factory) : IClassFixture<Pos
         await (await _client.ApplyDiscountAsync(orderId, new { amount = 10.01m }))
             .AssertErrorAsync(ErrorCode.DiscountExceedsSubtotal);
         await (await _client.ApplyDiscountAsync(orderId, new { rate = 100.01m }))
-            .AssertErrorAsync(ErrorCode.DiscountExceedsSubtotal);
+            .AssertErrorAsync(ErrorCode.ValidationFailed);
         Assert.Equal("0.00", (await _client.GetOrderAsync(orderId)).Money("discount"));
     }
 

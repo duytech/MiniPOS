@@ -28,7 +28,12 @@ public sealed class ChangeOrderMenuItemQuantityHandler(IOrderRepository orders,
             return Result.Fail<OrderDto>(NotFoundErrors.OrderMenuItem(command.ItemId));
         }
 
-        if ((OrderRules.OpenError(order) ?? ChangeQuantity(order, item, command.Quantity)) is { } error)
+        if (!OrderRules.IsOpen(order))
+        {
+            return Result.Fail<OrderDto>(OrderErrors.NotOpen(order.Status));
+        }
+
+        if (ChangeQuantity(order, item, command.Quantity) is { } error)
         {
             return Result.Fail<OrderDto>(error);
         }
@@ -54,9 +59,9 @@ public sealed class ChangeOrderMenuItemQuantityHandler(IOrderRepository orders,
         }
 
         var newSubtotal = OrderPricing.SubtotalWithQuantity(order, item, quantity);
-        if (OrderRules.FixedDiscountError(order.DiscountAmount, newSubtotal, $"A quantity of {quantity}") is { } tooLarge)
+        if (order.DiscountAmount is { } discount && !OrderRules.FixedDiscountFits(discount, newSubtotal))
         {
-            return tooLarge;
+            return OrderErrors.DiscountExceedsNewSubtotal($"A quantity of {quantity}", discount, newSubtotal);
         }
 
         item.Quantity = quantity;

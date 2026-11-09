@@ -17,9 +17,9 @@ public sealed class CancelOrderHandler(IOrderRepository orders, TimeProvider tim
             return Result.Fail<OrderDto>(NotFoundErrors.Order(command.OrderId));
         }
 
-        if (OrderRules.OpenError(order) is { } notOpen)
+        if (!OrderRules.IsOpen(order))
         {
-            return Result.Fail<OrderDto>(notOpen);
+            return Result.Fail<OrderDto>(OrderErrors.NotOpen(order.Status));
         }
 
         // A saved split is kept.

@@ -29,18 +29,6 @@ public class ApplyDiscountHandlerTests
     }
 
     [Fact]
-    public async Task Percent_discount_above_100_is_rejected()
-    {
-        var order = await OrderWith(11.50m);
-
-        var result = await _act.ApplyPercentDiscount(order, 100.01m);
-
-        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, result.Error!.Code);
-        Assert.Null(order.DiscountRate);
-        Assert.Null(order.DiscountAmount);
-    }
-
-    [Fact]
     public async Task Applying_a_discount_replaces_the_previous_one_and_it_can_be_removed()
     {
         var order = await OrderWith(10.00m);
