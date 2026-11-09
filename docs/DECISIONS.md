@@ -2,6 +2,13 @@
 
 Important design decisions: what, why, when. Newest first.
 
+## 2026-11-09: No OrderDiscount value object (#148)
+- **What:** `OrderDiscount` and `OrderPricing.Discount(order)` are deleted. `CalculateTotals` reads `Order.DiscountRate`
+  / `DiscountAmount` directly; `ApplyDiscountHandler` copies the command's `Rate` / `Amount` onto the order.
+- **Why:** "exactly one of rate or amount" is a rule about what gets written, so it is checked when writing
+  (`ApplyDiscountValidator`; `RemoveDiscountHandler` clears both). Re-checking it on read added nothing and, if both were
+  ever set, silently dropped the discount.
+
 ## 2026-11-08: Validation failures go into the message; controllers return Result (#144)
 - **What:** `ValidationError` and `error.fields` are gone. A validation failure is `Error.Validation(messages)`: code
   `ValidationFailed`, message every failure message joined with a space (`"'Quantity' must be greater than '0'."`).
@@ -28,7 +35,7 @@ Important design decisions: what, why, when. Newest first.
   Each use case's logic moved from the entity into its handler (e.g. `Order.Pay` → `PayOrderHandler`). Pricing and
   splitting stay in Domain as static `OrderPricing` and `OrderSplitting`, so totals are still computed in one place in
   Domain; the rules several handlers share are in static `OrderRules`. Value objects and records not mapped to tables
-  (`Money`, `Percentage`, `OrderDiscount`, `OrderTotals`, `SplitPart`) keep their members. No API or schema change.
+  (`Money`, `Percentage`, `OrderTotals`, `SplitPart`) keep their members. No API or schema change.
 - **Why:** the owner's decision.
 - **Trade-off, accepted:** the entities no longer protect themselves: any code can set `Status` or `Quantity` without the
   rules. The rules are kept by the handlers, checked by handler tests (`OrderActions` runs the real handlers on fakes),

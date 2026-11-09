@@ -17,18 +17,15 @@ public sealed class ApplyDiscountHandler(IOrderRepository orders, ILogger<ApplyD
             return Result.Fail<OrderDto>(NotFoundErrors.Order(command.OrderId));
         }
 
-        var discount = command.Rate is { } rate
-            ? OrderDiscount.PercentOfSubtotal(rate)
-            : OrderDiscount.FixedAmount(command.Amount!.Value);
-        if ((OrderRules.OpenError(order) ?? DiscountError(order, discount)) is { } error)
+        if ((OrderRules.OpenError(order) ?? DiscountError(order, command)) is { } error)
         {
             return Result.Fail<OrderDto>(error);
         }
 
-        if (order.DiscountRate != discount.Rate || order.DiscountAmount != discount.Amount)
+        if (order.DiscountRate != command.Rate || order.DiscountAmount != command.Amount)
         {
-            order.DiscountRate = discount.Rate;
-            order.DiscountAmount = discount.Amount;
+            order.DiscountRate = command.Rate;
+            order.DiscountAmount = command.Amount;
             order.SavedSplitParts.Clear();
         }
 
@@ -45,7 +42,7 @@ public sealed class ApplyDiscountHandler(IOrderRepository orders, ILogger<ApplyD
         return Result.Ok(OrderDto.From(order));
     }
 
-    private static Error? DiscountError(Order order, OrderDiscount discount) => discount.Rate is { Value: > 100m } rate
+    private static Error? DiscountError(Order order, ApplyDiscountCommand command) => command.Rate is { Value: > 100m } rate
         ? new Error(ErrorCode.DiscountExceedsSubtotal, $"A discount of {rate} is more than the subtotal.")
-        : OrderRules.FixedDiscountError(discount.Amount, OrderPricing.Subtotal(order), change: null);
+        : OrderRules.FixedDiscountError(command.Amount, OrderPricing.Subtotal(order), change: null);
 }

@@ -74,20 +74,6 @@ public class OrderPricingTests
     }
 
     [Fact]
-    public void Discount_is_built_from_the_rate_or_the_amount()
-    {
-        var order = TestOrders.New();
-        Assert.Null(OrderPricing.Discount(order));
-
-        order.DiscountRate = new Percentage(15m);
-        Assert.Equal(OrderDiscount.PercentOfSubtotal(new Percentage(15m)), OrderPricing.Discount(order));
-
-        order.DiscountRate = null;
-        order.DiscountAmount = Money.Usd(2.00m);
-        Assert.Equal(OrderDiscount.FixedAmount(Money.Usd(2.00m)), OrderPricing.Discount(order));
-    }
-
-    [Fact]
     public void Percent_discount_is_rounded_away_from_zero_at_the_midpoint()
     {
         var order = OrderWith(11.50m, Percentage.Zero);
