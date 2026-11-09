@@ -15,9 +15,8 @@ public class OrderPricingPersistenceTests(PosApiFactory factory) : IClassFixture
     [InlineData(false)]
     public async Task Rates_discount_tip_and_payment_method_survive_a_round_trip(bool percentDiscount)
     {
-        var discount = percentDiscount
-            ? OrderDiscount.PercentOfSubtotal(new Percentage(15m))
-            : OrderDiscount.FixedAmount(Money.Usd(0.75m));
+        Percentage? discountRate = percentDiscount ? new Percentage(15m) : null;
+        Money? discountAmount = percentDiscount ? null : Money.Usd(0.75m);
         Guid orderId;
         OrderTotals expected;
         using (var scope = factory.Services.CreateScope())
@@ -34,8 +33,8 @@ public class OrderPricingPersistenceTests(PosApiFactory factory) : IClassFixture
                 CardSurchargeRate = new Percentage(3m),
                 PaymentMethod = PaymentMethod.Card,
                 TipRate = new Percentage(18m),
-                DiscountRate = discount.Rate,
-                DiscountAmount = discount.Amount,
+                DiscountRate = discountRate,
+                DiscountAmount = discountAmount,
                 Lines =
                 [
                     new OrderLine
@@ -59,7 +58,8 @@ public class OrderPricingPersistenceTests(PosApiFactory factory) : IClassFixture
             Assert.Equal(new Percentage(3m), loaded.CardSurchargeRate);
             Assert.Equal(PaymentMethod.Card, loaded.PaymentMethod);
             Assert.Equal(new Percentage(18m), loaded.TipRate);
-            Assert.Equal(discount, OrderPricing.Discount(loaded));
+            Assert.Equal(discountRate, loaded.DiscountRate);
+            Assert.Equal(discountAmount, loaded.DiscountAmount);
             Assert.Equal(expected, OrderPricing.CalculateTotals(loaded));
             Assert.Equal(Money.Usd(5.54m), OrderPricing.CalculateTotals(loaded).Total); // 4.25 + surcharge 0.13 + tax 0.39 + tip 0.77
         }

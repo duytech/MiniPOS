@@ -15,14 +15,6 @@ public static class OrderPricing
     public static Money SubtotalWithQuantity(Order order, OrderLine line, int quantity) =>
         Subtotal(order) - LineTotal(line) + line.UnitPrice * quantity;
 
-    /// <summary>The order's discount, built from its two stored columns; null when it has none.</summary>
-    public static OrderDiscount? Discount(Order order) => (order.DiscountRate, order.DiscountAmount) switch
-    {
-        ({ } rate, null) => OrderDiscount.PercentOfSubtotal(rate),
-        (null, { } amount) => OrderDiscount.FixedAmount(amount),
-        _ => null,
-    };
-
     /// <summary>
     /// Each step is rounded to cents (MidpointRounding.AwayFromZero) before the next step uses it.
     /// 1. line total = unit price × quantity (exact cents)
@@ -37,10 +29,11 @@ public static class OrderPricing
     {
         var subtotal = Subtotal(order);
 
-        var discount = Discount(order) switch
+        // At most one of the two is set: applying a discount checks it (ApplyDiscountValidator).
+        var discount = (order.DiscountRate, order.DiscountAmount) switch
         {
-            { Rate: { } rate } => PercentOf(subtotal, rate),
-            { Amount: { } amount } => amount,
+            ({ } rate, _) => PercentOf(subtotal, rate),
+            (_, { } amount) => amount,
             _ => Money.Zero(order.Currency),
         };
         var discountedSubtotal = subtotal - discount;
