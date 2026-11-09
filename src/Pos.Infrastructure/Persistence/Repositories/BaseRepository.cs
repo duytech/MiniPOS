@@ -4,13 +4,13 @@ using Pos.Application.Common;
 
 namespace Pos.Infrastructure.Persistence.Repositories;
 
-internal abstract class BaseRepository(PosDbContext db)
+internal abstract class BaseRepository<TEntity>(PosDbContext db) where TEntity : class
 {
     private const string ChangedByAnotherRequest = "The data was changed by another request. Reload and try again.";
 
     protected PosDbContext Db { get; } = db;
 
-    protected DbSet<TEntity> Set<TEntity>() where TEntity : class => Db.Set<TEntity>();
+    protected DbSet<TEntity> Entities => Db.Set<TEntity>();
 
     /// <summary>
     /// Throws <see cref="ConcurrentChangeException"/> or <see cref="DataConflictException"/> for the expected failures;

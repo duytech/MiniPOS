@@ -5,12 +5,12 @@ using Pos.Domain.Orders;
 
 namespace Pos.Infrastructure.Persistence.Repositories;
 
-internal sealed class OrderRepository(PosDbContext db) : BaseRepository(db), IOrderRepository
+internal sealed class OrderRepository(PosDbContext db) : BaseRepository<Order>(db), IOrderRepository
 {
     private const string LikeEscape = "\\";
 
     public Task<Order?> GetByIdAsync(Guid id, CancellationToken cancellationToken) =>
-        Set<Order>()
+        Entities
             .Include(o => o.Lines)
             .Include(o => o.SavedSplitParts).ThenInclude(p => p.Lines)
             .AsSplitQuery()
@@ -19,7 +19,7 @@ internal sealed class OrderRepository(PosDbContext db) : BaseRepository(db), IOr
     public async Task<(IReadOnlyList<Order> Orders, int TotalCount)> ListAsync(
         OrderStatus? status, OrderSearch? search, int page, int pageSize, CancellationToken cancellationToken)
     {
-        var query = Set<Order>().AsNoTracking();
+        var query = Entities.AsNoTracking();
         if (status is not null)
         {
             query = query.Where(o => o.Status == status);
@@ -46,7 +46,7 @@ internal sealed class OrderRepository(PosDbContext db) : BaseRepository(db), IOr
 
     public Task CreateAsync(Order order, CancellationToken cancellationToken)
     {
-        Set<Order>().Add(order);
+        Entities.Add(order);
         return SaveChangesAsync(cancellationToken);
     }
 
