@@ -1,6 +1,6 @@
 ---
 name: add-endpoint
-description: Adds or changes an HTTP endpoint of the Mini POS API (src/Pos.Api) end to end - Domain property or shared rule, Application command/query + handler + validator, DI registration, controller action, and the unit, integration and concurrency tests this repo requires. Use for any new or changed route under /api, e.g. "add DELETE /api/orders/{id}/lines/{lineId}" or "expose X over the API".
+description: Adds or changes an HTTP endpoint of the Mini POS API (src/Pos.Api) end to end - Domain property or shared rule, Application command/query + handler + validator, DI registration, controller action, and the unit, integration and concurrency tests this repo requires. Use for any new or changed route under /api, e.g. "add DELETE /api/orders/{id}/items/{itemId}" or "expose X over the API".
 ---
 
 # Add an endpoint
@@ -61,7 +61,7 @@ In the area's controller (`src/Pos.Api/Controllers/`):
 | Returns money | Assert raw JSON strings with exactly 2 decimals (`order.Money("total") == "15.40"`); a midpoint (x.xx5) case; list total == `GET /api/orders/{id}` total |
 | Changes Domain money | Domain unit test with exact cents and a midpoint case (`tests/Pos.Domain.Tests`) |
 | Adds handler logic | Handler test through `OrderActions` (`tests/Pos.Application.Tests`): each rule, the no-op, nothing saved on an error |
-| Changes an order | Concurrency test: N parallel requests that would each succeed alone (e.g. removing *different* lines), then the same racing add-item; only successes and conflicts, and the stored rows show exactly the accepted requests. When a race can legitimately break a Domain rule (a removal racing a fixed discount), allow that code too and assert the rule holds in the stored rows |
+| Changes an order | Concurrency test: N parallel requests that would each succeed alone (e.g. removing *different* items), then the same racing add-item; only successes and conflicts, and the stored rows show exactly the accepted requests. When a race can legitimately break a Domain rule (a removal racing a fixed discount), allow that code too and assert the rule holds in the stored rows |
 | Moves the order to another status (pay, cancel) | Only one request can ever win, so the "each would succeed alone" pattern does not fit: N parallel requests through `OrderRace.RunAsync` (so every request loads the order before any commits) → exactly one success, the rest `ConcurrentChange`, at least one; without it a loser can load the closed order and answer `OrderNotOpen`; competing transitions (pay vs cancel) → the stored status is the winner's; the transition racing add-item → stored quantity = the accepted adds |
 
 Copy helpers from the existing test classes (see templates); add new HTTP helpers to `ApiClient.cs`.

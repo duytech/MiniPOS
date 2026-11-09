@@ -50,8 +50,8 @@ vs domain, repositories).
 - All amounts are `Money` (Domain value object: `decimal Amount` + `Currency`, USD only for now). Never `double`/`float`,
   never raw `decimal` in Domain/Application signatures.
 - Calculation order and rounding, in **one place** in Domain (`OrderPricing.CalculateTotals`):
-  1. line total = unit price × quantity (exact cents, no rounding needed)
-  2. subtotal = sum of line totals
+  1. item total = unit price × quantity (exact cents, no rounding needed)
+  2. subtotal = sum of item totals
   3. then discount → surcharge → tax → tip, each rounded to 2 decimals **immediately** with
      `MidpointRounding.AwayFromZero`, before the next step uses it
 - The base of each step (e.g. is tip on the pre-tax or post-tax amount? is the surcharge taxed?) is a business rule:
