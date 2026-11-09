@@ -28,7 +28,3 @@ dotnet_diagnostic.CA1716.severity = none
 # EF Core migrations are generated; analyzers do not apply.
 [**/Migrations/*.cs]
 generated_code = true
-
-# Repositories use the DbContext they pass to BaseRepository: both hold the same scoped instance, never reassigned.
-[src/Pos.Infrastructure/Persistence/Repositories/*.cs]
-dotnet_diagnostic.CS9107.severity = none

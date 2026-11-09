@@ -8,7 +8,9 @@ internal abstract class BaseRepository(PosDbContext db)
 {
     private const string ChangedByAnotherRequest = "The data was changed by another request. Reload and try again.";
 
-    private readonly PosDbContext _db = db;
+    protected PosDbContext Db { get; } = db;
+
+    protected DbSet<TEntity> Set<TEntity>() where TEntity : class => Db.Set<TEntity>();
 
     /// <summary>
     /// Throws <see cref="ConcurrentChangeException"/> or <see cref="DataConflictException"/> for the expected failures;
@@ -18,7 +20,7 @@ internal abstract class BaseRepository(PosDbContext db)
     {
         try
         {
-            await _db.SaveChangesAsync(cancellationToken);
+            await Db.SaveChangesAsync(cancellationToken);
         }
         catch (DbUpdateConcurrencyException ex)
         {
