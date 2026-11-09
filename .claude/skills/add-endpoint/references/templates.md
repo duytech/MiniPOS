@@ -63,7 +63,7 @@ public async Task<Result<OrderDto>> RemoveTip(
 
 ## Concurrency test shape
 
-N parallel requests of the new endpoint that would each succeed alone (different targets, e.g. different lines: N
-removals of the *same* line are correctly not found after the first), then interleaved with add-item; then:
+N parallel requests of the new endpoint that would each succeed alone (different targets, e.g. different items: N
+removals of the *same* item are correctly not found after the first), then interleaved with add-item; then:
 `AssertOnlyOkOrConflict(results)` and compare the stored rows (`StoredAsync`) with the accepted requests only.
 Example: `Parallel_line_removals_and_add_items_lose_neither` in `ConcurrentOrderAdjustmentTests.cs`.
