@@ -36,7 +36,7 @@ total = subtotal − discount + surcharge + tax + tip
 
 - Tax rate and card surcharge rate come from configuration (`Pricing:TaxRatePercent`, `Pricing:CardSurchargePercent`
   in `src/Pos.Api/appsettings.json`) and are snapshotted on the order when it is created.
-- A percent discount above 100% is rejected. A fixed discount can never be more than the subtotal: applying it, or a
+- A percent discount above 100% is rejected with `ValidationFailed`. A fixed discount can never be more than the subtotal: applying it, or a
   item change that would leave a smaller subtotal, is rejected with `DiscountExceedsSubtotal` (change or remove the discount first).
 - A percent discount and the tip follow the subtotal when items change.
 

@@ -422,3 +422,5 @@ Important design decisions: what, why, when. Newest first.
 - **Why:** the owner's choice: a check reads as a question (`IsOpen`), and building the error stays in one place.
   `IsOpen` is not a property of `Order` because mapped entities hold only auto-properties (`EntityShapeTests`).
   Trade-off, accepted: handlers no longer chain the open check with `??`.
+- **Percent discount ≤ 100% is checked by `ApplyDiscountValidator`:** the owner's choice; it needs nothing from the
+  order. API change, accepted: a rate above 100 now answers `ValidationFailed`, not `DiscountExceedsSubtotal`.

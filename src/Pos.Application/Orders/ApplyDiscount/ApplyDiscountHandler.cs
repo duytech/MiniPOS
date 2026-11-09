@@ -49,11 +49,6 @@ public sealed class ApplyDiscountHandler(IOrderRepository orders, ILogger<ApplyD
 
     private static Error? DiscountError(Order order, ApplyDiscountCommand command)
     {
-        if (command.Rate is { Value: > 100m } rate)
-        {
-            return new Error(ErrorCode.DiscountExceedsSubtotal, $"A discount of {rate} is more than the subtotal.");
-        }
-
         var subtotal = OrderPricing.Subtotal(order);
         return command.Amount is { } amount && !OrderRules.FixedDiscountFits(amount, subtotal)
             ? OrderErrors.DiscountExceedsSubtotal(amount, subtotal)
