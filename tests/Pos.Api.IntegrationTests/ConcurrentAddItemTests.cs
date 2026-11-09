@@ -7,7 +7,7 @@ using Pos.Infrastructure.Persistence;
 namespace Pos.Api.IntegrationTests;
 
 /// <summary>
-/// Hidden verifier from Day 3, adapted to the Day 6 API (menu items created via the API, table <c>order_lines</c>).
+/// Hidden verifier from Day 3, adapted to the Day 6 API (menu items created via the API, table <c>order_menu_items</c>).
 /// Two terminals (or a double-tap) adding to the same order at the same time.
 /// The invariant, whatever the fix (retry or conflict): no 5xx, every rejected request
 /// is a conflict, and the stored quantity equals exactly the number of accepted requests.
@@ -19,7 +19,7 @@ public class ConcurrentAddItemTests(PosApiFactory factory) : IClassFixture<PosAp
     private readonly HttpClient _client = factory.CreateClient();
 
     [Fact]
-    public async Task Concurrent_adds_of_an_existing_line_do_not_lose_quantity()
+    public async Task Concurrent_adds_of_an_existing_item_do_not_lose_quantity()
     {
         var cappuccino = await _client.CreateMenuItemAsync("Cappuccino", 4.50m);
         var orderId = await _client.CreateOrderAsync();
@@ -85,7 +85,7 @@ public class ConcurrentAddItemTests(PosApiFactory factory) : IClassFixture<PosAp
         await using var conn = new NpgsqlConnection(connectionString);
         await conn.OpenAsync();
         await using var cmd = new NpgsqlCommand(
-            "SELECT COALESCE(SUM(quantity), 0)::int FROM order_lines WHERE order_id = @o AND menu_item_id = @m", conn);
+            "SELECT COALESCE(SUM(quantity), 0)::int FROM order_menu_items WHERE order_id = @o AND menu_item_id = @m", conn);
         cmd.Parameters.AddWithValue("o", orderId);
         cmd.Parameters.AddWithValue("m", menuItemId);
         return (int)(await cmd.ExecuteScalarAsync())!;

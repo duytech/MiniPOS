@@ -16,7 +16,7 @@ public class OrderSurchargeTests
     private static Order OrderWith(decimal subtotal, Percentage taxRate, PaymentMethod paymentMethod)
     {
         var order = TestOrders.New(taxRate, CardSurcharge);
-        TestOrders.AddLine(order, subtotal);
+        TestOrders.AddPricedItem(order, subtotal);
         order.PaymentMethod = paymentMethod;
         return order;
     }

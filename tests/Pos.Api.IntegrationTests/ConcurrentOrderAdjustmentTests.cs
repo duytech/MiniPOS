@@ -86,7 +86,7 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
 
         var accepted = AssertOnlyOkOrConflict(results);
         Assert.Equal(1 + accepted.Count(a => a == "add"), await StoredAsync<int>(
-            orderId, "(SELECT SUM(quantity)::int FROM order_lines WHERE order_id = o.id)"));
+            orderId, "(SELECT SUM(quantity)::int FROM order_menu_items WHERE order_id = o.id)"));
         if (accepted.Contains(change))
         {
             var (column, expected) = change switch
@@ -102,29 +102,29 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
     }
 
     [Fact]
-    public async Task Parallel_removals_of_different_lines_delete_exactly_the_accepted_lines()
+    public async Task Parallel_removals_of_different_items_delete_exactly_the_accepted_items()
     {
         var orderId = await _client.CreateOrderAsync();
-        var lineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
+        var itemIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
 
-        var results = await ConcurrentlyAsync(lineIds.Select(lineId => (Func<Task<(ErrorCode?, string)>>)(async () =>
+        var results = await ConcurrentlyAsync(itemIds.Select(itemId => (Func<Task<(ErrorCode?, string)>>)(async () =>
         {
-            using var response = await _client.RemoveLineAsync(orderId, lineId);
-            return (await response.OutcomeAsync(), lineId.ToString());
+            using var response = await _client.RemoveItemAsync(orderId, itemId);
+            return (await response.OutcomeAsync(), itemId.ToString());
         })));
 
         var accepted = AssertOnlyOkOrConflict(results);
-        var expected = lineIds.Select(id => id.ToString()).Except(accepted).Order(StringComparer.Ordinal);
-        Assert.Equal(string.Join(",", expected), await StoredLineIdsAsync(orderId));
+        var expected = itemIds.Select(id => id.ToString()).Except(accepted).Order(StringComparer.Ordinal);
+        Assert.Equal(string.Join(",", expected), await StoredItemIdsAsync(orderId));
     }
 
     [Fact]
-    public async Task Parallel_line_removals_and_add_items_lose_neither()
+    public async Task Parallel_item_removals_and_add_items_lose_neither()
     {
         var (orderId, menuItemId) = await OrderWithOneItemAsync();
-        var removableLineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
+        var removableItemIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
 
-        var requests = removableLineIds.SelectMany(lineId => new Func<Task<(ErrorCode?, string)>>[]
+        var requests = removableItemIds.SelectMany(itemId => new Func<Task<(ErrorCode?, string)>>[]
         {
             async () =>
             {
@@ -133,20 +133,20 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
             },
             async () =>
             {
-                using var response = await _client.RemoveLineAsync(orderId, lineId);
-                return (await response.OutcomeAsync(), lineId.ToString());
+                using var response = await _client.RemoveItemAsync(orderId, itemId);
+                return (await response.OutcomeAsync(), itemId.ToString());
             },
         });
         var results = await ConcurrentlyAsync(requests);
 
         var accepted = AssertOnlyOkOrConflict(results);
         Assert.Equal(1 + accepted.Count(a => a == "add"), await StoredAsync<int>(
-            orderId, $"(SELECT quantity FROM order_lines WHERE order_id = o.id AND menu_item_id = '{menuItemId}')"));
-        var storedLineIds = (await StoredLineIdsAsync(orderId)).Split(',');
-        var expectedRemaining = removableLineIds.Select(id => id.ToString()).Except(accepted);
+            orderId, $"(SELECT quantity FROM order_menu_items WHERE order_id = o.id AND menu_item_id = '{menuItemId}')"));
+        var storedItemIds = (await StoredItemIdsAsync(orderId)).Split(',');
+        var expectedRemaining = removableItemIds.Select(id => id.ToString()).Except(accepted);
         Assert.Equal(
             expectedRemaining.Order(StringComparer.Ordinal),
-            storedLineIds.Where(id => removableLineIds.Contains(Guid.Parse(id))).Order(StringComparer.Ordinal));
+            storedItemIds.Where(id => removableItemIds.Contains(Guid.Parse(id))).Order(StringComparer.Ordinal));
     }
 
     /// <summary>
@@ -154,12 +154,12 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
     /// whatever the interleaving, the stored discount must never be more than the stored subtotal.
     /// </summary>
     [Fact]
-    public async Task Line_removal_racing_a_fixed_discount_never_leaves_the_discount_above_the_subtotal()
+    public async Task Item_removal_racing_a_fixed_discount_never_leaves_the_discount_above_the_subtotal()
     {
         var (orderId, _) = await OrderWithOneItemAsync();
         await (await _client.AddItemAsync(orderId, await _client.CreateMenuItemAsync("Tea", 2.00m), 1)).AssertSuccessAsync();
-        var phoLineId = Guid.Parse(await StoredAsync<string>(
-            orderId, "(SELECT id::text FROM order_lines WHERE order_id = o.id AND unit_price = 9.50)"));
+        var phoItemId = Guid.Parse(await StoredAsync<string>(
+            orderId, "(SELECT id::text FROM order_menu_items WHERE order_id = o.id AND unit_price = 9.50)"));
 
         var requests = Enumerable.Range(0, ConcurrentRequests).Select(_ => (Func<Task<(ErrorCode?, string)>>)(async () =>
             {
@@ -168,7 +168,7 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
             }))
             .Append(async () =>
             {
-                using var response = await _client.RemoveLineAsync(orderId, phoLineId);
+                using var response = await _client.RemoveItemAsync(orderId, phoItemId);
                 return (await response.OutcomeAsync(), "remove");
             });
         var results = await ConcurrentlyAsync(requests);
@@ -184,31 +184,31 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
     }
 
     [Fact]
-    public async Task Parallel_quantity_changes_of_different_lines_store_exactly_the_accepted_quantities()
+    public async Task Parallel_quantity_changes_of_different_items_store_exactly_the_accepted_quantities()
     {
         var orderId = await _client.CreateOrderAsync();
-        var lineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
+        var itemIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
 
-        var results = await ConcurrentlyAsync(lineIds.Select(lineId => (Func<Task<(ErrorCode?, string)>>)(async () =>
+        var results = await ConcurrentlyAsync(itemIds.Select(itemId => (Func<Task<(ErrorCode?, string)>>)(async () =>
         {
-            using var response = await _client.ChangeLineQuantityAsync(orderId, lineId, 5);
-            return (await response.OutcomeAsync(), lineId.ToString());
+            using var response = await _client.ChangeItemQuantityAsync(orderId, itemId, 5);
+            return (await response.OutcomeAsync(), itemId.ToString());
         })));
 
         var accepted = AssertOnlyOkOrConflict(results);
-        var expected = lineIds
+        var expected = itemIds
             .Select(id => $"{id}:{(accepted.Contains(id.ToString()) ? 5 : 1)}")
             .Order(StringComparer.Ordinal);
-        Assert.Equal(string.Join(",", expected), await StoredLineQuantitiesAsync(orderId));
+        Assert.Equal(string.Join(",", expected), await StoredItemQuantitiesAsync(orderId));
     }
 
     [Fact]
     public async Task Parallel_quantity_changes_and_add_items_lose_neither()
     {
         var (orderId, menuItemId) = await OrderWithOneItemAsync();
-        var changedLineIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
+        var changedItemIds = await AddDistinctLinesAsync(orderId, ConcurrentRequests);
 
-        var requests = changedLineIds.SelectMany(lineId => new Func<Task<(ErrorCode?, string)>>[]
+        var requests = changedItemIds.SelectMany(itemId => new Func<Task<(ErrorCode?, string)>>[]
         {
             async () =>
             {
@@ -217,20 +217,20 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
             },
             async () =>
             {
-                using var response = await _client.ChangeLineQuantityAsync(orderId, lineId, 4);
-                return (await response.OutcomeAsync(), lineId.ToString());
+                using var response = await _client.ChangeItemQuantityAsync(orderId, itemId, 4);
+                return (await response.OutcomeAsync(), itemId.ToString());
             },
         });
         var results = await ConcurrentlyAsync(requests);
 
         var accepted = AssertOnlyOkOrConflict(results);
         Assert.Equal(1 + accepted.Count(a => a == "add"), await StoredAsync<int>(
-            orderId, $"(SELECT quantity FROM order_lines WHERE order_id = o.id AND menu_item_id = '{menuItemId}')"));
-        var expected = changedLineIds
+            orderId, $"(SELECT quantity FROM order_menu_items WHERE order_id = o.id AND menu_item_id = '{menuItemId}')"));
+        var expected = changedItemIds
             .Select(id => $"{id}:{(accepted.Contains(id.ToString()) ? 4 : 1)}")
             .Order(StringComparer.Ordinal);
-        var stored = (await StoredLineQuantitiesAsync(orderId)).Split(',')
-            .Where(entry => changedLineIds.Contains(Guid.Parse(entry.Split(':')[0])));
+        var stored = (await StoredItemQuantitiesAsync(orderId)).Split(',')
+            .Where(entry => changedItemIds.Contains(Guid.Parse(entry.Split(':')[0])));
         Assert.Equal(expected, stored.Order(StringComparer.Ordinal));
     }
 
@@ -243,8 +243,8 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
     {
         var (orderId, menuItemId) = await OrderWithOneItemAsync();
         await (await _client.AddItemAsync(orderId, menuItemId, 1)).AssertSuccessAsync();
-        var lineId = Guid.Parse(await StoredAsync<string>(
-            orderId, "(SELECT id::text FROM order_lines WHERE order_id = o.id)"));
+        var itemId = Guid.Parse(await StoredAsync<string>(
+            orderId, "(SELECT id::text FROM order_menu_items WHERE order_id = o.id)"));
 
         var requests = Enumerable.Range(0, ConcurrentRequests).Select(_ => (Func<Task<(ErrorCode?, string)>>)(async () =>
             {
@@ -253,7 +253,7 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
             }))
             .Append(async () =>
             {
-                using var response = await _client.ChangeLineQuantityAsync(orderId, lineId, 1);
+                using var response = await _client.ChangeItemQuantityAsync(orderId, itemId, 1);
                 return (await response.OutcomeAsync(), "decrease");
             });
         var results = await ConcurrentlyAsync(requests);
@@ -342,32 +342,32 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
 
         var accepted = AssertOnlySuccessConflictOrOrderNotOpen(results);
         Assert.Equal(1 + accepted.Count(a => a == "add"), await StoredAsync<int>(
-            orderId, "(SELECT SUM(quantity)::int FROM order_lines WHERE order_id = o.id)"));
+            orderId, "(SELECT SUM(quantity)::int FROM order_menu_items WHERE order_id = o.id)"));
         Assert.Equal(accepted.Contains("pay") ? "Paid" : "Open", await StoredAsync<string>(orderId, "status"));
         Assert.Equal(accepted.Contains("pay"), await StoredAsync<bool>(orderId, "paid_at IS NOT NULL"));
     }
 
-    private Task<string> StoredLineQuantitiesAsync(Guid orderId) => StoredAsync<string>(
+    private Task<string> StoredItemQuantitiesAsync(Guid orderId) => StoredAsync<string>(
         orderId, "(SELECT COALESCE(string_agg(id::text || ':' || quantity, ',' ORDER BY id::text COLLATE \"C\"), '') " +
-                 "FROM order_lines WHERE order_id = o.id)");
+                 "FROM order_menu_items WHERE order_id = o.id)");
 
     private async Task<List<Guid>> AddDistinctLinesAsync(Guid orderId, int count)
     {
-        var lineIds = new List<Guid>();
+        var itemIds = new List<Guid>();
         for (var i = 0; i < count; i++)
         {
             var menuItemId = await _client.CreateMenuItemAsync($"Side {i}", 1.25m);
             var response = await _client.AddItemAsync(orderId, menuItemId, 1);
             await response.AssertSuccessAsync();
-            lineIds.Add((await response.ReadDataAsync()).GetProperty("lines").EnumerateArray()
+            itemIds.Add((await response.ReadDataAsync()).GetProperty("items").EnumerateArray()
                 .Single(l => l.GetProperty("menuItemId").GetGuid() == menuItemId).GetProperty("id").GetGuid());
         }
 
-        return lineIds;
+        return itemIds;
     }
 
-    private Task<string> StoredLineIdsAsync(Guid orderId) => StoredAsync<string>(
-        orderId, "(SELECT COALESCE(string_agg(id::text, ',' ORDER BY id::text COLLATE \"C\"), '') FROM order_lines WHERE order_id = o.id)");
+    private Task<string> StoredItemIdsAsync(Guid orderId) => StoredAsync<string>(
+        orderId, "(SELECT COALESCE(string_agg(id::text, ',' ORDER BY id::text COLLATE \"C\"), '') FROM order_menu_items WHERE order_id = o.id)");
 
     private Task<HttpResponseMessage> SendChangeAsync(string change, Guid orderId) => change switch
     {

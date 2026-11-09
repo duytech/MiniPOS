@@ -210,7 +210,7 @@ public class OrderAdjustmentsApiTests(PosApiFactory factory) : IClassFixture<Pos
 
         await response.AssertErrorAsync(ErrorCode.OrderNotOpen);
         var order = await _client.GetOrderAsync(orderId);
-        Assert.Equal(1, order.GetProperty("lines").GetArrayLength());
+        Assert.Equal(1, order.GetProperty("items").GetArrayLength());
         Assert.Equal("10.89", order.Money("total"));
     }
 

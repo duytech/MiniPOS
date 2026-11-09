@@ -21,10 +21,10 @@ public class AddOrderItemHandlerTests
 
         var result = (await _act.AddItem(order, OrderActions.Item("Pho", 7.70m), 2)).Data!;
 
-        var line = Assert.Single(result.Lines);
-        Assert.Equal("Pho", line.Name);
-        Assert.Equal(Money.Usd(7.70m), line.UnitPrice);
-        Assert.Equal(Money.Usd(15.40m), line.LineTotal);
+        var item = Assert.Single(result.Items);
+        Assert.Equal("Pho", item.Name);
+        Assert.Equal(Money.Usd(7.70m), item.UnitPrice);
+        Assert.Equal(Money.Usd(15.40m), item.ItemTotal);
         Assert.Equal(Money.Usd(15.40m), result.Subtotal);
         Assert.Equal(Money.Usd(15.40m), result.Total);
         Assert.Equal(1, _act.Orders.SaveCount);
@@ -69,14 +69,14 @@ public class AddOrderItemHandlerTests
     }
 
     [Fact]
-    public async Task Identical_line_increases_quantity()
+    public async Task Identical_item_increases_quantity()
     {
         var order = _act.NewOrder();
 
         await _act.AddItem(order, Burger, 1, "no onions");
         var result = (await _act.AddItem(order, Burger, 2, "no onions")).Data!;
 
-        Assert.Equal(3, Assert.Single(order.Lines).Quantity);
+        Assert.Equal(3, Assert.Single(order.Items).Quantity);
         Assert.Equal(Money.Usd(38.97m), result.Total);
     }
 
@@ -90,34 +90,34 @@ public class AddOrderItemHandlerTests
         await _act.AddItem(order, Burger, 1, "");
         await _act.AddItem(order, Burger, 1, " no onions ");
 
-        Assert.Equal([3, 1], order.Lines.Select(l => l.Quantity));
-        Assert.Equal([null, "no onions"], order.Lines.Select(l => l.Notes));
+        Assert.Equal([3, 1], order.Items.Select(l => l.Quantity));
+        Assert.Equal([null, "no onions"], order.Items.Select(l => l.Notes));
     }
 
     [Fact]
-    public async Task Different_notes_create_a_new_line()
+    public async Task Different_notes_create_a_new_item()
     {
         var order = _act.NewOrder();
 
         await _act.AddItem(order, Burger, 1, "no onions");
         await _act.AddItem(order, Burger, 1, null);
 
-        Assert.Equal(2, order.Lines.Count);
+        Assert.Equal(2, order.Items.Count);
     }
 
     [Fact]
-    public async Task Different_menu_item_creates_a_new_line()
+    public async Task Different_menu_item_creates_a_new_item()
     {
         var order = _act.NewOrder();
 
         await _act.AddItem(order, Burger, 1);
         await _act.AddItem(order, Fries, 1);
 
-        Assert.Equal(2, order.Lines.Count);
+        Assert.Equal(2, order.Items.Count);
     }
 
     [Fact]
-    public async Task A_new_menu_price_creates_a_new_line_and_keeps_the_snapshotted_price()
+    public async Task A_new_menu_price_creates_a_new_item_and_keeps_the_snapshotted_price()
     {
         var order = _act.NewOrder();
         var pho = OrderActions.Item("Pho", 7.70m);
@@ -126,12 +126,12 @@ public class AddOrderItemHandlerTests
         pho.Price = Money.Usd(8.00m);
         var result = (await _act.AddItem(order, pho, 1)).Data!;
 
-        Assert.Equal([Money.Usd(7.70m), Money.Usd(8.00m)], result.Lines.Select(l => l.UnitPrice));
+        Assert.Equal([Money.Usd(7.70m), Money.Usd(8.00m)], result.Items.Select(l => l.UnitPrice));
         Assert.Equal(Money.Usd(15.70m), result.Total);
     }
 
     [Fact]
-    public async Task Line_quantity_overflow_is_an_error_and_nothing_is_saved()
+    public async Task Item_quantity_overflow_is_an_error_and_nothing_is_saved()
     {
         var order = _act.NewOrder();
         await _act.AddItem(order, Burger, int.MaxValue);
@@ -139,8 +139,8 @@ public class AddOrderItemHandlerTests
 
         var result = await _act.AddItem(order, Burger, 1);
 
-        Assert.Equal(ErrorCode.LineQuantityTooLarge, result.Error!.Code);
-        Assert.Equal(int.MaxValue, Assert.Single(order.Lines).Quantity);
+        Assert.Equal(ErrorCode.ItemQuantityTooLarge, result.Error!.Code);
+        Assert.Equal(int.MaxValue, Assert.Single(order.Items).Quantity);
         Assert.Equal(savesBefore, _act.Orders.SaveCount);
     }
 }

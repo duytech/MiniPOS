@@ -31,20 +31,20 @@ public class OrderRulesTests
     {
         Assert.Null(OrderRules.FixedDiscountError(null, Money.Usd(0.00m), change: null));
         Assert.Null(OrderRules.FixedDiscountError(Money.Usd(7.70m), Money.Usd(7.70m), change: null));
-        Assert.Null(OrderRules.FixedDiscountError(Money.Usd(7.69m), Money.Usd(7.70m), "Removing the line"));
+        Assert.Null(OrderRules.FixedDiscountError(Money.Usd(7.69m), Money.Usd(7.70m), "Removing the item"));
     }
 
     [Fact]
     public void A_fixed_discount_above_the_subtotal_names_the_change_that_would_cause_it()
     {
         var applying = OrderRules.FixedDiscountError(Money.Usd(7.71m), Money.Usd(7.70m), change: null);
-        var removing = OrderRules.FixedDiscountError(Money.Usd(7.71m), Money.Usd(7.70m), "Removing the line");
+        var removing = OrderRules.FixedDiscountError(Money.Usd(7.71m), Money.Usd(7.70m), "Removing the item");
 
         Assert.Equal(ErrorCode.DiscountExceedsSubtotal, applying!.Code);
         Assert.Equal("A discount of 7.71 USD is more than the subtotal of 7.70 USD.", applying.Message);
         Assert.Equal(ErrorCode.DiscountExceedsSubtotal, removing!.Code);
         Assert.Equal(
-            "Removing the line would leave a subtotal of 7.70 USD, less than the discount of 7.71 USD. " +
+            "Removing the item would leave a subtotal of 7.70 USD, less than the discount of 7.71 USD. " +
             "Change or remove the discount first.",
             removing.Message);
     }

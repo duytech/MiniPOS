@@ -14,7 +14,7 @@ public class OrdersApiTests(PosApiFactory factory) : IClassFixture<PosApiFactory
 
         await response.AssertSuccessAsync();
         var order = await response.ReadDataAsync();
-        Assert.Equal(0, order.GetProperty("lines").GetArrayLength());
+        Assert.Equal(0, order.GetProperty("items").GetArrayLength());
         Assert.Equal("0.00", order.Money("subtotal"));
         Assert.Equal("0.00", order.Money("total"));
     }
@@ -30,12 +30,12 @@ public class OrdersApiTests(PosApiFactory factory) : IClassFixture<PosApiFactory
         await (await _client.AddItemAsync(orderId, tea, 3)).AssertSuccessAsync();
 
         var order = await _client.GetOrderAsync(orderId);
-        var lines = order.GetProperty("lines").EnumerateArray().ToList();
-        Assert.Equal(2, lines.Count);
-        Assert.Equal("7.70", lines[0].Money("unitPrice"));
-        Assert.Equal("15.40", lines[0].Money("lineTotal"));
-        Assert.Equal("1.15", lines[1].Money("unitPrice"));
-        Assert.Equal("3.45", lines[1].Money("lineTotal"));
+        var items = order.GetProperty("items").EnumerateArray().ToList();
+        Assert.Equal(2, items.Count);
+        Assert.Equal("7.70", items[0].Money("unitPrice"));
+        Assert.Equal("15.40", items[0].Money("itemTotal"));
+        Assert.Equal("1.15", items[1].Money("unitPrice"));
+        Assert.Equal("3.45", items[1].Money("itemTotal"));
         Assert.Equal("18.85", order.Money("subtotal"));
         Assert.Equal("0.00", order.Money("discount"));
         Assert.Equal("Cash", order.GetProperty("paymentMethod").GetString());
@@ -58,7 +58,7 @@ public class OrdersApiTests(PosApiFactory factory) : IClassFixture<PosApiFactory
     }
 
     [Fact]
-    public async Task Adding_an_identical_line_increases_its_quantity()
+    public async Task Adding_an_identical_item_increases_its_quantity()
     {
         var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);
         var orderId = await _client.CreateOrderAsync();
@@ -67,9 +67,9 @@ public class OrdersApiTests(PosApiFactory factory) : IClassFixture<PosApiFactory
         await _client.AddItemAsync(orderId, pho, 2, "no onions");
         await _client.AddItemAsync(orderId, pho, 1);
 
-        var lines = (await _client.GetOrderAsync(orderId)).GetProperty("lines").EnumerateArray().ToList();
-        Assert.Equal(2, lines.Count);
-        Assert.Equal(3, lines.Single(l => l.GetProperty("notes").GetString() == "no onions").GetProperty("quantity").GetInt32());
+        var items = (await _client.GetOrderAsync(orderId)).GetProperty("items").EnumerateArray().ToList();
+        Assert.Equal(2, items.Count);
+        Assert.Equal(3, items.Single(l => l.GetProperty("notes").GetString() == "no onions").GetProperty("quantity").GetInt32());
     }
 
     [Fact]
@@ -111,7 +111,7 @@ public class OrdersApiTests(PosApiFactory factory) : IClassFixture<PosApiFactory
         var response = await _client.AddItemAsync(orderId, pho, quantity);
 
         await response.AssertErrorAsync(ErrorCode.ValidationFailed);
-        Assert.Equal(0, (await _client.GetOrderAsync(orderId)).GetProperty("lines").GetArrayLength());
+        Assert.Equal(0, (await _client.GetOrderAsync(orderId)).GetProperty("items").GetArrayLength());
     }
 
     [Fact]
@@ -123,7 +123,7 @@ public class OrdersApiTests(PosApiFactory factory) : IClassFixture<PosApiFactory
 
         var response = await _client.AddItemAsync(orderId, pho, 1);
 
-        await response.AssertErrorAsync(ErrorCode.LineQuantityTooLarge);
+        await response.AssertErrorAsync(ErrorCode.ItemQuantityTooLarge);
     }
 
     [Theory]

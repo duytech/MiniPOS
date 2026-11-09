@@ -13,28 +13,28 @@ public class OrderSplitEvenTests
     private static readonly Percentage NycTax = new(8.875m);
     private static readonly Percentage CardSurcharge = new(3m);
 
-    private static Order OrderWithLines(Percentage taxRate, params decimal[] prices) =>
-        TestOrders.WithLines(taxRate, CardSurcharge, prices).Order;
+    private static Order OrderWithItems(Percentage taxRate, params decimal[] prices) =>
+        TestOrders.WithItems(taxRate, CardSurcharge, prices).Order;
 
     private static Money[] Usd(params decimal[] amounts) => amounts.Select(Money.Usd).ToArray();
 
     [Fact]
     public void Leftover_cent_goes_to_the_first_part()
     {
-        var order = OrderWithLines(Percentage.Zero, 100.00m);
+        var order = OrderWithItems(Percentage.Zero, 100.00m);
 
         var parts = OrderSplitting.SplitEvenly(order, 3).Data!;
 
         // 100.00 / 3 = 33.333… → 33.33 each, leftover 0.01 to the first part.
         Assert.Equal(Usd(33.34m, 33.33m, 33.33m), parts.Select(p => p.Subtotal));
         Assert.Equal(Usd(33.34m, 33.33m, 33.33m), parts.Select(p => p.Total));
-        Assert.All(parts, p => Assert.Empty(p.LineIds));
+        Assert.All(parts, p => Assert.Empty(p.ItemIds));
     }
 
     [Fact]
     public void More_parts_than_cents_leaves_zero_parts()
     {
-        var order = OrderWithLines(Percentage.Zero, 0.05m);
+        var order = OrderWithItems(Percentage.Zero, 0.05m);
 
         var parts = OrderSplitting.SplitEvenly(order, 10).Data!;
 
@@ -44,7 +44,7 @@ public class OrderSplitEvenTests
     [Fact]
     public void A_share_on_the_half_cent_rounds_down_and_no_part_goes_negative()
     {
-        var order = OrderWithLines(NycTax, 0.24m); // tax 8.875% of 0.24 = 0.0213 → 0.02
+        var order = OrderWithItems(NycTax, 0.24m); // tax 8.875% of 0.24 = 0.0213 → 0.02
 
         var parts = OrderSplitting.SplitEvenly(order, 4).Data!;
 
@@ -58,7 +58,7 @@ public class OrderSplitEvenTests
     [Fact]
     public void One_part_is_the_whole_order()
     {
-        var order = OrderWithLines(NycTax, 3.33m, 3.33m, 3.33m);
+        var order = OrderWithItems(NycTax, 3.33m, 3.33m, 3.33m);
         order.TipRate = new Percentage(18m);
         var totals = OrderPricing.CalculateTotals(order);
 
@@ -72,7 +72,7 @@ public class OrderSplitEvenTests
     [Fact]
     public void Discount_surcharge_tax_and_tip_are_each_divided_separately()
     {
-        var order = OrderWithLines(NycTax, 3.33m, 3.33m, 3.33m);
+        var order = OrderWithItems(NycTax, 3.33m, 3.33m, 3.33m);
         order.DiscountRate = new Percentage(15m);
         order.PaymentMethod = PaymentMethod.Card;
         order.TipRate = new Percentage(18m);
@@ -97,7 +97,7 @@ public class OrderSplitEvenTests
     [InlineData(11)]
     public void Every_amount_of_the_parts_adds_up_to_the_order(int partCount)
     {
-        var order = OrderWithLines(NycTax, 12.99m, 7.45m, 0.99m, 23.10m);
+        var order = OrderWithItems(NycTax, 12.99m, 7.45m, 0.99m, 23.10m);
         order.DiscountRate = new Percentage(12.5m);
         order.PaymentMethod = PaymentMethod.Card;
         order.TipRate = new Percentage(20m);
@@ -139,7 +139,7 @@ public class OrderSplitEvenTests
     [InlineData(-1)]
     public void Needs_at_least_one_part(int partCount)
     {
-        var order = OrderWithLines(NycTax, 10.00m);
+        var order = OrderWithItems(NycTax, 10.00m);
 
         Assert.Equal(ErrorCode.InvalidSplit, OrderSplitting.SplitEvenly(order, partCount).Error!.Code);
     }

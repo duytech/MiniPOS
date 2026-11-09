@@ -27,7 +27,7 @@ public class CreateOrderHandlerTests
         Assert.Equal(new Percentage(8.875m), order.TaxRate);
         Assert.Equal(new Percentage(3m), order.CardSurchargeRate);
         Assert.Equal(PaymentMethod.Cash, order.PaymentMethod);
-        Assert.Empty(order.Lines);
+        Assert.Empty(order.Items);
         Assert.Equal(Money.Usd(0.00m), result.Subtotal);
         Assert.Equal(Money.Usd(0.00m), result.Total);
         Assert.Equal(1, _act.Orders.SaveCount);

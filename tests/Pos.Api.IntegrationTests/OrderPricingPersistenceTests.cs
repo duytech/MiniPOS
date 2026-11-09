@@ -35,9 +35,9 @@ public class OrderPricingPersistenceTests(PosApiFactory factory) : IClassFixture
                 TipRate = new Percentage(18m),
                 DiscountRate = discountRate,
                 DiscountAmount = discountAmount,
-                Lines =
+                Items =
                 [
-                    new OrderLine
+                    new OrderMenuItem
                     {
                         Id = Guid.NewGuid(), MenuItemId = menuItem.Id, Name = "Pho", UnitPrice = menuItem.Price, Quantity = 1,
                     },
@@ -52,7 +52,7 @@ public class OrderPricingPersistenceTests(PosApiFactory factory) : IClassFixture
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PosDbContext>();
-            var loaded = await db.Orders.Include(o => o.Lines).SingleAsync(o => o.Id == orderId);
+            var loaded = await db.Orders.Include(o => o.Items).SingleAsync(o => o.Id == orderId);
 
             Assert.Equal(new Percentage(8.875m), loaded.TaxRate);
             Assert.Equal(new Percentage(3m), loaded.CardSurchargeRate);

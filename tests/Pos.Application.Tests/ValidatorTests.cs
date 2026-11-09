@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Pos.Application.MenuItems.CreateMenuItem;
 using Pos.Application.Orders.AddOrderItem;
 using Pos.Application.Orders.ApplyDiscount;
-using Pos.Application.Orders.ChangeOrderLineQuantity;
+using Pos.Application.Orders.ChangeOrderMenuItemQuantity;
 using Pos.Application.Orders.ListOrders;
 using Pos.Application.Orders.PreviewSplit;
 using Pos.Application.Orders.SaveSplit;
@@ -127,7 +127,7 @@ public class ValidatorTests
     }
 
     /// <summary>
-    /// Shapes for the split by item body. Part counts, empty parts and which lines are in them are the order's rules
+    /// Shapes for the split by item body. Part counts, empty parts and which items are in them are the order's rules
     /// (422), so one part or an empty part is a valid shape here.
     /// </summary>
     public static TheoryData<string, bool> SplitShapes => new()
@@ -138,7 +138,7 @@ public class ValidatorTests
         { "empty-part", true },
         { "parts-null", false },
         { "part-null", false },
-        { "line-id-empty", false },
+        { "item-id-empty", false },
     };
 
     [Theory]
@@ -173,10 +173,10 @@ public class ValidatorTests
     [InlineData(0, false)]
     [InlineData(1, true)]
     [InlineData(int.MaxValue, true)]
-    public void Changed_line_quantity_must_be_positive(int quantity, bool valid)
+    public void Changed_item_quantity_must_be_positive(int quantity, bool valid)
     {
-        var result = Validator<ChangeOrderLineQuantityCommand>()
-            .Validate(new ChangeOrderLineQuantityCommand(Guid.NewGuid(), Guid.NewGuid(), quantity));
+        var result = Validator<ChangeOrderMenuItemQuantityCommand>()
+            .Validate(new ChangeOrderMenuItemQuantityCommand(Guid.NewGuid(), Guid.NewGuid(), quantity));
 
         Assert.Equal(valid, result.IsValid);
     }

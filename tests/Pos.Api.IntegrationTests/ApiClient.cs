@@ -24,12 +24,12 @@ internal static class ApiClient
         this HttpClient client, Guid orderId, Guid menuItemId, int quantity, string? notes = null) =>
         client.PostAsJsonAsync($"/api/orders/{orderId}/items", new { menuItemId, quantity, notes });
 
-    public static Task<HttpResponseMessage> RemoveLineAsync(this HttpClient client, Guid orderId, Guid lineId) =>
-        client.DeleteAsync($"/api/orders/{orderId}/lines/{lineId}");
+    public static Task<HttpResponseMessage> RemoveItemAsync(this HttpClient client, Guid orderId, Guid itemId) =>
+        client.DeleteAsync($"/api/orders/{orderId}/items/{itemId}");
 
-    public static Task<HttpResponseMessage> ChangeLineQuantityAsync(
-        this HttpClient client, Guid orderId, Guid lineId, int quantity) =>
-        client.PutAsJsonAsync($"/api/orders/{orderId}/lines/{lineId}/quantity", new { quantity });
+    public static Task<HttpResponseMessage> ChangeItemQuantityAsync(
+        this HttpClient client, Guid orderId, Guid itemId, int quantity) =>
+        client.PutAsJsonAsync($"/api/orders/{orderId}/items/{itemId}/quantity", new { quantity });
 
     /// <summary>Body is sent as given, e.g. <c>new { rate = 15 }</c> or <c>new { amount = 2.50 }</c>.</summary>
     public static Task<HttpResponseMessage> ApplyDiscountAsync(this HttpClient client, Guid orderId, object body) =>
@@ -65,9 +65,9 @@ internal static class ApiClient
         await response.AssertSuccessAsync();
     }
 
-    /// <summary>Body of PUT and preview split: one array of line ids per part, in part order.</summary>
+    /// <summary>Body of PUT and preview split: one array of item ids per part, in part order.</summary>
     public static object SplitBody(params IEnumerable<Guid>[] parts) =>
-        new { parts = parts.Select(lineIds => new { lineIds }).ToArray() };
+        new { parts = parts.Select(itemIds => new { itemIds }).ToArray() };
 
     public static Task<HttpResponseMessage> GetSplitAsync(this HttpClient client, Guid orderId) =>
         client.GetAsync($"/api/orders/{orderId}/split");
