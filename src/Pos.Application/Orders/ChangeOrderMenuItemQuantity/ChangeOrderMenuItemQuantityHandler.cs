@@ -59,9 +59,9 @@ public sealed class ChangeOrderMenuItemQuantityHandler(IOrderRepository orders,
         }
 
         var newSubtotal = OrderPricing.SubtotalWithQuantity(order, item, quantity);
-        if (OrderRules.FixedDiscountError(order.DiscountAmount, newSubtotal, $"A quantity of {quantity}") is { } tooLarge)
+        if (order.DiscountAmount is { } discount && !OrderRules.FixedDiscountFits(discount, newSubtotal))
         {
-            return tooLarge;
+            return OrderErrors.DiscountExceedsNewSubtotal($"A quantity of {quantity}", discount, newSubtotal);
         }
 
         item.Quantity = quantity;

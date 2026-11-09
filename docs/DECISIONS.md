@@ -417,7 +417,8 @@ Important design decisions: what, why, when. Newest first.
 ## 2026-11-09: Order rules check with bool; OrderErrors builds the errors (#152)
 - **What:** `OrderRules.IsOpen(order)` returns `bool`; the handler fails with `OrderErrors.NotOpen(order.Status)`.
   `OrderErrors` (Domain) holds the order errors shared by several use cases (`NotOpen`, `ItemNotOnOrder`).
-  `OrderRules.FixedDiscountError` still returns `Error?`: it compares amounts and its message depends on the change.
+  `OrderRules.FixedDiscountFits(discount, subtotal)` is a `bool` too; `OrderErrors.DiscountExceedsSubtotal` (applying
+  the discount) and `DiscountExceedsNewSubtotal` (an item change) build its two messages.
 - **Why:** the owner's choice: a check reads as a question (`IsOpen`), and building the error stays in one place.
   `IsOpen` is not a property of `Order` because mapped entities hold only auto-properties (`EntityShapeTests`).
   Trade-off, accepted: handlers no longer chain the open check with `??`.

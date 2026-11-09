@@ -12,19 +12,8 @@ public static class OrderRules
     public static bool IsOpen(Order order) => order.Status == OrderStatus.Open;
 
     /// <summary>
-    /// A fixed discount can never be more than the subtotal. <paramref name="change"/> names the item change that would
-    /// leave <paramref name="subtotal"/>, or is null when the discount itself is being applied.
+    /// A fixed discount can never be more than the subtotal. When it is, fail with
+    /// <see cref="OrderErrors.DiscountExceedsSubtotal"/> or <see cref="OrderErrors.DiscountExceedsNewSubtotal"/>.
     /// </summary>
-    public static Error? FixedDiscountError(Money? fixedDiscount, Money subtotal, string? change)
-    {
-        if (fixedDiscount is not { } discount || discount.Amount <= subtotal.Amount)
-        {
-            return null;
-        }
-
-        return new Error(ErrorCode.DiscountExceedsSubtotal, change is null
-            ? $"A discount of {discount} is more than the subtotal of {subtotal}."
-            : $"{change} would leave a subtotal of {subtotal}, less than the discount of {discount}. " +
-              "Change or remove the discount first.");
-    }
+    public static bool FixedDiscountFits(Money discount, Money subtotal) => discount.Amount <= subtotal.Amount;
 }

@@ -34,22 +34,22 @@ public class OrderRulesTests
     }
 
     [Fact]
-    public void No_fixed_discount_or_one_up_to_the_subtotal_is_allowed()
+    public void A_fixed_discount_up_to_the_subtotal_fits()
     {
-        Assert.Null(OrderRules.FixedDiscountError(null, Money.Usd(0.00m), change: null));
-        Assert.Null(OrderRules.FixedDiscountError(Money.Usd(7.70m), Money.Usd(7.70m), change: null));
-        Assert.Null(OrderRules.FixedDiscountError(Money.Usd(7.69m), Money.Usd(7.70m), "Removing the item"));
+        Assert.True(OrderRules.FixedDiscountFits(Money.Usd(7.70m), Money.Usd(7.70m)));
+        Assert.True(OrderRules.FixedDiscountFits(Money.Usd(7.69m), Money.Usd(7.70m)));
+        Assert.False(OrderRules.FixedDiscountFits(Money.Usd(7.71m), Money.Usd(7.70m)));
     }
 
     [Fact]
     public void A_fixed_discount_above_the_subtotal_names_the_change_that_would_cause_it()
     {
-        var applying = OrderRules.FixedDiscountError(Money.Usd(7.71m), Money.Usd(7.70m), change: null);
-        var removing = OrderRules.FixedDiscountError(Money.Usd(7.71m), Money.Usd(7.70m), "Removing the item");
+        var applying = OrderErrors.DiscountExceedsSubtotal(Money.Usd(7.71m), Money.Usd(7.70m));
+        var removing = OrderErrors.DiscountExceedsNewSubtotal("Removing the item", Money.Usd(7.71m), Money.Usd(7.70m));
 
-        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, applying!.Code);
+        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, applying.Code);
         Assert.Equal("A discount of 7.71 USD is more than the subtotal of 7.70 USD.", applying.Message);
-        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, removing!.Code);
+        Assert.Equal(ErrorCode.DiscountExceedsSubtotal, removing.Code);
         Assert.Equal(
             "Removing the item would leave a subtotal of 7.70 USD, less than the discount of 7.71 USD. " +
             "Change or remove the discount first.",

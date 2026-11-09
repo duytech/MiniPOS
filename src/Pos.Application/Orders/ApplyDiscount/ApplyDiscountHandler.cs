@@ -47,7 +47,16 @@ public sealed class ApplyDiscountHandler(IOrderRepository orders, ILogger<ApplyD
         return Result.Ok(OrderDto.From(order));
     }
 
-    private static Error? DiscountError(Order order, ApplyDiscountCommand command) => command.Rate is { Value: > 100m } rate
-        ? new Error(ErrorCode.DiscountExceedsSubtotal, $"A discount of {rate} is more than the subtotal.")
-        : OrderRules.FixedDiscountError(command.Amount, OrderPricing.Subtotal(order), change: null);
+    private static Error? DiscountError(Order order, ApplyDiscountCommand command)
+    {
+        if (command.Rate is { Value: > 100m } rate)
+        {
+            return new Error(ErrorCode.DiscountExceedsSubtotal, $"A discount of {rate} is more than the subtotal.");
+        }
+
+        var subtotal = OrderPricing.Subtotal(order);
+        return command.Amount is { } amount && !OrderRules.FixedDiscountFits(amount, subtotal)
+            ? OrderErrors.DiscountExceedsSubtotal(amount, subtotal)
+            : null;
+    }
 }
