@@ -424,3 +424,16 @@ Important design decisions: what, why, when. Newest first.
   Trade-off, accepted: handlers no longer chain the open check with `??`.
 - **Percent discount ≤ 100% is checked by `ApplyDiscountValidator`:** the owner's choice; it needs nothing from the
   order. API change, accepted: a rate above 100 now answers `ValidationFailed`, not `DiscountExceedsSubtotal`.
+
+## 2026-11-11: feature-list.json leaves the default instructions; API and frontend rules move to architecture.md (#154)
+- **What:** `CLAUDE.md` no longer describes `docs/feature-list.json`; that text is in `docs/feature-verification.md`,
+  which `CLAUDE.md` does not mention. The clean-state checklist and `business-rules.md` no longer require it, and
+  `protect-feature-state.mjs` is not registered in `.claude/settings.json`. The JSON, `verify-features.mjs` and the hook
+  script stay in the repo. The API and Frontend (web/) rules moved from `CLAUDE.md` to `docs/architecture.md`, and
+  `CLAUDE.md` lists every doc to read in one section.
+- **Why:** the owner's choice. A feature's steps run whole test classes shared by several features, so `passing` does
+  not prove that feature has tests; the state goes stale after a code change and repeats CI, later; the 36 KB file
+  costs context on every feature. The review is in `docs/feature-verification.md`.
+- **Trade-off, accepted:** nothing stops an agent from writing `state` by hand now, and `architecture.md` holds rules
+  that apply to `web/` and tests too, so `CLAUDE.md` says to read it before changing `src/`, `web/` or tests that call
+  the API.

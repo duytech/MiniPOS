@@ -5,7 +5,8 @@ description: Adds or changes a feature of the Mini POS web app (web/, Angular 20
 
 # Add an Angular feature
 
-CLAUDE.md holds the rules (money, reloading, no environment URLs, commands). This skill is the order of work and the
+CLAUDE.md (money, commands) and `docs/architecture.md` (the API envelope, reloading, no environment URLs) hold the
+rules. This skill is the order of work and the
 files to copy. Read `references/templates.md` (in this skill's folder, next to this file) before writing code.
 
 ## 0. UI behavior first: stop and ask

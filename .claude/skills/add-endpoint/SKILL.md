@@ -5,7 +5,7 @@ description: Adds or changes an HTTP endpoint of the Mini POS API (src/Pos.Api) 
 
 # Add an endpoint
 
-CLAUDE.md holds the rules (money, errors, concurrency, paging). This skill is the order of work and the files to copy.
+CLAUDE.md (money, concurrency) and `docs/architecture.md` (layers, the API envelope, paging) hold the rules. This skill is the order of work and the files to copy.
 Read `references/templates.md` (in this skill's folder, next to this file) before writing code.
 
 ## 0. Business rules first: stop and ask
