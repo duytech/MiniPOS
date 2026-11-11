@@ -1,7 +1,6 @@
 # Business rules
 
-The business rules already decided for Mini POS. Features and how each is verified: `docs/feature-list.json`. The code
-is the source of truth; when this file and the code disagree, fix this file.
+The business rules already decided for Mini POS. The code is the source of truth; when this file and the code disagree, fix this file.
 
 ## API conventions
 

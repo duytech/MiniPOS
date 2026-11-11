@@ -1,7 +1,9 @@
 # Architecture
 
-Rules for the .NET Clean Architecture API (`src/`). `dotnet test tests/Pos.ArchitectureTests` checks them; a failure
-lists each offending member.
+Rules for the .NET Clean Architecture API (`src/`) and the web app (`web/`). `dotnet test tests/Pos.ArchitectureTests`
+checks the .NET layering rules; a failure lists each offending member.
+
+## .NET layers
 
 - One use case = one folder in Application with `XxxCommand`/`XxxQuery` (record), `XxxHandler`
   (`ICommandHandler<TCommand, TResult>` / `IQueryHandler<TQuery, TResult>`), and `XxxValidator` (FluentValidation) when
@@ -27,3 +29,16 @@ lists each offending member.
 - Repositories return domain entities. Read models for lists live in Application (query + projection); Infrastructure
   never returns Application DTOs from a repository.
 - Delete template leftovers (e.g. `WeatherForecast`) when you touch that project.
+
+## API
+- Every expected answer is HTTP 200 with `{ isSuccess, data, error: { code, message } }`, including requests
+  rejected before the handler (malformed JSON, wrong type, missing required field). `code` is an `ErrorCode`, never an
+  HTTP status. Different: an unexpected error (a bug) is a 500 ProblemDetails with no details, and a request that never
+  reaches a controller (unknown route or an id that is not a GUID, wrong method, wrong Content-Type) gets the framework's
+  404, 405 or 415.
+- HTTP 200 does not mean success: a test checks `isSuccess` or the error code, not the status.
+- List endpoints are paged (`page`, `pageSize`, response includes `totalCount`). Never silently cap results.
+
+## Frontend (web/)
+- When reloading data, keep showing the previous data with a small loading indicator; don't swap the table for a spinner.
+- No environment URLs (hosts, ports) in components or messages.

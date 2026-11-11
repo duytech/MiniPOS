@@ -16,7 +16,7 @@ case where it does not is the point of your work, not a problem to make go away.
 
 ## Where expectations come from
 
-1. `CLAUDE.md` at the repo root (money rules, API rules, frontend rules).
+1. `CLAUDE.md` at the repo root (money rules) and `docs/architecture.md` (API rules, frontend rules).
 2. The plan, contract and business rules the caller gives you (a `plans/*.md` file or text in the prompt).
 3. Existing tests and helpers under `tests/`, for style and for helpers you can reuse.
 

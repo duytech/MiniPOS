@@ -81,8 +81,6 @@ each one checks):
 | `block-main-branch.mjs` | Before `git commit` / `git push` | No commit on `main`, no push that updates `main` |
 | `block-claude-coauthor.mjs` | Before commands | No `Co-Authored-By: Claude` in commits, PRs or issues |
 | `tests-only.mjs` | Before the `tester` edits a file | Refuses any path outside `tests/` |
-| `protect-feature-state.mjs` | Before edits to `docs/feature-list.json` | `state`, `testedAt`, `evidence` are written only by the verifier script |
-
 **.NET** ([`Directory.Build.props`](Directory.Build.props), [`.editorconfig`](.editorconfig)): warnings are errors;
 Roslyn analyzers at `latest-recommended`; Sonar S3776 cognitive complexity, max 15 per method.
 - Unit: [`tests/Pos.Domain.Tests`](tests/Pos.Domain.Tests), [`tests/Pos.Application.Tests`](tests/Pos.Application.Tests)
@@ -126,11 +124,10 @@ source column says where the rule is written down.
 | Money in JSON has exactly 2 decimals; list total equals detail total | `CLAUDE.md` | `List_total_equals_get_order_total_with_two_decimals` ([`OrdersListApiTests.cs`](tests/Pos.Api.IntegrationTests/OrdersListApiTests.cs)) and the raw-JSON tests in [`OrdersApiTests.cs`](tests/Pos.Api.IntegrationTests/OrdersApiTests.cs) |
 | A 500 leaks nothing about the exception, and is still logged | `reviewer` agent, CodeRabbit instructions | [`UnexpectedErrorTests.cs`](tests/Pos.Api.IntegrationTests/UnexpectedErrorTests.cs) |
 | The frontend never calculates money | `CLAUDE.md` | `shows no money value the API did not send` ([`order-detail.spec.ts`](web/src/app/orders/order-detail/order-detail.spec.ts)) |
-| Reloading keeps the old data with a small loading indicator | `CLAUDE.md` | [`slow-network.spec.ts`](tests/e2e/specs/slow-network.spec.ts) |
+| Reloading keeps the old data with a small loading indicator | [`docs/architecture.md`](docs/architecture.md) | [`slow-network.spec.ts`](tests/e2e/specs/slow-network.spec.ts) |
 | The migrate-on-startup flag works outside Development | [`docs/DECISIONS.md`](docs/DECISIONS.md) (#77) | [`StartupMigrationTests.cs`](tests/Pos.Api.IntegrationTests/StartupMigrationTests.cs) |
 | Cognitive complexity at most 15 | `CLAUDE.md` | Sonar S3776 (.NET) and `sonarjs/cognitive-complexity` (web): the .NET build and the web lint fail on it |
 | Never commit to `main`; no Claude co-author; UTF-8 files | `CLAUDE.md` | Hooks `block-main-branch.mjs`, `block-claude-coauthor.mjs`, `check-utf8.mjs` |
-| A feature is done only when its tests pass | `CLAUDE.md` | `protect-feature-state.mjs` + `scripts/verify-features.mjs` |
 
 Still caught only by review (`reviewer` agent and CodeRabbit path instructions): business rules or limits the task did
 not state, use-case folder layout (Command/Query + Handler + Validator), security of what a response exposes beyond
