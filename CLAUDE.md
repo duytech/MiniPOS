@@ -19,17 +19,18 @@ behavior, extra entities, seed data). If the task can't be done without one, sto
 listing it afterwards as an open question is not enough. A rule the user decides goes into `docs/business-rules.md`.
 
 ## Commands
-- DB: `docker compose up -d` (Postgres on **127.0.0.1:5433**; 5432 is taken by another install on this machine)
-- Whole app in Docker: `docker compose --profile app up -d` → http://localhost:8080 (images from GHCR, built by
+- `docker compose up -d`: DB (Postgres on **127.0.0.1:5433**; 5432 is taken by another install on this machine)
+- `docker compose --profile app up -d`: whole app in Docker → http://localhost:8080 (images from GHCR, built by
   `.github/workflows/cd.yml`; add `--build` to build from source)
-- Run API: `dotnet run --project src/Pos.Api --launch-profile http` → http://localhost:5191 (migrates on startup in Development)
-- Web dev server (in `web/`): `npm start` → http://localhost:4200 (proxies `/api` to 5191)
-- .NET build: warnings are errors and Roslyn analyzers (`latest-recommended`) run on build (`Directory.Build.props`,
-  `.editorconfig`): fix the code; a rule is only turned off in `.editorconfig` with a one-line reason. From Sonar
-  (`SonarAnalyzer.CSharp`) only S3776 Cognitive Complexity runs (max 15 per method): split the method, don't raise the
-  limit. `sonar.globalconfig` keeps every other Sonar rule off
-- Web lint: ESLint runs one Sonar rule, `sonarjs/cognitive-complexity` (max 15 per function, `.ts` only), same as S3776
-  in .NET: split the function, don't raise the limit
+- `dotnet run --project src/Pos.Api --launch-profile http`: run the API → http://localhost:5191 (migrates on startup in
+  Development)
+- `npm start` (in `web/`): web dev server → http://localhost:4200 (proxies `/api` to 5191)
+- `dotnet build Pos.slnx`: warnings are errors and Roslyn analyzers (`latest-recommended`) run on build
+  (`Directory.Build.props`, `.editorconfig`): fix the code; a rule is only turned off in `.editorconfig` with a one-line
+  reason. From Sonar (`SonarAnalyzer.CSharp`) only S3776 Cognitive Complexity runs (max 15 per method): split the method,
+  don't raise the limit. `sonar.globalconfig` keeps every other Sonar rule off
+- `npm run lint` (in `web/`): ESLint runs one Sonar rule, `sonarjs/cognitive-complexity` (max 15 per function, `.ts`
+  only), same as S3776 in .NET: split the function, don't raise the limit
 
 ## Money (the rules that matter most)
 - All amounts are `Money` (Domain value object: `decimal Amount` + `Currency`, USD only for now). Never `double`/`float`,
