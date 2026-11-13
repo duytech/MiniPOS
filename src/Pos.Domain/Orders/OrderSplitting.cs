@@ -54,10 +54,10 @@ public static class OrderSplitting
         }
 
         var totals = OrderPricing.CalculateTotals(order);
-        var discounts = Allocate(totals.Discount, partSubtotals, totals.Subtotal);
-        var surcharges = Allocate(totals.Surcharge, partSubtotals, totals.Subtotal);
-        var taxes = Allocate(totals.Tax, partSubtotals, totals.Subtotal);
-        var tips = Allocate(totals.Tip, partSubtotals, totals.Subtotal);
+        var discounts = AllocateAmountToPart(totals.Discount, partSubtotals, totals.Subtotal);
+        var surcharges = AllocateAmountToPart(totals.Surcharge, partSubtotals, totals.Subtotal);
+        var taxes = AllocateAmountToPart(totals.Tax, partSubtotals, totals.Subtotal);
+        var tips = AllocateAmountToPart(totals.Tip, partSubtotals, totals.Subtotal);
 
         return Result.Ok<IReadOnlyList<SplitPart>>(itemIdsPerPart.Select((itemIds, i) => new SplitPart(
                 itemIds.ToList(),
@@ -90,11 +90,11 @@ public static class OrderSplitting
         }
 
         var totals = OrderPricing.CalculateTotals(order);
-        var subtotals = AllocateEvenly(totals.Subtotal, parts);
-        var discounts = AllocateEvenly(totals.Discount, parts);
-        var surcharges = AllocateEvenly(totals.Surcharge, parts);
-        var taxes = AllocateEvenly(totals.Tax, parts);
-        var tips = AllocateEvenly(totals.Tip, parts);
+        var subtotals = AllocateMoneyEqually(totals.Subtotal, parts);
+        var discounts = AllocateMoneyEqually(totals.Discount, parts);
+        var surcharges = AllocateMoneyEqually(totals.Surcharge, parts);
+        var taxes = AllocateMoneyEqually(totals.Tax, parts);
+        var tips = AllocateMoneyEqually(totals.Tip, parts);
 
         return Result.Ok<IReadOnlyList<SplitPart>>(Enumerable.Range(0, parts)
             .Select(i => new SplitPart(
@@ -112,42 +112,55 @@ public static class OrderSplitting
         Result.Fail<IReadOnlyList<SplitPart>>(new Error(ErrorCode.InvalidSplit, message));
 
     /// <summary>
-    /// Shares <paramref name="amount"/> by each part's share of the subtotal, rounded down to the cent (amounts are never
-    /// negative, so ToZero is rounding down); the leftover cents go to the part with the largest subtotal.
+    /// Shares <paramref name="amountToShare"/> by each part's share of the subtotal, rounded down to the cent; the
+    /// leftover cents go to the part with the largest subtotal.
     /// </summary>
-    private static Money[] Allocate(Money amount, List<Money> partSubtotals, Money subtotal)
+    /// <param name="amountToShare">The order-level amount to share, e.g. the whole order's tax.</param>
+    /// <param name="partSubtotals">One entry per split part: the sum of the item totals of the items in that part.</param>
+    /// <param name="subtotal">The whole order's subtotal (sum of all item totals), the denominator of each part's
+    /// share; equals the sum of <paramref name="partSubtotals"/> because every item is in exactly one part.</param>
+    /// <returns>One share per part, in the order of <paramref name="partSubtotals"/>; the shares add up to
+    /// <paramref name="amountToShare"/>.</returns>
+    private static Money[] AllocateAmountToPart(Money amountToShare, List<Money> partSubtotals, Money subtotal)
     {
         var shares = partSubtotals
             .Select(partSubtotal => subtotal.Amount == 0m
-                ? Money.Zero(amount.Currency)
-                : new Money(
-                    decimal.Round(amount.Amount * partSubtotal.Amount / subtotal.Amount, 2, MidpointRounding.ToZero),
-                    amount.Currency))
+                ? Money.Zero(amountToShare.Currency)
+                : Money.RoundDownToCent(
+                    amountToShare.Amount * partSubtotal.Amount / subtotal.Amount, amountToShare.Currency))
             .ToArray();
 
-        var leftover = shares.Aggregate(amount, (rest, share) => rest - share);
-        var largestPart = 0;
-        for (var i = 1; i < partSubtotals.Count; i++)
+        var leftover = shares.Aggregate(amountToShare, (rest, share) => rest - share);
+        shares[FindIndexOfLargest(partSubtotals)] += leftover;
+        return shares;
+    }
+
+    /// <summary>Returns the index of the largest amount; on a tie, the first one.</summary>
+    private static int FindIndexOfLargest(List<Money> amounts)
+    {
+        var largest = 0;
+        for (var i = 1; i < amounts.Count; i++)
         {
-            if (partSubtotals[i].Amount > partSubtotals[largestPart].Amount)
+            if (amounts[i].Amount > amounts[largest].Amount)
             {
-                largestPart = i;
+                largest = i;
             }
         }
 
-        shares[largestPart] += leftover;
-        return shares;
+        return largest;
     }
 
     /// <summary>
     /// Divides <paramref name="amount"/> into <paramref name="parts"/> equal shares rounded down to the cent; the
     /// leftover cents go to the first share.
     /// </summary>
-    private static Money[] AllocateEvenly(Money amount, int parts)
+    private static Money[] AllocateMoneyEqually(Money amount, int parts)
     {
-        var share = new Money(decimal.Round(amount.Amount / parts, 2, MidpointRounding.ToZero), amount.Currency);
+        var share = Money.RoundDownToCent(amount.Amount / parts, amount.Currency);
         var shares = Enumerable.Repeat(share, parts).ToArray();
-        shares[0] = amount - share * (parts - 1);
+        var otherSharesTotal = share * (parts - 1);
+        var firstShare = amount - otherSharesTotal;
+        shares[0] = firstShare;
         return shares;
     }
 }

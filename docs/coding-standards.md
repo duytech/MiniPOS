@@ -24,3 +24,11 @@ Applies to variables, fields, properties, parameters, and methods that return a 
 | `bool CanFitFixedDiscount(...)` | `bool FixedDiscountFits(...)` |
 
 A method that returns a boolean meets both rules: `Is`, `Has` or `Can` counts as its verb.
+
+## Name a calculation that needs explaining
+
+When a reader has to work out what an expression means, put it in a variable named for what it holds.
+
+| Do | Don't |
+|----|-------|
+| `var otherSharesTotal = share * (parts - 1);`<br>`var firstShare = amount - otherSharesTotal;` | `shares[0] = amount - share * (parts - 1);` |

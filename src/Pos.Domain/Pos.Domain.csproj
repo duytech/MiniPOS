@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Lets the unit tests cover internal money helpers such as Money.RoundDownToCent. -->
+    <InternalsVisibleTo Include="Pos.Domain.Tests" />
+  </ItemGroup>
+
 </Project>

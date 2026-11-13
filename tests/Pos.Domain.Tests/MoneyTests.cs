@@ -22,6 +22,20 @@ public class MoneyTests
         Assert.Equal(Money.Usd(15.4m), Money.Usd(15.400m));
     }
 
+    [Theory]
+    [InlineData("1.009", "1.00")]
+    [InlineData("1.005", "1.00")] // midpoint: rounds down, not away from zero
+    [InlineData("3.3333333333", "3.33")]
+    [InlineData("2.5", "2.50")]
+    [InlineData("0", "0.00")]
+    public void RoundDownToCent_rounds_down_to_whole_cents(string amount, string expected)
+    {
+        var rounded = Money.RoundDownToCent(decimal.Parse(amount, CultureInfo.InvariantCulture), Currency.USD);
+
+        Assert.Equal(expected, rounded.Amount.ToString(CultureInfo.InvariantCulture));
+        Assert.Equal(Currency.USD, rounded.Currency);
+    }
+
     [Fact]
     public void Adds_exact_cents()
     {
