@@ -29,7 +29,7 @@ public readonly record struct Money
     /// <summary>
     /// Rounds <paramref name="amount"/> down to the cent. Callers pass non-negative amounts, so ToZero is rounding down.
     /// </summary>
-    public static Money RoundDownToCent(decimal amount, Currency currency) =>
+    internal static Money RoundDownToCent(decimal amount, Currency currency) =>
         new(decimal.Round(amount, 2, MidpointRounding.ToZero), currency);
 
     public static Money operator +(Money left, Money right)
