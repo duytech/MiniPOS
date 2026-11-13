@@ -4,10 +4,10 @@ import { toObservable, toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { EMPTY, Observable, Subject, catchError, concatMap, defer, map, merge, of, scan, startWith, switchMap } from 'rxjs';
 
-import { Order, OrderMenuItem, statusClass } from '../order.models';
+import { Order, OrderMenuItem, getStatusClass } from '../order.models';
 import { OrderSplitSection } from '../order-split/order-split';
 import { OrdersApi } from '../orders-api';
-import { GENERIC_ERROR, errorMessage, isConflict, isNotFound } from '../api-error';
+import { GENERIC_ERROR, getErrorMessage, isConflict, isNotFound } from '../api-error';
 
 export const CHANGED_MESSAGE = 'The order changed. Showing the latest version.';
 
@@ -67,7 +67,7 @@ export class OrderDetail {
 
   protected readonly order = computed(() => this.state().order);
   protected readonly isOpen = computed(() => this.order()?.status === 'Open');
-  protected readonly statusClass = statusClass;
+  protected readonly getStatusClass = getStatusClass;
 
   protected removeItem(item: OrderMenuItem): void {
     this.writes.next({ kind: 'remove', itemId: item.id });
@@ -82,7 +82,7 @@ export class OrderDetail {
   }
 
   /** The split section saw a conflict (or its split vanished): show the latest order and say why. */
-  protected splitChanged(): void {
+  protected handleSplitChanged(): void {
     this.reloads.next();
   }
 
@@ -127,17 +127,17 @@ export class OrderDetail {
 
       return request.pipe(
         map((updated): Patch => ({ order: updated, loading: false, error: null })),
-        catchError((error: unknown) => this.writeFailed(id, error)),
+        catchError((error: unknown) => this.handleWriteError(id, error)),
         startWith<Patch>({ loading: true }), // keeps `order`: the previous data stays on screen
       );
     });
   }
 
-  private writeFailed(id: string, error: unknown): Observable<Patch> {
+  private handleWriteError(id: string, error: unknown): Observable<Patch> {
     if (isConflict(error) || isNotFound(error)) {
       // Someone else changed the order (or removed the item): show the latest version.
       return this.reload(id);
     }
-    return of<Patch>({ loading: false, error: errorMessage(error) });
+    return of<Patch>({ loading: false, error: getErrorMessage(error) });
   }
 }

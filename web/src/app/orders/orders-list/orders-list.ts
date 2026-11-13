@@ -16,7 +16,7 @@ import {
   switchMap,
 } from 'rxjs';
 
-import { ORDER_STATUSES, OrderStatus, OrderSummary, PagedResult, statusClass } from '../order.models';
+import { ORDER_STATUSES, OrderStatus, OrderSummary, PagedResult, getStatusClass } from '../order.models';
 import { OrdersApi } from '../orders-api';
 
 export const SEARCH_DEBOUNCE_MS = 300;
@@ -40,7 +40,7 @@ export class OrdersList {
   private readonly api = inject(OrdersApi);
 
   protected readonly statuses = ORDER_STATUSES;
-  protected readonly statusClass = statusClass;
+  protected readonly getStatusClass = getStatusClass;
   protected readonly search = new FormControl('', { nonNullable: true });
   protected readonly status = new FormControl<OrderStatus | ''>('', { nonNullable: true });
   private readonly pageRequests = new Subject<number>();

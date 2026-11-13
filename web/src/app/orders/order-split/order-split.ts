@@ -5,7 +5,7 @@ import { EMPTY, Observable, Subject, catchError, concat, defer, exhaustMap, map,
 
 import { Order, OrderSplit, SaveSplitRequest } from '../order.models';
 import { OrdersApi } from '../orders-api';
-import { GENERIC_ERROR, errorMessage, isConflict, isNotFound } from '../api-error';
+import { GENERIC_ERROR, getErrorMessage, isConflict, isNotFound } from '../api-error';
 
 export const CLEARED_MESSAGE = 'The saved split was cleared because the order changed.';
 export const TOO_FEW_ITEMS_MESSAGE = 'Add at least 2 items to split the bill.';
@@ -59,7 +59,7 @@ function reconcile(order: Order, draft: Draft): Draft {
   return { partCount, assignments };
 }
 
-function fromSaved(order: Order, split: OrderSplit): Draft {
+function buildDraftFromSaved(order: Order, split: OrderSplit): Draft {
   const assignments: Record<string, number | null> = {};
   for (const item of order.items) {
     const index = split.parts.findIndex((part) => part.itemIds.includes(item.id));
@@ -78,7 +78,7 @@ function isComplete(order: Order, draft: Draft): boolean {
 }
 
 /** Parts in order 1..N, each with its items in the order's item order. */
-function toRequest(order: Order, draft: Draft): SaveSplitRequest {
+function buildSaveRequest(order: Order, draft: Draft): SaveSplitRequest {
   return {
     parts: Array.from({ length: draft.partCount }, (_, part) => ({
       itemIds: order.items.filter((item) => draft.assignments[item.id] === part).map((item) => item.id),
@@ -152,11 +152,11 @@ export class OrderSplitSection {
     this.edits.next({ ...draft, assignments: { ...draft.assignments, [itemId]: value === '' ? null : Number(value) } });
   }
 
-  protected partOf(itemId: string): number | null {
+  protected getPartOf(itemId: string): number | null {
     return this.state().draft.assignments[itemId] ?? null;
   }
 
-  protected namesOf(itemIds: string[]): string {
+  protected formatItemNames(itemIds: string[]): string {
     const names = this.itemNames();
     return itemIds.map((id) => names.get(id) ?? id).join(', ');
   }
@@ -176,7 +176,7 @@ export class OrderSplitSection {
           (state) => ({
             ...state,
             saved: split,
-            draft: fromSaved(order, split),
+            draft: buildDraftFromSaved(order, split),
             parts: split,
             loadingSplit: false,
             previewing: false,
@@ -186,7 +186,7 @@ export class OrderSplitSection {
       ),
       catchError((error: unknown) =>
         isNotFound(error)
-          ? this.noSavedSplit(order)
+          ? this.handleNoSavedSplit(order)
           : of<Reducer>((state) => ({ ...state, loadingSplit: false, error: GENERIC_ERROR })),
       ),
       // Items may have changed: keep the assignments of remaining items now; the previous parts stay on screen.
@@ -200,7 +200,7 @@ export class OrderSplitSection {
   }
 
   /** Not found from GET split: there is no saved split. If one was shown before, the order change cleared it. */
-  private noSavedSplit(order: Order): Observable<Reducer> {
+  private handleNoSavedSplit(order: Order): Observable<Reducer> {
     return defer(() => {
       const draft = this.state().draft;
       const complete = isComplete(order, draft);
@@ -230,7 +230,7 @@ export class OrderSplitSection {
 
   /** A response only lands if the draft it was asked for is still the one on screen. */
   private preview(order: Order, draft: Draft): Observable<Reducer> {
-    return this.api.previewSplit(order.id, toRequest(order, draft)).pipe(
+    return this.api.previewSplit(order.id, buildSaveRequest(order, draft)).pipe(
       map(
         (split): Reducer =>
           (state) => (state.draft === draft ? { ...state, parts: split, previewing: false, error: null } : state),
@@ -238,7 +238,7 @@ export class OrderSplitSection {
       // A conflict is not expected here (preview changes nothing): like any error but a broken rule, the generic message (R12).
       catchError((error: unknown) =>
         of<Reducer>((state) =>
-          state.draft === draft ? { ...state, previewing: false, error: errorMessage(error) } : state,
+          state.draft === draft ? { ...state, previewing: false, error: getErrorMessage(error) } : state,
         ),
       ),
       startWith<Reducer>((state) => ({ ...state, previewing: true })),
@@ -252,7 +252,7 @@ export class OrderSplitSection {
       if (order.status !== 'Open') {
         return EMPTY;
       }
-      return this.api.saveSplit(order.id, toRequest(order, draft)).pipe(
+      return this.api.saveSplit(order.id, buildSaveRequest(order, draft)).pipe(
         map(
           (split): Reducer =>
             (state) => ({
@@ -264,7 +264,7 @@ export class OrderSplitSection {
               message: null,
             }),
         ),
-        catchError((error: unknown) => this.writeFailed(error, false)),
+        catchError((error: unknown) => this.handleWriteError(error, false)),
         startWith<Reducer>((state) => ({ ...state, writing: true })),
       );
     });
@@ -278,18 +278,18 @@ export class OrderSplitSection {
       }
       return this.api.removeSplit(order.id).pipe(
         map((): Reducer => (state) => ({ ...state, saved: null, writing: false, error: null, message: null })),
-        catchError((error: unknown) => this.writeFailed(error, true)),
+        catchError((error: unknown) => this.handleWriteError(error, true)),
         startWith<Reducer>((state) => ({ ...state, writing: true })),
       );
     });
   }
 
-  private writeFailed(error: unknown, isRemove: boolean): Observable<Reducer> {
+  private handleWriteError(error: unknown, isRemove: boolean): Observable<Reducer> {
     if (isConflict(error) || (isRemove && isNotFound(error))) {
       // The parent reloads the order and shows its "order changed" message; the new order re-reads the split.
       this.changed.emit();
       return of<Reducer>((state) => ({ ...state, writing: false, error: null }));
     }
-    return of<Reducer>((state) => ({ ...state, writing: false, error: errorMessage(error) }));
+    return of<Reducer>((state) => ({ ...state, writing: false, error: getErrorMessage(error) }));
   }
 }

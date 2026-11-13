@@ -34,7 +34,7 @@
       <span
         data-testid="order-status"
         class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset"
-        [class]="statusClass(order.status)"
+        [class]="getStatusClass(order.status)"
       >
         {{ order.status }}
       </span>
@@ -160,7 +160,7 @@
     </dl>
 
     <!-- Outside data-testid="totals": the order summary selectors must not match part amounts. -->
-    <app-order-split [order]="order" (changed)="splitChanged()" />
+    <app-order-split [order]="order" (changed)="handleSplitChanged()" />
   } @else if (state().loading) {
     <div class="flex items-center gap-2 py-10 text-sm text-slate-500" role="status" data-testid="initial-loading">
       <span class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600"></span>

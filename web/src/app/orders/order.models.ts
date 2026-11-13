@@ -2,7 +2,7 @@ export const ORDER_STATUSES = ['Open', 'Paid', 'Cancelled'] as const;
 
 export type OrderStatus = (typeof ORDER_STATUSES)[number];
 
-export function statusClass(status: OrderStatus): string {
+export function getStatusClass(status: OrderStatus): string {
   switch (status) {
     case 'Open':
       return 'bg-sky-50 text-sky-700 ring-sky-600/20';

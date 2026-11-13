@@ -33,7 +33,7 @@ public class OrderPricingTests
     {
         var item = TestOrders.AddPricedItem(TestOrders.New(), 3.35m, 3);
 
-        Assert.Equal(Money.Usd(10.05m), OrderPricing.ItemTotal(item));
+        Assert.Equal(Money.Usd(10.05m), OrderPricing.CalculateItemTotal(item));
     }
 
     [Fact]
@@ -66,11 +66,11 @@ public class OrderPricingTests
         var burger = TestOrders.AddPricedItem(order, 12.99m, 2); // 25.98
         TestOrders.AddPricedItem(order, 10.03m);
 
-        Assert.Equal(Money.Usd(10.03m), OrderPricing.SubtotalWithQuantity(order, burger, 0));
-        Assert.Equal(Money.Usd(23.02m), OrderPricing.SubtotalWithQuantity(order, burger, 1));
-        Assert.Equal(Money.Usd(74.98m), OrderPricing.SubtotalWithQuantity(order, burger, 5)); // 64.95 + 10.03
+        Assert.Equal(Money.Usd(10.03m), OrderPricing.CalculateSubtotalWithQuantity(order, burger, 0));
+        Assert.Equal(Money.Usd(23.02m), OrderPricing.CalculateSubtotalWithQuantity(order, burger, 1));
+        Assert.Equal(Money.Usd(74.98m), OrderPricing.CalculateSubtotalWithQuantity(order, burger, 5)); // 64.95 + 10.03
         Assert.Equal(2, burger.Quantity);
-        Assert.Equal(Money.Usd(36.01m), OrderPricing.Subtotal(order));
+        Assert.Equal(Money.Usd(36.01m), OrderPricing.CalculateSubtotal(order));
     }
 
     [Fact]

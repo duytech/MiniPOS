@@ -50,5 +50,5 @@ public sealed record OrderMenuItemDto(
     Money ItemTotal)
 {
     public static OrderMenuItemDto From(OrderMenuItem item) =>
-        new(item.Id, item.MenuItemId, item.Name, item.UnitPrice, item.Quantity, item.Notes, OrderPricing.ItemTotal(item));
+        new(item.Id, item.MenuItemId, item.Name, item.UnitPrice, item.Quantity, item.Notes, OrderPricing.CalculateItemTotal(item));
 }

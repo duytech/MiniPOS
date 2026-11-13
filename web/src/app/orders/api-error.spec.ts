@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { of, throwError, firstValueFrom } from 'rxjs';
 
-import { ApiError, ApiResponse, GENERIC_ERROR, errorMessage, isConflict, isNotFound, unwrap } from './api-error';
+import { ApiError, ApiResponse, GENERIC_ERROR, getErrorMessage, isConflict, isNotFound, unwrap } from './api-error';
 
 describe('api-error', () => {
   it('unwrap gives the data of a success', async () => {
@@ -34,12 +34,12 @@ describe('api-error', () => {
 
   it('shows the message of a broken rule only', () => {
     for (const code of ['OrderNotOpen', 'ItemNotOnOrder', 'DiscountExceedsSubtotal', 'ItemQuantityTooLarge', 'InvalidSplit']) {
-      expect(errorMessage(new ApiError(code, 'Why.'))).toBe('Why.');
+      expect(getErrorMessage(new ApiError(code, 'Why.'))).toBe('Why.');
     }
     for (const code of ['ValidationFailed', 'OrderNotFound', 'ConcurrentChange', 'SomethingNew']) {
-      expect(errorMessage(new ApiError(code, 'Why.'))).toBe(GENERIC_ERROR);
+      expect(getErrorMessage(new ApiError(code, 'Why.'))).toBe(GENERIC_ERROR);
     }
-    expect(errorMessage(new HttpErrorResponse({ status: 500 }))).toBe(GENERIC_ERROR);
+    expect(getErrorMessage(new HttpErrorResponse({ status: 500 }))).toBe(GENERIC_ERROR);
   });
 
   it('tells not found and conflict apart', () => {

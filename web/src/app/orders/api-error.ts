@@ -41,4 +41,4 @@ export const isNotFound = (error: unknown): boolean =>
 export const isConflict = (error: unknown): boolean => hasCode(error, CONFLICT_CODES);
 
 /** What to show the cashier: the API's message for a broken business rule, otherwise the generic one. */
-export const errorMessage = (error: unknown): string => (hasCode(error, RULE_CODES) ? error.message : GENERIC_ERROR);
+export const getErrorMessage = (error: unknown): string => (hasCode(error, RULE_CODES) ? error.message : GENERIC_ERROR);
