@@ -31,4 +31,4 @@ When a reader has to work out what an expression means, put it in a variable nam
 
 | Do | Don't |
 |----|-------|
-| `var otherPartsTotal = share * (parts - 1);`<br>`var firstShare = amount - otherPartsTotal;` | `shares[0] = amount - share * (parts - 1);` |
+| `var otherSharesTotal = share * (parts - 1);`<br>`var firstShare = amount - otherSharesTotal;` | `shares[0] = amount - share * (parts - 1);` |

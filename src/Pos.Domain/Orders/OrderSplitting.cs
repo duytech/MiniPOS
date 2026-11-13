@@ -158,8 +158,8 @@ public static class OrderSplitting
     {
         var share = Money.RoundDownToCent(amount.Amount / parts, amount.Currency);
         var shares = Enumerable.Repeat(share, parts).ToArray();
-        var otherPartsTotal = share * (parts - 1);
-        var firstShare = amount - otherPartsTotal;
+        var otherSharesTotal = share * (parts - 1);
+        var firstShare = amount - otherSharesTotal;
         shares[0] = firstShare;
         return shares;
     }
