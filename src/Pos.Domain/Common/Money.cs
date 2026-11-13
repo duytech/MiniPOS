@@ -1,8 +1,9 @@
 namespace Pos.Domain.Common;
 
 /// <summary>
-/// An amount of money in whole cents. Arithmetic that can produce fractions of a cent is not offered here:
-/// rounding belongs to the order's pricing method.
+/// An amount of money in whole cents. Arithmetic that can produce fractions of a cent is not offered here; the only
+/// rounding is <see cref="RoundDownToCent"/>, used to share an amount between split parts. Pricing rounding
+/// (AwayFromZero) stays in the order's pricing method.
 /// </summary>
 public readonly record struct Money
 {
@@ -24,6 +25,12 @@ public readonly record struct Money
     public static Money Zero(Currency currency) => new(0m, currency);
 
     public static Money Usd(decimal amount) => new(amount, Currency.USD);
+
+    /// <summary>
+    /// Rounds <paramref name="amount"/> down to the cent. Callers pass non-negative amounts, so ToZero is rounding down.
+    /// </summary>
+    public static Money RoundDownToCent(decimal amount, Currency currency) =>
+        new(decimal.Round(amount, 2, MidpointRounding.ToZero), currency);
 
     public static Money operator +(Money left, Money right)
     {
