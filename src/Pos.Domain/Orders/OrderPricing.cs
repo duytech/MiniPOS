@@ -54,5 +54,5 @@ public static class OrderPricing
     }
 
     private static Money CalculatePercentOf(Money amount, Percentage rate) =>
-        new(decimal.Round(amount.Amount * rate.Value / 100m, 2, MidpointRounding.AwayFromZero), amount.Currency);
+        Money.RoundToNearestCent(amount.Amount * rate.Value / 100m, amount.Currency);
 }

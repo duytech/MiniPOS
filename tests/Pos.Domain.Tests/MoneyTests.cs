@@ -36,6 +36,20 @@ public class MoneyTests
         Assert.Equal(Currency.USD, rounded.Currency);
     }
 
+    [Theory]
+    [InlineData("0.505", "0.51")] // midpoint: away from zero, not to even (0.50)
+    [InlineData("0.515", "0.52")]
+    [InlineData("0.8875", "0.89")]
+    [InlineData("1.004", "1.00")]
+    [InlineData("2.5", "2.50")]
+    public void RoundToNearestCent_rounds_half_a_cent_away_from_zero(string amount, string expected)
+    {
+        var rounded = Money.RoundToNearestCent(decimal.Parse(amount, CultureInfo.InvariantCulture), Currency.USD);
+
+        Assert.Equal(expected, rounded.Amount.ToString(CultureInfo.InvariantCulture));
+        Assert.Equal(Currency.USD, rounded.Currency);
+    }
+
     [Fact]
     public void Adds_exact_cents()
     {
