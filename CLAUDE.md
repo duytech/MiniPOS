@@ -8,7 +8,7 @@ surrounding code.**
 - `docs/business-rules.md`: before adding a feature. Business rules already decided.
 - `docs/architecture.md`: before adding or changing code in `src/` or `web/`, or tests that call the API. Architecture
   rules (use-case folders, validators vs domain, repositories), the API envelope and paging, frontend rules.
-- `docs/coding-standards.md`: before writing or renaming code in `src/`, `web/` or `tests/`. Naming rules.
+- `docs/coding-standards.md`: before writing or renaming code in `src/`, `web/` or `tests/`. Naming and readability rules.
 - `docs/DECISIONS.md`: past design decisions. Record important new ones and their reasons there. No need for detailed
   design documents — just "what decision, why, when".
 - `docs/hooks.md`: when a hook blocks you or before you change one. What each hook does.
