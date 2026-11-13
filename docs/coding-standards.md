@@ -5,6 +5,8 @@ not the surrounding code.
 
 ## Methods start with a verb
 
+Framework-required method names are exempt, such as Angular lifecycle hooks `ngOnInit` and `ngOnDestroy`.
+
 | Do | Don't |
 |----|-------|
 | `CalculateTotals`, `AddItem`, `GetById` | `Totals`, `ItemAdd`, `ById` |
