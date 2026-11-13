@@ -115,6 +115,12 @@ public static class OrderSplitting
     /// Shares <paramref name="amount"/> by each part's share of the subtotal, rounded down to the cent (amounts are never
     /// negative, so ToZero is rounding down); the leftover cents go to the part with the largest subtotal.
     /// </summary>
+    /// <param name="amount">The order-level amount to share, e.g. the whole order's tax.</param>
+    /// <param name="partSubtotals">One entry per split part: the sum of the item totals of the items in that part.</param>
+    /// <param name="subtotal">The whole order's subtotal (sum of all item totals), the denominator of each part's
+    /// share; equals the sum of <paramref name="partSubtotals"/> because every item is in exactly one part.</param>
+    /// <returns>One share per part, in the order of <paramref name="partSubtotals"/>; the shares add up to
+    /// <paramref name="amount"/>.</returns>
     private static Money[] Allocate(Money amount, List<Money> partSubtotals, Money subtotal)
     {
         var shares = partSubtotals
