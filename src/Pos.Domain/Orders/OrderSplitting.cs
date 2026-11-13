@@ -54,10 +54,10 @@ public static class OrderSplitting
         }
 
         var totals = OrderPricing.CalculateTotals(order);
-        var discounts = AllocateProportionally(totals.Discount, partSubtotals, totals.Subtotal);
-        var surcharges = AllocateProportionally(totals.Surcharge, partSubtotals, totals.Subtotal);
-        var taxes = AllocateProportionally(totals.Tax, partSubtotals, totals.Subtotal);
-        var tips = AllocateProportionally(totals.Tip, partSubtotals, totals.Subtotal);
+        var discounts = AllocateAmountToPart(totals.Discount, partSubtotals, totals.Subtotal);
+        var surcharges = AllocateAmountToPart(totals.Surcharge, partSubtotals, totals.Subtotal);
+        var taxes = AllocateAmountToPart(totals.Tax, partSubtotals, totals.Subtotal);
+        var tips = AllocateAmountToPart(totals.Tip, partSubtotals, totals.Subtotal);
 
         return Result.Ok<IReadOnlyList<SplitPart>>(itemIdsPerPart.Select((itemIds, i) => new SplitPart(
                 itemIds.ToList(),
@@ -121,7 +121,7 @@ public static class OrderSplitting
     /// share; equals the sum of <paramref name="partSubtotals"/> because every item is in exactly one part.</param>
     /// <returns>One share per part, in the order of <paramref name="partSubtotals"/>; the shares add up to
     /// <paramref name="amount"/>.</returns>
-    private static Money[] AllocateProportionally(Money amount, List<Money> partSubtotals, Money subtotal)
+    private static Money[] AllocateAmountToPart(Money amount, List<Money> partSubtotals, Money subtotal)
     {
         var shares = partSubtotals
             .Select(partSubtotal => subtotal.Amount == 0m
