@@ -36,9 +36,9 @@ public class OrderRulesTests
     [Fact]
     public void A_fixed_discount_up_to_the_subtotal_fits()
     {
-        Assert.True(OrderRules.FixedDiscountFits(Money.Usd(7.70m), Money.Usd(7.70m)));
-        Assert.True(OrderRules.FixedDiscountFits(Money.Usd(7.69m), Money.Usd(7.70m)));
-        Assert.False(OrderRules.FixedDiscountFits(Money.Usd(7.71m), Money.Usd(7.70m)));
+        Assert.True(OrderRules.CanFitFixedDiscount(Money.Usd(7.70m), Money.Usd(7.70m)));
+        Assert.True(OrderRules.CanFitFixedDiscount(Money.Usd(7.69m), Money.Usd(7.70m)));
+        Assert.False(OrderRules.CanFitFixedDiscount(Money.Usd(7.71m), Money.Usd(7.70m)));
     }
 
     [Fact]

@@ -22,7 +22,7 @@ public sealed class ApplyDiscountHandler(IOrderRepository orders, ILogger<ApplyD
             return Result.Fail<OrderDto>(OrderErrors.NotOpen(order.Status));
         }
 
-        if (DiscountError(order, command) is { } error)
+        if (FindDiscountError(order, command) is { } error)
         {
             return Result.Fail<OrderDto>(error);
         }
@@ -47,10 +47,10 @@ public sealed class ApplyDiscountHandler(IOrderRepository orders, ILogger<ApplyD
         return Result.Ok(OrderDto.From(order));
     }
 
-    private static Error? DiscountError(Order order, ApplyDiscountCommand command)
+    private static Error? FindDiscountError(Order order, ApplyDiscountCommand command)
     {
-        var subtotal = OrderPricing.Subtotal(order);
-        return command.Amount is { } amount && !OrderRules.FixedDiscountFits(amount, subtotal)
+        var subtotal = OrderPricing.CalculateSubtotal(order);
+        return command.Amount is { } amount && !OrderRules.CanFitFixedDiscount(amount, subtotal)
             ? OrderErrors.DiscountExceedsSubtotal(amount, subtotal)
             : null;
     }

@@ -32,8 +32,8 @@ public sealed class RemoveOrderMenuItemHandler(IOrderRepository orders, ILogger<
             return Result.Fail<OrderDto>(OrderErrors.NotOpen(order.Status));
         }
 
-        var newSubtotal = OrderPricing.SubtotalWithQuantity(order, item, quantity: 0);
-        if (order.DiscountAmount is { } discount && !OrderRules.FixedDiscountFits(discount, newSubtotal))
+        var newSubtotal = OrderPricing.CalculateSubtotalWithQuantity(order, item, quantity: 0);
+        if (order.DiscountAmount is { } discount && !OrderRules.CanFitFixedDiscount(discount, newSubtotal))
         {
             return Result.Fail<OrderDto>(OrderErrors.DiscountExceedsNewSubtotal("Removing the item", discount, newSubtotal));
         }

@@ -15,5 +15,5 @@ public static class OrderRules
     /// A fixed discount can never be more than the subtotal. When it is, fail with
     /// <see cref="OrderErrors.DiscountExceedsSubtotal"/> or <see cref="OrderErrors.DiscountExceedsNewSubtotal"/>.
     /// </summary>
-    public static bool FixedDiscountFits(Money discount, Money subtotal) => discount.Amount <= subtotal.Amount;
+    public static bool CanFitFixedDiscount(Money discount, Money subtotal) => discount.Amount <= subtotal.Amount;
 }

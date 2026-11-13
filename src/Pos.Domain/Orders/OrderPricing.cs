@@ -6,14 +6,14 @@ namespace Pos.Domain.Orders;
 public static class OrderPricing
 {
     /// <summary>Unit price × quantity. Both are exact (whole cents × integer), so no rounding is involved.</summary>
-    public static Money ItemTotal(OrderMenuItem item) => item.UnitPrice * item.Quantity;
+    public static Money CalculateItemTotal(OrderMenuItem item) => item.UnitPrice * item.Quantity;
 
-    public static Money Subtotal(Order order) =>
-        order.Items.Aggregate(Money.Zero(order.Currency), (sum, item) => sum + ItemTotal(item));
+    public static Money CalculateSubtotal(Order order) =>
+        order.Items.Aggregate(Money.Zero(order.Currency), (sum, item) => sum + CalculateItemTotal(item));
 
     /// <summary>The subtotal the order would have with <paramref name="item"/> at <paramref name="quantity"/> (0 = removed).</summary>
-    public static Money SubtotalWithQuantity(Order order, OrderMenuItem item, int quantity) =>
-        Subtotal(order) - ItemTotal(item) + item.UnitPrice * quantity;
+    public static Money CalculateSubtotalWithQuantity(Order order, OrderMenuItem item, int quantity) =>
+        CalculateSubtotal(order) - CalculateItemTotal(item) + item.UnitPrice * quantity;
 
     /// <summary>
     /// Each step is rounded to cents (MidpointRounding.AwayFromZero) before the next step uses it.
@@ -27,12 +27,12 @@ public static class OrderPricing
     /// </summary>
     public static OrderTotals CalculateTotals(Order order)
     {
-        var subtotal = Subtotal(order);
+        var subtotal = CalculateSubtotal(order);
 
         // At most one of the two is set: applying a discount checks it (ApplyDiscountValidator).
         var discount = (order.DiscountRate, order.DiscountAmount) switch
         {
-            ({ } rate, _) => PercentOf(subtotal, rate),
+            ({ } rate, _) => CalculatePercentOf(subtotal, rate),
             (_, { } amount) => amount,
             _ => Money.Zero(order.Currency),
         };
@@ -40,19 +40,19 @@ public static class OrderPricing
 
         var surchargeBase = discountedSubtotal;
         var surcharge = order.PaymentMethod == PaymentMethod.Card
-            ? PercentOf(surchargeBase, order.CardSurchargeRate)
+            ? CalculatePercentOf(surchargeBase, order.CardSurchargeRate)
             : Money.Zero(order.Currency);
 
         var taxBase = discountedSubtotal + surcharge;
-        var tax = PercentOf(taxBase, order.TaxRate);
+        var tax = CalculatePercentOf(taxBase, order.TaxRate);
 
         var tipBase = discountedSubtotal;
-        var tip = order.TipRate is { } tipRate ? PercentOf(tipBase, tipRate) : Money.Zero(order.Currency);
+        var tip = order.TipRate is { } tipRate ? CalculatePercentOf(tipBase, tipRate) : Money.Zero(order.Currency);
 
         return new OrderTotals(subtotal, discount, surcharge, tax, tip,
             Total: discountedSubtotal + surcharge + tax + tip);
     }
 
-    private static Money PercentOf(Money amount, Percentage rate) =>
-        new(decimal.Round(amount.Amount * rate.Value / 100m, 2, MidpointRounding.AwayFromZero), amount.Currency);
+    private static Money CalculatePercentOf(Money amount, Percentage rate) =>
+        Money.RoundToNearestCent(amount.Amount * rate.Value / 100m, amount.Currency);
 }

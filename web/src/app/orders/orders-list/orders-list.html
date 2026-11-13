@@ -87,7 +87,7 @@
               <td class="px-2 py-3 sm:px-4">
                 <span
                   class="inline-flex rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset"
-                  [class]="statusClass(order.status)"
+                  [class]="getStatusClass(order.status)"
                 >
                   {{ order.status }}
                 </span>
