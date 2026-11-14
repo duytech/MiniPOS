@@ -96,7 +96,7 @@ public static class OrderSplitting
         var taxes = AllocateMoneyEqually(totals.Tax, parts);
         var tips = AllocateMoneyEqually(totals.Tip, parts);
 
-        return Result.Ok<IReadOnlyList<SplitPart>>(Enumerable.Range(0, parts)
+        var splitParts = Enumerable.Range(0, parts)
             .Select(i => new SplitPart(
                 [],
                 subtotals[i],
@@ -105,7 +105,8 @@ public static class OrderSplitting
                 taxes[i],
                 tips[i],
                 Total: subtotals[i] - discounts[i] + surcharges[i] + taxes[i] + tips[i]))
-            .ToList());
+            .ToList();
+        return Result.Ok<IReadOnlyList<SplitPart>>(splitParts);
     }
 
     private static Result<IReadOnlyList<SplitPart>> InvalidSplit(string message) =>

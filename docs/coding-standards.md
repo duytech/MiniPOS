@@ -43,3 +43,13 @@ method then reads as a list of steps.
 | Do | Don't |
 |----|-------|
 | `shares[FindIndexOfLargest(partSubtotals)] += leftover;` | `var largest = 0;`<br>`for (var i = 1; i < partSubtotals.Count; i++) { … }`<br>`shares[largest] += leftover;` |
+
+## Name a long call before passing it on
+
+When an argument is itself a long call (a LINQ chain, a call that spans lines, a call with its own logic), put its
+result in a variable named for what it holds, then pass the variable. Short calls that read at a glance stay inline,
+such as static factories: `Result.Ok(OrderDto.From(order))`, `Result.Fail<OrderDto>(NotFoundErrors.Order(id))`.
+
+| Do | Don't |
+|----|-------|
+| `var splitParts = Enumerable.Range(0, parts)`<br>`    .Select(i => new SplitPart(…))`<br>`    .ToList();`<br>`return Result.Ok<IReadOnlyList<SplitPart>>(splitParts);` | `return Result.Ok<IReadOnlyList<SplitPart>>(Enumerable.Range(0, parts)`<br>`    .Select(i => new SplitPart(…))`<br>`    .ToList());` |
