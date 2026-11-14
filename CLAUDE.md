@@ -85,6 +85,7 @@ Run what the change touches, in this order; CI runs all of it on every PR.
 - Every change needs a task id (a GitHub issue number).
 - Git Commit messages should explain what was done and why, Must start with a task id like: 13245 | Do something.
 - Branch name must start with a task id.
+- Ask me before you commit or push code.
 
 ## Plan structure
 - A plan has a `## Execution Steps` section: the numbered task list you will track while building it, same steps in
