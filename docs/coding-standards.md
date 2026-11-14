@@ -46,9 +46,15 @@ method then reads as a list of steps.
 
 ## Name a long call before passing it on
 
-When an argument is itself a long call (a LINQ chain, a call that spans lines, a call with its own logic), put its
-result in a variable named for what it holds, then pass the variable. Short calls that read at a glance stay inline,
-such as static factories: `Result.Ok(OrderDto.From(order))`, `Result.Fail<OrderDto>(NotFoundErrors.Order(id))`.
+When an argument is itself a long call, put its result in a variable named for what it holds, then pass the variable.
+A call is long when it spans more than one line, or when it nests calls two or more levels deep inside the argument.
+
+Stay inline:
+- Short calls that read at a glance, such as static factories: `Result.Ok(OrderDto.From(order))`,
+  `Result.Fail<OrderDto>(NotFoundErrors.Order(id))`.
+- A one-line LINQ chain passed to a DTO constructor or factory: `order.Items.Select(OrderMenuItemDto.From).ToList()`.
+- A one-line LINQ chain in a test assertion: `Assert.Equal(expected, parts.Select(p => p.Total))`.
+- RxJS operators inside `pipe(...)`; the pipeline itself, when passed on (e.g. to `toSignal`), is a long call.
 
 | Do | Don't |
 |----|-------|
