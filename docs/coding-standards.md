@@ -43,3 +43,19 @@ method then reads as a list of steps.
 | Do | Don't |
 |----|-------|
 | `shares[FindIndexOfLargest(partSubtotals)] += leftover;` | `var largest = 0;`<br>`for (var i = 1; i < partSubtotals.Count; i++) { … }`<br>`shares[largest] += leftover;` |
+
+## Name a long call before passing it on
+
+When an argument is itself a long call, put its result in a variable named for what it holds, then pass the variable.
+A call is long when it spans more than one line, or when it nests calls two or more levels deep inside the argument.
+
+Stay inline:
+- Short calls that read at a glance, such as static factories: `Result.Ok(OrderDto.From(order))`,
+  `Result.Fail<OrderDto>(NotFoundErrors.Order(id))`.
+- A one-line LINQ chain passed to a DTO constructor or factory: `order.Items.Select(OrderMenuItemDto.From).ToList()`.
+- A one-line LINQ chain in a test assertion: `Assert.Equal(expected, parts.Select(p => p.Total))`.
+- RxJS operators inside `pipe(...)`; the pipeline itself, when passed on (e.g. to `toSignal`), is a long call.
+
+| Do | Don't |
+|----|-------|
+| `var splitParts = Enumerable.Range(0, parts)`<br>`    .Select(i => new SplitPart(…))`<br>`    .ToList();`<br>`return Result.Ok<IReadOnlyList<SplitPart>>(splitParts);` | `return Result.Ok<IReadOnlyList<SplitPart>>(Enumerable.Range(0, parts)`<br>`    .Select(i => new SplitPart(…))`<br>`    .ToList());` |

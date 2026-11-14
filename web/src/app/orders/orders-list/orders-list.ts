@@ -71,19 +71,18 @@ export class OrdersList {
    * Each query cancels the request still in flight (switchMap). While a request loads, the previous result stays
    * on screen with `isLoading` set.
    */
-  protected readonly state = toSignal(
-    this.query$.pipe(
-      switchMap((query) =>
-        this.api.list(query).pipe(
-          map((result): Partial<ListState> => ({ result, isLoading: false, hasError: false })),
-          catchError(() => of<Partial<ListState>>({ isLoading: false, hasError: true })),
-          startWith<Partial<ListState>>({ isLoading: true, hasError: false }),
-        ),
+  private readonly state$ = this.query$.pipe(
+    switchMap((query) =>
+      this.api.list(query).pipe(
+        map((result): Partial<ListState> => ({ result, isLoading: false, hasError: false })),
+        catchError(() => of<Partial<ListState>>({ isLoading: false, hasError: true })),
+        startWith<Partial<ListState>>({ isLoading: true, hasError: false }),
       ),
-      scan((state: ListState, patch: Partial<ListState>) => ({ ...state, ...patch }), INITIAL_STATE),
     ),
-    { initialValue: INITIAL_STATE },
+    scan((state: ListState, patch: Partial<ListState>) => ({ ...state, ...patch }), INITIAL_STATE),
   );
+
+  protected readonly state = toSignal(this.state$, { initialValue: INITIAL_STATE });
 
   protected readonly result = computed(() => this.state().result);
   protected readonly firstRow = computed(() => {

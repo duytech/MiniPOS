@@ -40,6 +40,8 @@ export class OrderDetail {
   private readonly writes = new Subject<ItemWrite>();
   private readonly reloads = new Subject<void>();
 
+  private readonly jobs$ = merge(this.writes, this.reloads.pipe(map(() => 'reload' as const)));
+
   /**
    * One pipeline for the screen. Loading uses switchMap: a new id makes the previous load useless.
    *
@@ -50,20 +52,17 @@ export class OrderDetail {
    * Reloads (the split section saw a conflict) queue in the same concatMap: a reload read before a write committed
    * must not land after it and put the older quantity back on screen, or the next + would send a stale quantity.
    */
-  protected readonly state: Signal<DetailState> = toSignal(
-    toObservable(this.id).pipe(
-      switchMap((id) =>
-        merge(
-          this.load(id),
-          merge(this.writes, this.reloads.pipe(map(() => 'reload' as const))).pipe(
-            concatMap((job) => (job === 'reload' ? this.reload(id) : this.runWrite(id, job))),
-          ),
-        ),
+  private readonly state$ = toObservable(this.id).pipe(
+    switchMap((id) =>
+      merge(
+        this.load(id),
+        this.jobs$.pipe(concatMap((job) => (job === 'reload' ? this.reload(id) : this.runWrite(id, job)))),
       ),
-      scan((state: DetailState, patch: Patch) => ({ ...state, ...patch }), INITIAL_STATE),
     ),
-    { initialValue: INITIAL_STATE },
+    scan((state: DetailState, patch: Patch) => ({ ...state, ...patch }), INITIAL_STATE),
   );
+
+  protected readonly state: Signal<DetailState> = toSignal(this.state$, { initialValue: INITIAL_STATE });
 
   protected readonly order = computed(() => this.state().order);
   protected readonly isOpen = computed(() => this.order()?.status === 'Open');

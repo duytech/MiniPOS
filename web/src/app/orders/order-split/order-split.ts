@@ -109,15 +109,18 @@ export class OrderSplitSection {
    * preview useless (its request is cancelled). Save and Remove use exhaustMap: a second click while one runs is a
    * duplicate and is ignored; switchMap would only cancel the request on the client, not on the server.
    */
-  protected readonly state: Signal<SplitState> = toSignal(
-    merge(
-      toObservable(this.order).pipe(switchMap((order) => this.load(order))),
-      this.edits.pipe(switchMap((draft) => this.edit(draft))),
-      this.saves.pipe(exhaustMap(() => this.runSave())),
-      this.removes.pipe(exhaustMap(() => this.runRemove())),
-    ).pipe(scan((state: SplitState, reduce: Reducer) => reduce(state), INITIAL_STATE)),
-    { initialValue: INITIAL_STATE },
+  private readonly reducers$ = merge(
+    toObservable(this.order).pipe(switchMap((order) => this.load(order))),
+    this.edits.pipe(switchMap((draft) => this.edit(draft))),
+    this.saves.pipe(exhaustMap(() => this.runSave())),
+    this.removes.pipe(exhaustMap(() => this.runRemove())),
   );
+
+  private readonly state$ = this.reducers$.pipe(
+    scan((state: SplitState, reduce: Reducer) => reduce(state), INITIAL_STATE),
+  );
+
+  protected readonly state: Signal<SplitState> = toSignal(this.state$, { initialValue: INITIAL_STATE });
 
   protected readonly isOpen = computed(() => this.order().status === 'Open');
   protected readonly hasTooFewItems = computed(() => this.isOpen() && this.order().items.length < MIN_PARTS);
