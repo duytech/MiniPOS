@@ -39,10 +39,10 @@ internal static class OrderRace
         }
 
         var running = requests.Select(send => Task.Run(send)).ToList();
-        var allBlocked = await WaitUntilBlockedAsync(connectionString, gate.ProcessID, running);
+        var isAllBlocked = await IsAllBlockedWithinTimeoutAsync(connectionString, gate.ProcessID, running);
         await lockTransaction.RollbackAsync();
         var results = await Task.WhenAll(running);
-        Assert.True(allBlocked,
+        Assert.True(isAllBlocked,
             $"Only some of the {running.Count} requests reached the order's write within {BlockTimeout}.");
         return results;
     }
@@ -51,7 +51,7 @@ internal static class OrderRace
     /// Polls from a second connection: pg_stat_activity is a snapshot per transaction, so the gate's own transaction
     /// would keep seeing the first answer. Stops early when a request finished without waiting.
     /// </summary>
-    private static async Task<bool> WaitUntilBlockedAsync<T>(
+    private static async Task<bool> IsAllBlockedWithinTimeoutAsync<T>(
         string connectionString, int gatePid, List<Task<T>> running)
     {
         await using var monitor = new NpgsqlConnection(connectionString);

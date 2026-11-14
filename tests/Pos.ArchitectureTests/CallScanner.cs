@@ -25,7 +25,7 @@ internal static class CallScanner
         called.DeclaringType.FullName == typeof(Pos.Domain.Common.Money).FullName && MoneyOperators.Contains(called.Name);
 
     /// <summary>A call whose value is a Result: the method's return value, or the awaited value of a Task of Result.</summary>
-    public static bool ReturnsResult(MethodReference called) =>
+    public static bool IsResultReturning(MethodReference called) =>
         IsResult(called.ReturnType)
         || (called.Name == "GetResult" && called.DeclaringType is GenericInstanceType awaiter
             && awaiter.GenericArguments.Any(IsResult));
@@ -39,7 +39,7 @@ internal static class CallScanner
     /// shortcut: a Result stored in a variable that is never read is not found, move to a Roslyn analyzer if that bites.
     /// </summary>
     public static IEnumerable<(string Caller, string Call)> ScanDiscardedResults(Assembly assembly) =>
-        Scan(assembly, (called, instruction) => ReturnsResult(called) && NextReal(instruction)?.OpCode.Code == Code.Pop);
+        Scan(assembly, (called, instruction) => IsResultReturning(called) && NextReal(instruction)?.OpCode.Code == Code.Pop);
 
     private static IEnumerable<(string Caller, string Call)> Scan(
         Assembly assembly, Func<MethodReference, Instruction, bool> matches)

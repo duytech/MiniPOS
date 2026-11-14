@@ -54,7 +54,7 @@ export function summaryValue(page: Page, term: string): Locator {
 }
 
 interface ShownRow {
-  cells: { text: string; visible: boolean }[];
+  cells: { text: string; isVisible: boolean }[];
 }
 
 /** Visible text of each body row's cells (innerText, so hidden responsive copies are left out). */
@@ -63,7 +63,7 @@ async function shownRows(rows: Locator): Promise<ShownRow[]> {
     trs.map((tr) => ({
       cells: Array.from(tr.querySelectorAll('td')).map((td) => ({
         text: (td as HTMLElement).innerText.trim(),
-        visible: td.checkVisibility(),
+        isVisible: td.checkVisibility(),
       })),
     })),
   );
@@ -85,7 +85,7 @@ function rowFor(rows: ShownRow[], name: string): { row: ShownRow; rest: string }
  * the "$x.xx each" text under the item name.
  */
 function shownUnitPrice(found: { row: ShownRow; rest: string }, unitIdx: number): string {
-  if (unitIdx >= 0 && found.row.cells[unitIdx]?.visible) return found.row.cells[unitIdx].text;
+  if (unitIdx >= 0 && found.row.cells[unitIdx]?.isVisible) return found.row.cells[unitIdx].text;
   const match = /^(\S+)\s+each$/.exec(found.rest);
   return match ? match[1] : `<no visible unit price; item cell rest "${found.rest}">`;
 }

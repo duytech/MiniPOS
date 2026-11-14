@@ -176,11 +176,11 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         var unexpected = results.Where(r => r.Item1 is not (null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict or ErrorCode.OrderNotOpen or ErrorCode.DiscountExceedsSubtotal)).ToList();
         Assert.Empty(unexpected);
         var order = await _client.GetOrderAsync(orderId);
-        var removedPho = results.Any(r => r is (null, "remove"));
-        var discounted = results.Any(r => r is (null, "discount"));
-        Assert.Equal(!removedPho, discounted);
-        Assert.Equal(removedPho ? "2.00" : "11.50", order.Money("subtotal"));
-        Assert.Equal(discounted ? "5.00" : "0.00", order.Money("discount"));
+        var hasRemovedPho = results.Any(r => r is (null, "remove"));
+        var isDiscounted = results.Any(r => r is (null, "discount"));
+        Assert.Equal(!hasRemovedPho, isDiscounted);
+        Assert.Equal(hasRemovedPho ? "2.00" : "11.50", order.Money("subtotal"));
+        Assert.Equal(isDiscounted ? "5.00" : "0.00", order.Money("discount"));
     }
 
     [Fact]
@@ -261,11 +261,11 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
         var unexpected = results.Where(r => r.Item1 is not (null or ErrorCode.ConcurrentChange or ErrorCode.DataConflict or ErrorCode.OrderNotOpen or ErrorCode.DiscountExceedsSubtotal)).ToList();
         Assert.Empty(unexpected);
         var order = await _client.GetOrderAsync(orderId);
-        var decreased = results.Any(r => r is (null, "decrease"));
-        var discounted = results.Any(r => r is (null, "discount"));
-        Assert.Equal(!decreased, discounted);
-        Assert.Equal(decreased ? "9.50" : "19.00", order.Money("subtotal"));
-        Assert.Equal(discounted ? "10.00" : "0.00", order.Money("discount"));
+        var isDecreased = results.Any(r => r is (null, "decrease"));
+        var isDiscounted = results.Any(r => r is (null, "discount"));
+        Assert.Equal(!isDecreased, isDiscounted);
+        Assert.Equal(isDecreased ? "9.50" : "19.00", order.Money("subtotal"));
+        Assert.Equal(isDiscounted ? "10.00" : "0.00", order.Money("discount"));
     }
 
     /// <summary>

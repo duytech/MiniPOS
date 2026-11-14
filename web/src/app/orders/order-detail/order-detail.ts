@@ -16,12 +16,12 @@ type ItemWrite = { kind: 'remove'; itemId: string } | { kind: 'step'; itemId: st
 
 interface DetailState {
   order: Order | null;
-  loading: boolean;
-  notFound: boolean;
+  isLoading: boolean;
+  isNotFound: boolean;
   error: string | null;
 }
 
-const INITIAL_STATE: DetailState = { order: null, loading: true, notFound: false, error: null };
+const INITIAL_STATE: DetailState = { order: null, isLoading: true, isNotFound: false, error: null };
 
 type Patch = Partial<DetailState>;
 
@@ -88,9 +88,9 @@ export class OrderDetail {
 
   private load(id: string): Observable<Patch> {
     return this.api.get(id).pipe(
-      map((order): Patch => ({ order, loading: false })),
+      map((order): Patch => ({ order, isLoading: false })),
       catchError((error: unknown) =>
-        of<Patch>(isNotFound(error) ? { loading: false, notFound: true } : { loading: false, error: GENERIC_ERROR }),
+        of<Patch>(isNotFound(error) ? { isLoading: false, isNotFound: true } : { isLoading: false, error: GENERIC_ERROR }),
       ),
       // A different order: start from an empty screen, not the previous order's items.
       startWith<Patch>(INITIAL_STATE),
@@ -99,9 +99,9 @@ export class OrderDetail {
 
   private reload(id: string): Observable<Patch> {
     return this.api.get(id).pipe(
-      map((order): Patch => ({ order, loading: false, error: CHANGED_MESSAGE })),
-      catchError(() => of<Patch>({ loading: false, error: GENERIC_ERROR })),
-      startWith<Patch>({ loading: true }), // keeps `order`: the previous data stays on screen
+      map((order): Patch => ({ order, isLoading: false, error: CHANGED_MESSAGE })),
+      catchError(() => of<Patch>({ isLoading: false, error: GENERIC_ERROR })),
+      startWith<Patch>({ isLoading: true }), // keeps `order`: the previous data stays on screen
     );
   }
 
@@ -126,9 +126,9 @@ export class OrderDetail {
       }
 
       return request.pipe(
-        map((updated): Patch => ({ order: updated, loading: false, error: null })),
+        map((updated): Patch => ({ order: updated, isLoading: false, error: null })),
         catchError((error: unknown) => this.handleWriteError(id, error)),
-        startWith<Patch>({ loading: true }), // keeps `order`: the previous data stays on screen
+        startWith<Patch>({ isLoading: true }), // keeps `order`: the previous data stays on screen
       );
     });
   }
@@ -138,6 +138,6 @@ export class OrderDetail {
       // Someone else changed the order (or removed the item): show the latest version.
       return this.reload(id);
     }
-    return of<Patch>({ loading: false, error: getErrorMessage(error) });
+    return of<Patch>({ isLoading: false, error: getErrorMessage(error) });
   }
 }

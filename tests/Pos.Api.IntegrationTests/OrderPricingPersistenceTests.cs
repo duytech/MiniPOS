@@ -13,10 +13,10 @@ public class OrderPricingPersistenceTests(PosApiFactory factory) : IClassFixture
     [Theory]
     [InlineData(true)]
     [InlineData(false)]
-    public async Task Rates_discount_tip_and_payment_method_survive_a_round_trip(bool percentDiscount)
+    public async Task Rates_discount_tip_and_payment_method_survive_a_round_trip(bool isPercentDiscount)
     {
-        Percentage? discountRate = percentDiscount ? new Percentage(15m) : null;
-        Money? discountAmount = percentDiscount ? null : Money.Usd(0.75m);
+        Percentage? discountRate = isPercentDiscount ? new Percentage(15m) : null;
+        Money? discountAmount = isPercentDiscount ? null : Money.Usd(0.75m);
         Guid orderId;
         OrderTotals expected;
         using (var scope = factory.Services.CreateScope())
