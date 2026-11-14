@@ -25,9 +25,9 @@ interface SplitState {
   draft: Draft;
   /** The parts on screen, exactly as the API returned them (GET, preview or PUT). */
   parts: OrderSplit | null;
-  loadingSplit: boolean;
-  previewing: boolean;
-  writing: boolean;
+  isLoadingSplit: boolean;
+  isPreviewing: boolean;
+  isWriting: boolean;
   error: string | null;
   message: string | null;
 }
@@ -38,9 +38,9 @@ const INITIAL_STATE: SplitState = {
   saved: null,
   draft: EMPTY_DRAFT,
   parts: null,
-  loadingSplit: true,
-  previewing: false,
-  writing: false,
+  isLoadingSplit: true,
+  isPreviewing: false,
+  isWriting: false,
   error: null,
   message: null,
 };
@@ -120,15 +120,15 @@ export class OrderSplitSection {
   );
 
   protected readonly isOpen = computed(() => this.order().status === 'Open');
-  protected readonly tooFewItems = computed(() => this.isOpen() && this.order().items.length < MIN_PARTS);
+  protected readonly hasTooFewItems = computed(() => this.isOpen() && this.order().items.length < MIN_PARTS);
   /** Open: always shown. Paid or Cancelled: only a saved split is shown, read-only (R14). */
-  protected readonly visible = computed(
+  protected readonly isVisible = computed(
     () => this.isOpen() || this.state().saved !== null || this.state().error !== null,
   );
-  protected readonly editable = computed(() => this.isOpen() && !this.tooFewItems());
-  protected readonly busy = computed(() => {
+  protected readonly canEdit = computed(() => this.isOpen() && !this.hasTooFewItems());
+  protected readonly isBusy = computed(() => {
     const state = this.state();
-    return state.loadingSplit || state.previewing || state.writing;
+    return state.isLoadingSplit || state.isPreviewing || state.isWriting;
   });
   /** Part count choices: 2 to the number of items (R13). */
   protected readonly partCountChoices = computed(() =>
@@ -178,8 +178,8 @@ export class OrderSplitSection {
             saved: split,
             draft: buildDraftFromSaved(order, split),
             parts: split,
-            loadingSplit: false,
-            previewing: false,
+            isLoadingSplit: false,
+            isPreviewing: false,
             error: null,
             message: null,
           }),
@@ -187,14 +187,14 @@ export class OrderSplitSection {
       catchError((error: unknown) =>
         isNotFound(error)
           ? this.handleNoSavedSplit(order)
-          : of<Reducer>((state) => ({ ...state, loadingSplit: false, error: GENERIC_ERROR })),
+          : of<Reducer>((state) => ({ ...state, isLoadingSplit: false, error: GENERIC_ERROR })),
       ),
       // Items may have changed: keep the assignments of remaining items now; the previous parts stay on screen.
       startWith<Reducer>((state) => ({
         ...state,
         draft: reconcile(order, state.draft),
-        loadingSplit: true,
-        previewing: false,
+        isLoadingSplit: true,
+        isPreviewing: false,
       })),
     );
   }
@@ -208,7 +208,7 @@ export class OrderSplitSection {
         ...state,
         saved: null,
         parts: complete ? state.parts : null,
-        loadingSplit: false,
+        isLoadingSplit: false,
         error: null,
         message: state.saved === null ? null : CLEARED_MESSAGE,
       });
@@ -223,7 +223,7 @@ export class OrderSplitSection {
       ...state,
       draft,
       parts: complete ? state.parts : null,
-      previewing: false,
+      isPreviewing: false,
     });
     return complete ? concat(of(setDraft), this.preview(order, draft)) : of(setDraft);
   }
@@ -233,15 +233,15 @@ export class OrderSplitSection {
     return this.api.previewSplit(order.id, buildSaveRequest(order, draft)).pipe(
       map(
         (split): Reducer =>
-          (state) => (state.draft === draft ? { ...state, parts: split, previewing: false, error: null } : state),
+          (state) => (state.draft === draft ? { ...state, parts: split, isPreviewing: false, error: null } : state),
       ),
       // A conflict is not expected here (preview changes nothing): like any error but a broken rule, the generic message (R12).
       catchError((error: unknown) =>
         of<Reducer>((state) =>
-          state.draft === draft ? { ...state, previewing: false, error: getErrorMessage(error) } : state,
+          state.draft === draft ? { ...state, isPreviewing: false, error: getErrorMessage(error) } : state,
         ),
       ),
-      startWith<Reducer>((state) => ({ ...state, previewing: true })),
+      startWith<Reducer>((state) => ({ ...state, isPreviewing: true })),
     );
   }
 
@@ -259,13 +259,13 @@ export class OrderSplitSection {
               ...state,
               saved: split,
               parts: state.draft === draft ? split : state.parts,
-              writing: false,
+              isWriting: false,
               error: null,
               message: null,
             }),
         ),
         catchError((error: unknown) => this.handleWriteError(error, false)),
-        startWith<Reducer>((state) => ({ ...state, writing: true })),
+        startWith<Reducer>((state) => ({ ...state, isWriting: true })),
       );
     });
   }
@@ -277,9 +277,9 @@ export class OrderSplitSection {
         return EMPTY;
       }
       return this.api.removeSplit(order.id).pipe(
-        map((): Reducer => (state) => ({ ...state, saved: null, writing: false, error: null, message: null })),
+        map((): Reducer => (state) => ({ ...state, saved: null, isWriting: false, error: null, message: null })),
         catchError((error: unknown) => this.handleWriteError(error, true)),
-        startWith<Reducer>((state) => ({ ...state, writing: true })),
+        startWith<Reducer>((state) => ({ ...state, isWriting: true })),
       );
     });
   }
@@ -288,8 +288,8 @@ export class OrderSplitSection {
     if (isConflict(error) || (isRemove && isNotFound(error))) {
       // The parent reloads the order and shows its "order changed" message; the new order re-reads the split.
       this.changed.emit();
-      return of<Reducer>((state) => ({ ...state, writing: false, error: null }));
+      return of<Reducer>((state) => ({ ...state, isWriting: false, error: null }));
     }
-    return of<Reducer>((state) => ({ ...state, writing: false, error: getErrorMessage(error) }));
+    return of<Reducer>((state) => ({ ...state, isWriting: false, error: getErrorMessage(error) }));
   }
 }

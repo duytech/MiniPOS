@@ -18,7 +18,7 @@ public class StartupMigrationTests
     [Fact]
     public async Task Production_with_MigrateOnStartup_applies_every_migration()
     {
-        await using var app = new ProductionApp(migrateOnStartup: true);
+        await using var app = new ProductionApp(isMigrateOnStartup: true);
         try
         {
             app.CreateClient();
@@ -37,7 +37,7 @@ public class StartupMigrationTests
     [Fact]
     public async Task Production_without_MigrateOnStartup_leaves_the_database_alone()
     {
-        await using var app = new ProductionApp(migrateOnStartup: false);
+        await using var app = new ProductionApp(isMigrateOnStartup: false);
         try
         {
             app.CreateClient();
@@ -51,7 +51,7 @@ public class StartupMigrationTests
         }
     }
 
-    private sealed class ProductionApp(bool migrateOnStartup) : WebApplicationFactory<Program>
+    private sealed class ProductionApp(bool isMigrateOnStartup) : WebApplicationFactory<Program>
     {
         private readonly string _connectionString = new NpgsqlConnectionStringBuilder(ServerConnectionString())
         {
@@ -68,7 +68,7 @@ public class StartupMigrationTests
         {
             builder.UseEnvironment("Production");
             builder.UseSetting($"ConnectionStrings:{DependencyInjection.ConnectionStringName}", _connectionString);
-            builder.UseSetting("Database:MigrateOnStartup", migrateOnStartup ? "true" : "false");
+            builder.UseSetting("Database:MigrateOnStartup", isMigrateOnStartup ? "true" : "false");
         }
 
         private static string ServerConnectionString() =>

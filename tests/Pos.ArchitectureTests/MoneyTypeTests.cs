@@ -99,22 +99,22 @@ public class MoneyTypeTests
 
     private static IEnumerable<string> RawDecimalFields(Type type) =>
         from field in type.GetFields(Declared)
-        where IsVisible(field.IsPublic, field.IsFamily, field.IsFamilyOrAssembly) && ContainsDecimal(field.FieldType)
+        where IsVisible(field.IsPublic, field.IsFamily, field.IsFamilyOrAssembly) && HasDecimal(field.FieldType)
         select field.Name;
 
     private static IEnumerable<string> RawDecimalProperties(Type type) =>
         from property in type.GetProperties(Declared)
         let accessor = property.GetMethod ?? property.SetMethod!
         where IsVisible(accessor.IsPublic, accessor.IsFamily, accessor.IsFamilyOrAssembly)
-            && ContainsDecimal(property.PropertyType)
+            && HasDecimal(property.PropertyType)
         select property.Name;
 
     private static IEnumerable<string> RawDecimalMethods(Type type) =>
         from method in type.GetMethods(Declared).Cast<MethodBase>().Concat(type.GetConstructors(Declared))
         where !(method.IsSpecialName && method is not ConstructorInfo)
             && IsVisible(method.IsPublic, method.IsFamily, method.IsFamilyOrAssembly)
-            && ((method as MethodInfo)?.ReturnType is { } returnType && ContainsDecimal(returnType)
-                || method.GetParameters().Any(p => ContainsDecimal(p.ParameterType)))
+            && ((method as MethodInfo)?.ReturnType is { } returnType && HasDecimal(returnType)
+                || method.GetParameters().Any(p => HasDecimal(p.ParameterType)))
         select method.Name;
 
     private static bool IsVisible(Type type) =>
@@ -123,7 +123,7 @@ public class MoneyTypeTests
     private static bool IsVisible(bool isPublic, bool isFamily, bool isFamilyOrAssembly) =>
         isPublic || isFamily || isFamilyOrAssembly;
 
-    private static bool ContainsDecimal(Type type) => Flatten(type).Any(t => t == typeof(decimal));
+    private static bool HasDecimal(Type type) => Flatten(type).Any(t => t == typeof(decimal));
 
     /// <summary>The type itself plus element types and generic arguments, e.g. Task&lt;decimal?&gt; → decimal.</summary>
     private static IEnumerable<Type> Flatten(Type type)

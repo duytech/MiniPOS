@@ -44,11 +44,11 @@ internal static class FloatingPointScanner
         if (method.Body.Variables.Any(v => IsFloatingPoint(v.VariableType)))
             yield return $"{where}: local variable";
 
-        foreach (var instruction in method.Body.Instructions.Where(UsesFloatingPoint))
+        foreach (var instruction in method.Body.Instructions.Where(IsFloatingPointInstruction))
             yield return $"{where}: {instruction.OpCode} {instruction.Operand}";
     }
 
-    private static bool UsesFloatingPoint(Instruction instruction) =>
+    private static bool IsFloatingPointInstruction(Instruction instruction) =>
         FloatingPointOpCodes.Contains(instruction.OpCode.Code) || instruction.Operand switch
         {
             MethodReference m => IsFloatingPoint(m.ReturnType) || m.Parameters.Any(p => IsFloatingPoint(p.ParameterType)),

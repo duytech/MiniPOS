@@ -24,12 +24,12 @@ public class ValidatorTests
     [InlineData(0, false)]
     [InlineData(-1, false)]
     [InlineData(1, true)]
-    public void Add_item_quantity_must_be_positive(int quantity, bool valid)
+    public void Add_item_quantity_must_be_positive(int quantity, bool isValid)
     {
         var result = Validator<AddOrderItemCommand>()
             .Validate(new AddOrderItemCommand(Guid.NewGuid(), Guid.NewGuid(), quantity, null));
 
-        Assert.Equal(valid, result.IsValid);
+        Assert.Equal(isValid, result.IsValid);
     }
 
     [Fact]
@@ -46,12 +46,12 @@ public class ValidatorTests
     [InlineData("9999999999.99", true)]
     [InlineData("-0.01", false)]
     [InlineData("10000000000.00", false)]
-    public void Menu_item_price_must_fit_the_money_column_and_not_be_negative(string price, bool valid)
+    public void Menu_item_price_must_fit_the_money_column_and_not_be_negative(string price, bool isValid)
     {
         var result = Validator<CreateMenuItemCommand>()
             .Validate(new CreateMenuItemCommand("Tea", Money.Usd(decimal.Parse(price, CultureInfo.InvariantCulture))));
 
-        Assert.Equal(valid, result.IsValid);
+        Assert.Equal(isValid, result.IsValid);
     }
 
     [Theory]
@@ -71,11 +71,11 @@ public class ValidatorTests
     [InlineData(1, 0, false)]
     [InlineData(1, 101, false)]
     [InlineData(int.MaxValue, 100, false)]
-    public void List_orders_paging_must_be_in_range(int page, int pageSize, bool valid)
+    public void List_orders_paging_must_be_in_range(int page, int pageSize, bool isValid)
     {
         var result = Validator<ListOrdersQuery>().Validate(new ListOrdersQuery(null, null, page, pageSize));
 
-        Assert.Equal(valid, result.IsValid);
+        Assert.Equal(isValid, result.IsValid);
     }
 
     [Fact]
@@ -97,26 +97,26 @@ public class ValidatorTests
     [InlineData("15", "2.50", false)]
     [InlineData(null, "-0.01", false)]
     [InlineData(null, "10000000000.00", false)]
-    public void Discount_has_exactly_one_of_rate_up_to_100_or_amount_and_the_amount_fits(string? rate, string? amount, bool valid)
+    public void Discount_has_exactly_one_of_rate_up_to_100_or_amount_and_the_amount_fits(string? rate, string? amount, bool isValid)
     {
         var result = Validator<ApplyDiscountCommand>().Validate(new ApplyDiscountCommand(
             Guid.NewGuid(),
             rate is null ? null : new Percentage(decimal.Parse(rate, CultureInfo.InvariantCulture)),
             amount is null ? null : Money.Usd(decimal.Parse(amount, CultureInfo.InvariantCulture))));
 
-        Assert.Equal(valid, result.IsValid);
+        Assert.Equal(isValid, result.IsValid);
     }
 
     [Theory]
     [InlineData("0", true)]
     [InlineData("999.9999", true)]
     [InlineData("1000", false)]
-    public void Tip_rate_must_fit_the_percentage_column(string rate, bool valid)
+    public void Tip_rate_must_fit_the_percentage_column(string rate, bool isValid)
     {
         var result = Validator<SetTipCommand>()
             .Validate(new SetTipCommand(Guid.NewGuid(), new Percentage(decimal.Parse(rate, CultureInfo.InvariantCulture))));
 
-        Assert.Equal(valid, result.IsValid);
+        Assert.Equal(isValid, result.IsValid);
     }
 
     [Fact]
@@ -145,12 +145,12 @@ public class ValidatorTests
 
     [Theory]
     [MemberData(nameof(SplitShapes))]
-    public void Save_and_preview_split_check_the_shape_only(string shape, bool valid)
+    public void Save_and_preview_split_check_the_shape_only(string shape, bool isValid)
     {
         var (orderId, parts) = SplitShape(shape);
 
-        Assert.Equal(valid, Validator<SaveSplitCommand>().Validate(new SaveSplitCommand(orderId, parts)).IsValid);
-        Assert.Equal(valid, Validator<PreviewSplitQuery>().Validate(new PreviewSplitQuery(orderId, parts)).IsValid);
+        Assert.Equal(isValid, Validator<SaveSplitCommand>().Validate(new SaveSplitCommand(orderId, parts)).IsValid);
+        Assert.Equal(isValid, Validator<PreviewSplitQuery>().Validate(new PreviewSplitQuery(orderId, parts)).IsValid);
     }
 
     private static (Guid OrderId, IReadOnlyList<IReadOnlyList<Guid>?>? Parts) SplitShape(string shape)
@@ -175,12 +175,12 @@ public class ValidatorTests
     [InlineData(0, false)]
     [InlineData(1, true)]
     [InlineData(int.MaxValue, true)]
-    public void Changed_item_quantity_must_be_positive(int quantity, bool valid)
+    public void Changed_item_quantity_must_be_positive(int quantity, bool isValid)
     {
         var result = Validator<ChangeOrderMenuItemQuantityCommand>()
             .Validate(new ChangeOrderMenuItemQuantityCommand(Guid.NewGuid(), Guid.NewGuid(), quantity));
 
-        Assert.Equal(valid, result.IsValid);
+        Assert.Equal(isValid, result.IsValid);
     }
 
     [Theory]
@@ -190,9 +190,9 @@ public class ValidatorTests
     [InlineData(20, true)]
     [InlineData(21, false)]
     [InlineData(int.MaxValue, false)]
-    public void Even_split_is_between_1_and_20_parts(int parts, bool valid)
+    public void Even_split_is_between_1_and_20_parts(int parts, bool isValid)
     {
-        Assert.Equal(valid, Validator<SplitOrderEvenlyQuery>().Validate(new SplitOrderEvenlyQuery(Guid.NewGuid(), parts)).IsValid);
+        Assert.Equal(isValid, Validator<SplitOrderEvenlyQuery>().Validate(new SplitOrderEvenlyQuery(Guid.NewGuid(), parts)).IsValid);
     }
 
     private IValidator<T> Validator<T>() => _services.GetRequiredService<IValidator<T>>();

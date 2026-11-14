@@ -558,7 +558,7 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
     [Theory]
     [MemberData(nameof(OrderChanges))]
-    public async Task Only_a_real_change_clears_the_saved_split(string change, bool clears)
+    public async Task Only_a_real_change_clears_the_saved_split(string change, bool isCleared)
     {
         var (orderId, items) = await OrderWithLinesAsync(6.00m, 4.00m, 2.00m);
         await PrepareAsync(orderId, change);
@@ -570,7 +570,7 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
 
         await response.AssertSuccessAsync();
         var split = await GetSplitAsync(orderId);
-        if (clears)
+        if (isCleared)
         {
             await AssertProblemAsync(split, ErrorCode.SplitNotFound, $"Split '{orderId}' was not found.");
         }

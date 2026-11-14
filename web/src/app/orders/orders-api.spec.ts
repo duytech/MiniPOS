@@ -169,13 +169,13 @@ describe('OrdersApi', () => {
   });
 
   it('removes the saved split with DELETE and completes', () => {
-    let completed = false;
-    api.removeSplit('o1').subscribe({ complete: () => (completed = true) });
+    let isCompleted = false;
+    api.removeSplit('o1').subscribe({ complete: () => (isCompleted = true) });
 
     const req = http.expectOne('/api/orders/o1/split');
     expect(req.request.method).toBe('DELETE');
     req.flush(ok(true));
 
-    expect(completed).toBe(true);
+    expect(isCompleted).toBe(true);
   });
 });

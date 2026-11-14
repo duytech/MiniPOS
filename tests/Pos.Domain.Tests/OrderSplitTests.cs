@@ -93,11 +93,11 @@ public class OrderSplitTests
         var data = new TheoryData<int, bool, bool>();
         foreach (var discountKind in new[] { 0, 1, 2 })
         {
-            foreach (var card in new[] { false, true })
+            foreach (var isCard in new[] { false, true })
             {
-                foreach (var tip in new[] { false, true })
+                foreach (var hasTip in new[] { false, true })
                 {
-                    data.Add(discountKind, card, tip);
+                    data.Add(discountKind, isCard, hasTip);
                 }
             }
         }
@@ -106,11 +106,11 @@ public class OrderSplitTests
     }
 
     /// <param name="discountKind">0 = none, 1 = 15% of subtotal, 2 = fixed 1.00.</param>
-    /// <param name="card">Pay by card, so the order has a surcharge.</param>
-    /// <param name="tip">Add an 18% tip.</param>
+    /// <param name="isCard">Pay by card, so the order has a surcharge.</param>
+    /// <param name="hasTip">Add an 18% tip.</param>
     [Theory]
     [MemberData(nameof(PricingCombinations))]
-    public void Parts_add_up_exactly_to_the_order(int discountKind, bool card, bool tip)
+    public void Parts_add_up_exactly_to_the_order(int discountKind, bool isCard, bool hasTip)
     {
         var (order, l) = OrderWithItems(NycTax, 3.33m, 4.17m, 2.51m, 15.40m, 0.99m);
         if (discountKind == 1)
@@ -122,8 +122,8 @@ public class OrderSplitTests
             order.DiscountAmount = Money.Usd(1.00m);
         }
 
-        order.PaymentMethod = card ? PaymentMethod.Card : PaymentMethod.Cash;
-        if (tip)
+        order.PaymentMethod = isCard ? PaymentMethod.Card : PaymentMethod.Cash;
+        if (hasTip)
         {
             order.TipRate = new Percentage(18m);
         }

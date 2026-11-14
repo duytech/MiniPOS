@@ -7,7 +7,7 @@
     ← Back to orders
   </a>
 
-  @if (state().notFound) {
+  @if (state().isNotFound) {
     <div
       data-testid="not-found"
       class="rounded-md border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-600"
@@ -38,7 +38,7 @@
       >
         {{ order.status }}
       </span>
-      @if (state().loading) {
+      @if (state().isLoading) {
         <span data-testid="loading" class="inline-flex items-center gap-1.5 text-xs text-slate-500" role="status">
           <span class="h-3 w-3 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600"></span>
           Updating…
@@ -48,7 +48,7 @@
 
     <div
       class="overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm transition-opacity"
-      [class.opacity-60]="state().loading"
+      [class.opacity-60]="state().isLoading"
     >
       <table class="min-w-full divide-y divide-slate-200 text-sm">
         <thead class="bg-slate-50 text-left text-xs font-medium tracking-wide text-slate-500 uppercase">
@@ -161,7 +161,7 @@
 
     <!-- Outside data-testid="totals": the order summary selectors must not match part amounts. -->
     <app-order-split [order]="order" (changed)="handleSplitChanged()" />
-  } @else if (state().loading) {
+  } @else if (state().isLoading) {
     <div class="flex items-center gap-2 py-10 text-sm text-slate-500" role="status" data-testid="initial-loading">
       <span class="h-4 w-4 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600"></span>
       Loading order…

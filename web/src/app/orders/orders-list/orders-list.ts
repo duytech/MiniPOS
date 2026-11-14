@@ -24,11 +24,11 @@ export const PAGE_SIZE = 20;
 
 interface ListState {
   result: PagedResult<OrderSummary> | null;
-  loading: boolean;
-  error: boolean;
+  isLoading: boolean;
+  hasError: boolean;
 }
 
-const INITIAL_STATE: ListState = { result: null, loading: true, error: false };
+const INITIAL_STATE: ListState = { result: null, isLoading: true, hasError: false };
 
 @Component({
   selector: 'app-orders-list',
@@ -69,15 +69,15 @@ export class OrdersList {
 
   /**
    * Each query cancels the request still in flight (switchMap). While a request loads, the previous result stays
-   * on screen with `loading` set.
+   * on screen with `isLoading` set.
    */
   protected readonly state = toSignal(
     this.query$.pipe(
       switchMap((query) =>
         this.api.list(query).pipe(
-          map((result): Partial<ListState> => ({ result, loading: false, error: false })),
-          catchError(() => of<Partial<ListState>>({ loading: false, error: true })),
-          startWith<Partial<ListState>>({ loading: true, error: false }),
+          map((result): Partial<ListState> => ({ result, isLoading: false, hasError: false })),
+          catchError(() => of<Partial<ListState>>({ isLoading: false, hasError: true })),
+          startWith<Partial<ListState>>({ isLoading: true, hasError: false }),
         ),
       ),
       scan((state: ListState, patch: Partial<ListState>) => ({ ...state, ...patch }), INITIAL_STATE),
