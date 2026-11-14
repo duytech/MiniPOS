@@ -28,13 +28,13 @@ public class PosDbContext(DbContextOptions<PosDbContext> options) : DbContext(op
     private void TouchOrdersWithChangedItems()
     {
         ChangeTracker.DetectChanges();
-        var changedOrderIds = ChangeTracker.Entries<OrderMenuItem>()
+        var orderIdsWithChangedItems = ChangeTracker.Entries<OrderMenuItem>()
             .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
-            .Select(e => e.Property<Guid>(OrderMenuItemConfiguration.OrderIdProperty).CurrentValue)
-            .Concat(ChangeTracker.Entries<SavedSplitPart>()
-                .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
-                .Select(e => e.Property<Guid>(SavedSplitPartConfiguration.OrderIdProperty).CurrentValue))
-            .ToHashSet();
+            .Select(e => e.Property<Guid>(OrderMenuItemConfiguration.OrderIdProperty).CurrentValue);
+        var orderIdsWithChangedSplit = ChangeTracker.Entries<SavedSplitPart>()
+            .Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted)
+            .Select(e => e.Property<Guid>(SavedSplitPartConfiguration.OrderIdProperty).CurrentValue);
+        var changedOrderIds = orderIdsWithChangedItems.Concat(orderIdsWithChangedSplit).ToHashSet();
 
         foreach (var order in ChangeTracker.Entries<Order>())
         {

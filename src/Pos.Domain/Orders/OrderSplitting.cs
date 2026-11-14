@@ -59,7 +59,7 @@ public static class OrderSplitting
         var taxes = AllocateAmountToPart(totals.Tax, partSubtotals, totals.Subtotal);
         var tips = AllocateAmountToPart(totals.Tip, partSubtotals, totals.Subtotal);
 
-        return Result.Ok<IReadOnlyList<SplitPart>>(itemIdsPerPart.Select((itemIds, i) => new SplitPart(
+        var splitParts = itemIdsPerPart.Select((itemIds, i) => new SplitPart(
                 itemIds.ToList(),
                 partSubtotals[i],
                 discounts[i],
@@ -67,7 +67,8 @@ public static class OrderSplitting
                 taxes[i],
                 tips[i],
                 Total: partSubtotals[i] - discounts[i] + surcharges[i] + taxes[i] + tips[i]))
-            .ToList());
+            .ToList();
+        return Result.Ok<IReadOnlyList<SplitPart>>(splitParts);
     }
 
     /// <summary>The item ids of the order's saved split, per part, in saved order.</summary>

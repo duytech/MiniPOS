@@ -32,15 +32,16 @@ public sealed class SaveSplitHandler(IOrderRepository orders, ILogger<SaveSplitH
             return Result.Fail<OrderSplitDto>(parts.Error);
         }
 
-        order.SavedSplitParts.Clear();
-        order.SavedSplitParts.AddRange(itemIdsPerPart.Select((itemIds, position) => new SavedSplitPart
+        var savedParts = itemIdsPerPart.Select((itemIds, position) => new SavedSplitPart
         {
             Id = Guid.NewGuid(),
             Position = position,
             Items = itemIds
                 .Select((itemId, itemPosition) => new SavedSplitMenuItem { OrderMenuItemId = itemId, Position = itemPosition })
                 .ToList(),
-        }));
+        });
+        order.SavedSplitParts.Clear();
+        order.SavedSplitParts.AddRange(savedParts);
 
         try
         {
