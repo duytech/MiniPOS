@@ -519,8 +519,9 @@ public partial class SplitBillContractTests(PosApiFactory factory) : IClassFixtu
         var (orderId, items) = await OrderWithLinesAsync(60.00m, 40.00m);
         await (await PutSplitAsync(orderId, [items[0].Id], [items[1].Id])).AssertSuccessAsync();
 
-        var deleteRequests = Enumerable.Range(0, ConcurrentRequests)
-            .Select(_ => (Func<Task<HttpResponseMessage>>)(() => DeleteSplitAsync(orderId)));
+        Func<Task<HttpResponseMessage>> DeleteRequest(int _) => () => DeleteSplitAsync(orderId);
+
+        var deleteRequests = Enumerable.Range(0, ConcurrentRequests).Select(DeleteRequest);
         var results = await ConcurrentlyAsync(deleteRequests);
 
         var unexpected = results
