@@ -10,6 +10,7 @@ indent_style = space
 indent_size = 4
 
 # Code style rules that fail the build (EnforceCodeStyleInBuild in Directory.Build.props).
+dotnet_diagnostic.IDE0004.severity = warning
 dotnet_diagnostic.IDE0005.severity = warning
 csharp_style_namespace_declarations = file_scoped:warning
 dotnet_diagnostic.IDE0161.severity = warning
