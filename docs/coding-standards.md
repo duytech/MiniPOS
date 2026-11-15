@@ -66,6 +66,9 @@ C# only. When a lambda spans more than one line or has a block body `{ … }`, m
 what it does or returns, then use the function. A cast such as `(Func<…>)` that the lambda needed is replaced by the
 local function's return type.
 
+A lambda that is the whole body of a named local function, as in `TipRequest(int rate) => async () => { … }`, is
+already named: do not nest another local function inside it.
+
 Stay inline: one-line expression lambdas, such as `items.Select(i => i.Id)` or `.Where(r => r.Error is null)`.
 
 | Do | Don't |
