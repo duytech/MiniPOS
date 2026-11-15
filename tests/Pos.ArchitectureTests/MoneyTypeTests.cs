@@ -137,9 +137,8 @@ public class MoneyTypeTests
         yield return type;
         if (!type.IsGenericType) yield break;
 
-        foreach (var inner in type.GetGenericArguments().SelectMany(Flatten))
-        {
+        foreach (var argument in type.GetGenericArguments())
+        foreach (var inner in Flatten(argument))
             yield return inner;
-        }
     }
 }

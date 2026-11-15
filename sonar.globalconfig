@@ -7,3 +7,6 @@ dotnet_diagnostic.S3776.severity = warning
 
 # False positive: flags the last collection expression passed to a params array of collections (ApiClient.SplitBody).
 dotnet_diagnostic.S3878.severity = none
+
+# The owner's choice: stacked foreach loops without braces (CallScanner, MoneyTypeTests) read fine as one loop.
+dotnet_diagnostic.S3973.severity = none

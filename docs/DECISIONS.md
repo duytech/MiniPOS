@@ -440,7 +440,7 @@ Important design decisions: what, why, when. Newest first.
 
 ## 2026-11-15: All default Sonar rules run in the C# build and in ESLint (#173)
 - **What:** `sonar.globalconfig` no longer turns off Sonar's default rules (Sonar Way) and ESLint uses the `sonarjs`
-  recommended preset; before, only S3776 / `sonarjs/cognitive-complexity` ran. Only S3878 is off, with its reason.
+  recommended preset; before, only S3776 / `sonarjs/cognitive-complexity` ran. S3878 and S3973 are off, with their reasons.
   `AddOrderItemRequest` now has `[Required] Guid? MenuItemId` and `[Required] int? Quantity` (S6964).
 - **Why:** the owner's choice: Sonar catches things the CA rules miss (a redundant `!`, under-posting, a test with no
   assertion), and the findings at the time were few (16 C#, 1 web).
