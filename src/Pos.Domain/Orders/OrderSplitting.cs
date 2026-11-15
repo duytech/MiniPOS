@@ -74,7 +74,7 @@ public static class OrderSplitting
     /// <summary>The item ids of the order's saved split, per part, in saved order.</summary>
     public static IReadOnlyList<IReadOnlyCollection<Guid>> GetSavedSplitItemIds(Order order) => order.SavedSplitParts
         .OrderBy(p => p.Position)
-        .Select(p => (IReadOnlyCollection<Guid>)p.Items.OrderBy(l => l.Position).Select(l => l.OrderMenuItemId).ToList())
+        .Select(p => p.Items.OrderBy(l => l.Position).Select(l => l.OrderMenuItemId).ToList())
         .ToList();
 
     /// <summary>
