@@ -6,6 +6,9 @@ namespace Pos.Infrastructure.Persistence.Configurations;
 
 internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
 {
+    private const int EnumNameMaxLength = 20;
+    private const int CurrencyCodeLength = 3;
+
     public void Configure(EntityTypeBuilder<Order> builder)
     {
         builder.ToTable("orders");
@@ -13,17 +16,17 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         builder.Property(o => o.Id).HasColumnName("id").ValueGeneratedNever();
         builder.Property(o => o.Number).HasColumnName("number").UseIdentityByDefaultColumn();
         builder.HasIndex(o => o.Number).IsUnique();
-        builder.Property(o => o.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(20);
+        builder.Property(o => o.Status).HasColumnName("status").HasConversion<string>().HasMaxLength(EnumNameMaxLength);
         builder.Property(o => o.CreatedAt).HasColumnName("created_at");
         builder.HasIndex(o => o.CreatedAt);
         builder.Property(o => o.PaidAt).HasColumnName("paid_at");
         builder.Property(o => o.CancelledAt).HasColumnName("cancelled_at");
-        builder.Property(o => o.Currency).HasColumnName("currency").HasConversion<string>().HasMaxLength(3);
+        builder.Property(o => o.Currency).HasColumnName("currency").HasConversion<string>().HasMaxLength(CurrencyCodeLength);
         builder.Property(o => o.TaxRate).HasColumnName("tax_rate")
             .HasConversion<PercentageConverter>().HasColumnType(PercentageConverter.ColumnType);
         builder.Property(o => o.CardSurchargeRate).HasColumnName("card_surcharge_rate")
             .HasConversion<PercentageConverter>().HasColumnType(PercentageConverter.ColumnType);
-        builder.Property(o => o.PaymentMethod).HasColumnName("payment_method").HasConversion<string>().HasMaxLength(20);
+        builder.Property(o => o.PaymentMethod).HasColumnName("payment_method").HasConversion<string>().HasMaxLength(EnumNameMaxLength);
         builder.Property(o => o.TipRate).HasColumnName("tip_rate")
             .HasConversion<PercentageConverter>().HasColumnType(PercentageConverter.ColumnType);
         builder.Property(o => o.DiscountRate).HasColumnName("discount_rate")

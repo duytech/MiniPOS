@@ -9,6 +9,9 @@ public readonly record struct Percentage
     /// <summary>Decimal places the database stores (numeric(7,4)); more would be lost silently on save.</summary>
     public const int MaxDecimalPlaces = 4;
 
+    /// <summary>100%: a rate is divided by it to apply it to an amount.</summary>
+    public const decimal Hundred = 100m;
+
     public decimal Value { get; }
 
     public Percentage(decimal value)

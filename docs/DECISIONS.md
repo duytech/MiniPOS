@@ -446,3 +446,9 @@ Important design decisions: what, why, when. Newest first.
   assertion), and the findings at the time were few (16 C#, 1 web).
 - **Trade-off, accepted:** a package upgrade can add default rules that fail the build. A missing `menuItemId` or
   `quantity` on add item still answers `ValidationFailed`, now with "The ... field is required." before the handler runs.
+
+## 2026-11-15: Sonar S109 (magic numbers) runs; S121 (braces) does not (#176)
+- **What:** S109, which is not in Sonar's default set, fails the build in `src/` (Sonar does not run it on test
+  projects). The numbers it found have names: `Money.DecimalPlaces`, `Percentage.Hundred`, and the column lengths in
+  `OrderConfiguration`. S121 (every `if`/loop needs braces) stays off.
+- **Why:** the owner's choice. S121 would undo the S3973 decision (#173): the stacked `foreach` loops stay.
