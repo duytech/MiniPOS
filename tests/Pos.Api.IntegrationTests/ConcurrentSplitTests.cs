@@ -27,13 +27,15 @@ public class ConcurrentSplitTests(PosApiFactory factory) : IClassFixture<PosApiF
             [[0, 1], [2, 3]], [[0, 2], [1, 3]], [[0, 3], [1, 2]], [[0], [1], [2], [3]],
         ];
 
-        var results = await OrderRace.RunAsync(factory.ConnectionString, orderId, groupings.Select(grouping =>
-            (Func<Task<(ErrorCode?, string)>>)(async () =>
+        Func<Task<(ErrorCode?, string)>> SaveRequest(int[][] grouping) => async () =>
         {
             var parts = grouping.Select(part => part.Select(i => l[i])).ToArray();
             using var response = await _client.SaveSplitAsync(orderId, ApiClient.SplitBody(parts));
             return (await response.OutcomeAsync(), Describe(parts));
-        })));
+        };
+
+        var saveRequests = groupings.Select(SaveRequest);
+        var results = await OrderRace.RunAsync(factory.ConnectionString, orderId, saveRequests);
 
         var accepted = AssertOnly(results, null, ErrorCode.ConcurrentChange, ErrorCode.DataConflict);
         Assert.Single(accepted);

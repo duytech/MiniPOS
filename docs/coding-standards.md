@@ -59,3 +59,18 @@ Stay inline:
 | Do | Don't |
 |----|-------|
 | `var splitParts = Enumerable.Range(0, parts)`<br>`    .Select(i => new SplitPart(…))`<br>`    .ToList();`<br>`return Result.Ok<IReadOnlyList<SplitPart>>(splitParts);` | `return Result.Ok<IReadOnlyList<SplitPart>>(Enumerable.Range(0, parts)`<br>`    .Select(i => new SplitPart(…))`<br>`    .ToList());` |
+
+## Name a lambda that spans lines
+
+C# only. When a lambda spans more than one line or has a block body `{ … }`, move it into a local function named for
+what it does or returns, then use the function. A cast such as `(Func<…>)` that the lambda needed is replaced by the
+local function's return type.
+
+A lambda that is the whole body of a named local function, as in `TipRequest(int rate) => async () => { … }`, is
+already named: do not nest another local function inside it.
+
+Stay inline: one-line expression lambdas, such as `items.Select(i => i.Id)` or `.Where(r => r.Error is null)`.
+
+| Do | Don't |
+|----|-------|
+| `Func<Task<(ErrorCode?, string)>> TipRequest(int rate) => async () =>`<br>`{`<br>`    using var response = await _client.SetTipAsync(orderId, rate);`<br>`    return (await response.OutcomeAsync(), …);`<br>`};`<br>`var tipRequests = Enumerable.Range(1, n).Select(TipRequest);` | `var tipRequests = Enumerable.Range(1, n)`<br>`    .Select(rate => (Func<Task<(ErrorCode?, string)>>)(async () =>`<br>`    {`<br>`        using var response = await _client.SetTipAsync(orderId, rate);`<br>`        return (await response.OutcomeAsync(), …);`<br>`    }));` |
