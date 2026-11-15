@@ -58,7 +58,7 @@ public class CloseOrderHandlerTests
         };
 
         Assert.Equal(ErrorCode.OrderNotOpen, result.Error!.Code);
-        Assert.Equal($"The order is {status}; only an open order can be changed.", result.Error!.Message);
+        Assert.Equal($"The order is {status}; only an open order can be changed.", result.Error.Message);
         Assert.Equal(1, Assert.Single(order.Items).Quantity);
         Assert.Equal(totalsBefore, OrderPricing.CalculateTotals(order));
         Assert.Equal(PaymentMethod.Cash, order.PaymentMethod);

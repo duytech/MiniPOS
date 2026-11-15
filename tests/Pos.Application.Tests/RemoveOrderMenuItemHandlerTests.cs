@@ -91,7 +91,7 @@ public class RemoveOrderMenuItemHandlerTests
         Assert.Equal(
             "Removing the item would leave a subtotal of 7.70 USD, less than the discount of 7.71 USD. " +
             "Change or remove the discount first.",
-            result.Error!.Message);
+            result.Error.Message);
         Assert.Equal(2, order.Items.Count);
         Assert.Equal(Money.Usd(1.99m), OrderPricing.CalculateTotals(order).Total);
     }

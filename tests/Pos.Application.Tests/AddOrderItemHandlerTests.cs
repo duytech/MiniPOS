@@ -61,7 +61,7 @@ public class AddOrderItemHandlerTests
         var result = await _act.AddItem(order, Burger, 1);
 
         Assert.False(result.IsSuccess);
-        Assert.Equal(ErrorCode.ConcurrentChange, result.Error!.Code);
+        Assert.Equal(ErrorCode.ConcurrentChange, result.Error.Code);
         Assert.Equal("Changed.", result.Error.Message);
         var log = Assert.Single(_act.Logs);
         Assert.Equal(LogLevel.Error, log.Level);

@@ -46,9 +46,14 @@ internal static class CallScanner
     {
         using var module = ModuleDefinition.ReadModule(assembly.Location);
 
-        foreach (var type in module.GetTypes())
-        foreach (var method in type.Methods.Where(m => m.HasBody))
-        foreach (var instruction in method.Body.Instructions)
+        var instructions =
+            from type in module.GetTypes()
+            from method in type.Methods
+            where method.HasBody
+            from instruction in method.Body.Instructions
+            select (type, method, instruction);
+
+        foreach (var (type, method, instruction) in instructions)
         {
             if (instruction.OpCode.Code is Code.Call or Code.Callvirt or Code.Ldftn
                 && instruction.Operand is MethodReference called

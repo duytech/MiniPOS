@@ -106,7 +106,7 @@ public sealed class OrdersController : ControllerBase
         [FromServices] ICommandHandler<AddOrderItemCommand, OrderDto> handler,
         CancellationToken cancellationToken) =>
         await handler.HandleAsync(
-            new AddOrderItemCommand(id, request.MenuItemId, request.Quantity, request.Notes),
+            new AddOrderItemCommand(id, request.MenuItemId!.Value, request.Quantity!.Value, request.Notes),
             cancellationToken);
 
     /// <summary>Removes an item. Fails when a fixed discount is larger than the new subtotal.</summary>
@@ -185,7 +185,7 @@ public sealed class OrdersController : ControllerBase
         await handler.HandleAsync(new CancelOrderCommand(id), cancellationToken);
 }
 
-public sealed record AddOrderItemRequest(Guid MenuItemId, int Quantity, string? Notes);
+public sealed record AddOrderItemRequest([Required] Guid? MenuItemId, [Required] int? Quantity, string? Notes);
 
 public sealed record ChangeItemQuantityRequest([Required] int? Quantity);
 

@@ -244,6 +244,7 @@ describe('OrderDetail', () => {
     flush(expectQuantity(1), order({ items: [item({ quantity: 1, itemTotal: 12.5 })] }));
 
     http.expectNone(`${ORDER_URL}/items/l1/quantity`);
+    expect(text('item-quantity')).toBe('1');
   });
 
   it('keeps the order on screen with a loading indicator while a change is in flight', () => {

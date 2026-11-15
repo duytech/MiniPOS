@@ -23,7 +23,7 @@ public class ApplyDiscountHandlerTests
         var result = await _act.ApplyFixedDiscount(order, 11.51m);
 
         Assert.Equal(ErrorCode.DiscountExceedsSubtotal, result.Error!.Code);
-        Assert.Equal("A discount of 11.51 USD is more than the subtotal of 11.50 USD.", result.Error!.Message);
+        Assert.Equal("A discount of 11.51 USD is more than the subtotal of 11.50 USD.", result.Error.Message);
         Assert.Null(order.DiscountRate);
         Assert.Null(order.DiscountAmount);
     }

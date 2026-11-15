@@ -437,3 +437,12 @@ Important design decisions: what, why, when. Newest first.
 - **Trade-off, accepted:** nothing stops an agent from writing `state` by hand now, and `architecture.md` holds rules
   that apply to `web/` and tests too, so `CLAUDE.md` says to read it before changing `src/`, `web/` or tests that call
   the API.
+
+## 2026-11-15: All default Sonar rules run in the C# build and in ESLint (#173)
+- **What:** `sonar.globalconfig` no longer turns off Sonar's default rules (Sonar Way) and ESLint uses the `sonarjs`
+  recommended preset; before, only S3776 / `sonarjs/cognitive-complexity` ran. Only S3878 is off, with its reason.
+  `AddOrderItemRequest` now has `[Required] Guid? MenuItemId` and `[Required] int? Quantity` (S6964).
+- **Why:** the owner's choice: Sonar catches things the CA rules miss (a redundant `!`, under-posting, a test with no
+  assertion), and the findings at the time were few (16 C#, 1 web).
+- **Trade-off, accepted:** a package upgrade can add default rules that fail the build. A missing `menuItemId` or
+  `quantity` on add item still answers `ValidationFailed`, now with "The ... field is required." before the handler runs.
