@@ -23,12 +23,13 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
     {
         var (orderId, _) = await OrderWithOneItemAsync();
 
-        var results = await ConcurrentlyAsync(Enumerable.Range(1, ConcurrentRequests)
+        var tipRequests = Enumerable.Range(1, ConcurrentRequests)
             .Select(rate => (Func<Task<(ErrorCode?, string)>>)(async () =>
             {
                 using var response = await _client.SetTipAsync(orderId, rate);
                 return (await response.OutcomeAsync(), rate.ToString(CultureInfo.InvariantCulture));
-            })));
+            }));
+        var results = await ConcurrentlyAsync(tipRequests);
 
         var accepted = AssertOnlyOkOrConflict(results);
         Assert.Contains(await StoredAsync<string>(orderId, "tip_rate::int::text"), accepted);
@@ -39,12 +40,13 @@ public class ConcurrentOrderAdjustmentTests(PosApiFactory factory) : IClassFixtu
     {
         var (orderId, _) = await OrderWithOneItemAsync();
 
-        var results = await ConcurrentlyAsync(Enumerable.Range(1, ConcurrentRequests)
+        var discountRequests = Enumerable.Range(1, ConcurrentRequests)
             .Select(rate => (Func<Task<(ErrorCode?, string)>>)(async () =>
             {
                 using var response = await _client.ApplyDiscountAsync(orderId, new { rate });
                 return (await response.OutcomeAsync(), rate.ToString(CultureInfo.InvariantCulture));
-            })));
+            }));
+        var results = await ConcurrentlyAsync(discountRequests);
 
         var accepted = AssertOnlyOkOrConflict(results);
         Assert.Contains(await StoredAsync<string>(orderId, "discount_rate::int::text"), accepted);
