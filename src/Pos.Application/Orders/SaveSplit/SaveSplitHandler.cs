@@ -25,7 +25,7 @@ public sealed class SaveSplitHandler(IOrderRepository orders, ILogger<SaveSplitH
             return Result.Fail<OrderSplitDto>(OrderErrors.NotOpen(order.Status));
         }
 
-        var itemIdsPerPart = command.Parts!.Select(p => (IReadOnlyCollection<Guid>)p!).ToList();
+        var itemIdsPerPart = command.Parts!.Select(p => p!).ToList();
         var parts = OrderSplitting.Split(order, itemIdsPerPart);
         if (!parts.IsSuccess)
         {
