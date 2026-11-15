@@ -28,8 +28,9 @@ listing it afterwards as an open question is not enough. A rule the user decides
 - `npm start` (in `web/`): web dev server → http://localhost:4200 (proxies `/api` to 5191)
 - `dotnet build Pos.slnx`: warnings are errors and Roslyn analyzers (`latest-recommended`) run on build
   (`Directory.Build.props`, `.editorconfig`): fix the code; a rule is only turned off in `.editorconfig` with a one-line
-  reason. Sonar's default rules (`SonarAnalyzer.CSharp`) run too; a Sonar rule is only turned off in `sonar.globalconfig`
-  with a one-line reason. S3776 Cognitive Complexity (max 15 per method): split the method, don't raise the limit
+  reason. Sonar's default rules (`SonarAnalyzer.CSharp`) run too, plus S109 magic numbers (name the number in a
+  const); a Sonar rule is only turned off in `sonar.globalconfig` with a one-line reason. S3776 Cognitive Complexity
+  (max 15 per method): split the method, don't raise the limit
 - `npm run lint` (in `web/`): ESLint runs the `sonarjs` recommended rules (`.ts` only), including
   `sonarjs/cognitive-complexity` (max 15 per function), same as S3776 in .NET: split the function, don't raise the limit
 

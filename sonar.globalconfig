@@ -5,6 +5,9 @@ is_global = true
 
 dotnet_diagnostic.S3776.severity = warning
 
+# Not in Sonar's default set, turned on by the owner: S109 magic numbers (name the number in a constant).
+dotnet_diagnostic.S109.severity = warning
+
 # False positive: flags the last collection expression passed to a params array of collections (ApiClient.SplitBody).
 dotnet_diagnostic.S3878.severity = none
 

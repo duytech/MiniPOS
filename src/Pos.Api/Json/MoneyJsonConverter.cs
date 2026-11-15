@@ -18,7 +18,7 @@ public sealed class MoneyJsonConverter : JsonConverter<Money>
             throw new JsonException("Money must be a number.");
         }
 
-        if (decimal.Round(amount, 2) != amount)
+        if (decimal.Round(amount, Money.DecimalPlaces) != amount)
         {
             throw new JsonException("Money must have at most 2 decimal places.");
         }

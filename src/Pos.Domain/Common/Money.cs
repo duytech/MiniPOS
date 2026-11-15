@@ -7,18 +7,23 @@ namespace Pos.Domain.Common;
 /// </summary>
 public readonly record struct Money
 {
+    /// <summary>Decimal places of an amount: whole cents.</summary>
+    public const int DecimalPlaces = 2;
+
+    private const decimal ZeroAtCentScale = 0.00m;
+
     public decimal Amount { get; }
     public Currency Currency { get; }
 
     public Money(decimal amount, Currency currency)
     {
-        if (decimal.Round(amount, 2) != amount)
+        if (decimal.Round(amount, DecimalPlaces) != amount)
         {
             throw new ArgumentException($"Money must be in whole cents, got {amount}.", nameof(amount));
         }
 
         // Normalize the scale (1.5m and 1.500m both become 1.50m) so equal amounts compare and print the same.
-        Amount = decimal.Round(amount, 2) + 0.00m;
+        Amount = decimal.Round(amount, DecimalPlaces) + ZeroAtCentScale;
         Currency = currency;
     }
 
@@ -31,13 +36,13 @@ public readonly record struct Money
     /// the rounding every pricing step uses.
     /// </summary>
     internal static Money RoundToNearestCent(decimal amount, Currency currency) =>
-        new(decimal.Round(amount, 2, MidpointRounding.AwayFromZero), currency);
+        new(decimal.Round(amount, DecimalPlaces, MidpointRounding.AwayFromZero), currency);
 
     /// <summary>
     /// Rounds <paramref name="amount"/> down to the cent. Callers pass non-negative amounts, so ToZero is rounding down.
     /// </summary>
     internal static Money RoundDownToCent(decimal amount, Currency currency) =>
-        new(decimal.Round(amount, 2, MidpointRounding.ToZero), currency);
+        new(decimal.Round(amount, DecimalPlaces, MidpointRounding.ToZero), currency);
 
     public static Money operator +(Money left, Money right)
     {
