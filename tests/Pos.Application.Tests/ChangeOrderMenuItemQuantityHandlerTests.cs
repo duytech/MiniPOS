@@ -93,7 +93,7 @@ public class ChangeOrderMenuItemQuantityHandlerTests
         var result = await _act.ChangeQuantity(order, pho, 2);
 
         Assert.Equal(ErrorCode.DiscountExceedsSubtotal, result.Error!.Code);
-        Assert.StartsWith("A quantity of 2 would leave a subtotal of 7.70 USD", result.Error!.Message);
+        Assert.StartsWith("A quantity of 2 would leave a subtotal of 7.70 USD", result.Error.Message);
         Assert.Equal(3, order.Items[0].Quantity);
         Assert.Equal(Money.Usd(3.84m), OrderPricing.CalculateTotals(order).Total); // 11.55 − 7.71
     }

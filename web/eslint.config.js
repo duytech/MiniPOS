@@ -12,10 +12,10 @@ module.exports = tseslint.config(
       ...tseslint.configs.recommended,
       ...tseslint.configs.stylistic,
       ...angular.configs.tsRecommended,
+      sonarjs.configs.recommended,
     ],
     processor: angular.processInlineTemplates,
-    // Sonar for one rule only, as in the .NET build (S3776): no sonarjs preset, so no other sonarjs rule runs.
-    plugins: { sonarjs },
+    // Sonar default rules (recommended preset), as in the .NET build. Cognitive complexity max 15, same as S3776.
     rules: {
       "sonarjs/cognitive-complexity": ["error", 15],
       "@angular-eslint/directive-selector": [

@@ -115,6 +115,29 @@ public class OrdersApiTests(PosApiFactory factory) : IClassFixture<PosApiFactory
     }
 
     [Fact]
+    public async Task Missing_quantity_is_invalid()
+    {
+        var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);
+        var orderId = await _client.CreateOrderAsync();
+
+        var response = await _client.PostAsJsonAsync($"/api/orders/{orderId}/items", new { menuItemId = pho });
+
+        await response.AssertErrorAsync(ErrorCode.ValidationFailed);
+        Assert.Equal(0, (await _client.GetOrderAsync(orderId)).GetProperty("items").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Missing_menu_item_id_is_invalid()
+    {
+        var orderId = await _client.CreateOrderAsync();
+
+        var response = await _client.PostAsJsonAsync($"/api/orders/{orderId}/items", new { quantity = 1 });
+
+        await response.AssertErrorAsync(ErrorCode.ValidationFailed);
+        Assert.Equal(0, (await _client.GetOrderAsync(orderId)).GetProperty("items").GetArrayLength());
+    }
+
+    [Fact]
     public async Task Quantity_overflow_is_rejected()
     {
         var pho = await _client.CreateMenuItemAsync("Pho", 7.70m);

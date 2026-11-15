@@ -24,6 +24,12 @@ if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("Databas
 
 app.MapControllers();
 
-app.Run();
+await app.RunAsync();
 
-public partial class Program;
+// WebApplicationFactory<Program> in the integration tests needs a public Program type; nothing constructs it.
+public partial class Program
+{
+    protected Program()
+    {
+    }
+}

@@ -10,7 +10,7 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
-  <!-- Sonar for one rule only: S3776 Cognitive Complexity. sonar.globalconfig turns every other Sonar rule off. -->
+  <!-- Sonar default rules (Sonar Way); sonar.globalconfig holds the S3776 threshold note and any rule turned off. -->
   <ItemGroup>
     <PackageReference Include="SonarAnalyzer.CSharp" Version="10.35.0.4138" PrivateAssets="all" IncludeAssets="analyzers" />
     <GlobalAnalyzerConfigFiles Include="$(MSBuildThisFileDirectory)sonar.globalconfig" />
