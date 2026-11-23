@@ -30,6 +30,18 @@ A method that returns a boolean meets both rules: `Is`, `Has` or `Can` counts as
 ## 3. Name a calculation that needs explaining
 
 When a reader has to work out what an expression means, put it in a variable named for what it holds.
+An expression needs a name when any of these holds:
+- Read aloud, it means something its symbols don't say: `share * (parts - 1)` is "the total of the other shares".
+- You would write a comment to explain it: the variable name replaces the comment.
+- It mixes operators of different precedence, or needs parentheses to read right: `a - b * (c - 1)`,
+  `x ?? y > z && w`.
+- It computes a value the business has a name for, such as subtotal, leftover or discounted total.
+- The same expression appears more than once.
+
+Stay inline:
+- One operation whose operand names already say what it is, assigned to a variable named for the result:
+  `var itemTotal = unitPrice * quantity;`.
+- Common index arithmetic: `i + 1`, `items.Count - 1`.
 
 | Do | Don't |
 |----|-------|
