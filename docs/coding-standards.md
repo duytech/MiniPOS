@@ -3,7 +3,7 @@
 Naming and readability rules for C# (`src/`, `tests/`) and TypeScript (`web/`). Some existing code predates them:
 follow this file, not the surrounding code.
 
-## Methods start with a verb
+## 1. Methods start with a verb
 
 Framework-required method names are exempt, such as Angular lifecycle hooks `ngOnInit` and `ngOnDestroy`. Also exempt:
 static factory methods that create a value (`Money.Zero`, `OrderDto.From`, `OrderErrors.NotOpen`), `[LoggerMessage]`
@@ -14,7 +14,7 @@ log methods, and test method names, which read as behavior sentences.
 | `CalculateTotals`, `AddItem`, `GetById` | `Totals`, `ItemAdd`, `ById` |
 | `loadOrders`, `formatStatus` | `orders`, `statusText` |
 
-## Booleans start with `Is`, `Has` or `Can`
+## 2. Booleans start with `Is`, `Has` or `Can`
 
 Applies to variables, fields, properties, parameters, and methods that return a boolean. In camelCase use `is`, `has`,
 `can`.
@@ -27,15 +27,27 @@ Applies to variables, fields, properties, parameters, and methods that return a 
 
 A method that returns a boolean meets both rules: `Is`, `Has` or `Can` counts as its verb.
 
-## Name a calculation that needs explaining
+## 3. Name a calculation that needs explaining
 
 When a reader has to work out what an expression means, put it in a variable named for what it holds.
+An expression needs a name when any of these holds:
+- Read aloud, it means something its symbols don't say: `share * (parts - 1)` is "the total of the other shares".
+- You would write a comment to explain it: the variable name replaces the comment.
+- It mixes operators of different precedence, or needs parentheses to read right: `a - b * (c - 1)`,
+  `x ?? y > z && w`.
+- It computes a value the business has a name for, such as subtotal, leftover or discounted total.
+- The same expression appears more than once.
+
+Stay inline:
+- One operation whose operand names already say what it is, assigned to a variable named for the result:
+  `var itemTotal = unitPrice * quantity;`.
+- Common index arithmetic: `i + 1`, `items.Count - 1`.
 
 | Do | Don't |
 |----|-------|
 | `var otherSharesTotal = share * (parts - 1);`<br>`var firstShare = amount - otherSharesTotal;` | `shares[0] = amount - share * (parts - 1);` |
 
-## Extract a block that does one job
+## 4. Extract a block that does one job
 
 When a loop or a few steps inside a method do one job, move them into a function named for that job. The calling
 method then reads as a list of steps.
@@ -44,7 +56,7 @@ method then reads as a list of steps.
 |----|-------|
 | `shares[FindIndexOfLargest(partSubtotals)] += leftover;` | `var largest = 0;`<br>`for (var i = 1; i < partSubtotals.Count; i++) { … }`<br>`shares[largest] += leftover;` |
 
-## Name a long call before passing it on
+## 5. Name a long call before passing it on
 
 When an argument is itself a long call, put its result in a variable named for what it holds, then pass the variable.
 A call is long when it spans more than one line, or when it nests calls two or more levels deep inside the argument.
@@ -60,7 +72,7 @@ Stay inline:
 |----|-------|
 | `var splitParts = Enumerable.Range(0, parts)`<br>`    .Select(i => new SplitPart(…))`<br>`    .ToList();`<br>`return Result.Ok<IReadOnlyList<SplitPart>>(splitParts);` | `return Result.Ok<IReadOnlyList<SplitPart>>(Enumerable.Range(0, parts)`<br>`    .Select(i => new SplitPart(…))`<br>`    .ToList());` |
 
-## Name a lambda that spans lines
+## 6. Name a lambda that spans lines
 
 C# only. When a lambda spans more than one line or has a block body `{ … }`, move it into a local function named for
 what it does or returns, then use the function. A cast such as `(Func<…>)` that the lambda needed is replaced by the
